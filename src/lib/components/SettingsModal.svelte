@@ -6,9 +6,10 @@
 
 	interface Props {
 		onClose: () => void;
+		isDedicatedWindow?: boolean;
 	}
 
-	let { onClose }: Props = $props();
+	let { onClose, isDedicatedWindow = false }: Props = $props();
 
 	let apiKeys = $state<Record<ProviderId, string>>({
 		anthropic: '',
@@ -103,8 +104,8 @@
 	}
 </script>
 
-<div class="modal-backdrop" onclick={onClose}>
-	<div class="modal card" onclick={(e) => e.stopPropagation()}>
+<div class={isDedicatedWindow ? 'dedicated-window-view' : 'modal-backdrop'} onclick={isDedicatedWindow ? undefined : onClose}>
+	<div class={isDedicatedWindow ? 'dedicated-settings-card card' : 'modal card'} onclick={(e) => e.stopPropagation()}>
 		<h2>Settings & AI Model Configuration</h2>
 
 		<!-- Feedback Messages -->
@@ -379,5 +380,24 @@
 		display: flex;
 		justify-content: flex-end;
 		gap: 10px;
+	}
+
+	.dedicated-window-view {
+		width: 100%;
+		height: 100vh;
+		overflow-y: auto;
+		background: var(--bg);
+		padding: 24px;
+		display: flex;
+		justify-content: center;
+	}
+
+	.dedicated-settings-card {
+		width: 100%;
+		max-width: 680px;
+		height: fit-content;
+		padding: 24px 28px;
+		box-shadow: none;
+		border: 1px solid var(--line);
 	}
 </style>

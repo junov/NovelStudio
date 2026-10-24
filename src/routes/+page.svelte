@@ -13,16 +13,24 @@
 	import NewProjectModal from '$lib/components/NewProjectModal.svelte';
 	import SettingsModal from '$lib/components/SettingsModal.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
-	import { pickFolder } from '$lib/tauri';
+	import DedicatedInterviewView from '$lib/components/DedicatedInterviewView.svelte';
+	import { pickFolder, openSettingsWindow, closeWindow, inTauri } from '$lib/tauri';
 
 	let showNewModal = $state(false);
 	let showSettingsModal = $state(false);
 	let showPalette = $state(false);
+	let activeHash = $state('');
 
 	onMount(async () => {
+		activeHash = typeof window !== 'undefined' ? window.location.hash : '';
+		const handleHash = () => {
+			activeHash = window.location.hash;
+		};
+		window.addEventListener('hashchange', handleHash);
+
 		await settings.init();
 		// If recent project exists, try to open most recent
-		if (settings.value.recentProjects.length > 0 && !project.root) {
+		if (settings.value.recentProjects.length > 0 && !project.root && !activeHash) {
 			const mostRecent = settings.value.recentProjects[0];
 			try {
 				await project.open(mostRecent.path);
@@ -30,6 +38,10 @@
 				console.warn('Could not auto-open recent project:', e);
 			}
 		}
+
+		return () => {
+			window.removeEventListener('hashchange', handleHash);
+		};
 	});
 
 	async function openFolderDialog() {
@@ -38,6 +50,18 @@
 			await project.open(selected);
 			settings.addRecent(selected, project.title);
 		}
+	}
+
+	async function handleOpenSettings() {
+		if (inTauri()) {
+			try {
+				await openSettingsWindow();
+				return;
+			} catch (e) {
+				console.warn('Could not open separate settings window, using dialog overlay:', e);
+			}
+		}
+		showSettingsModal = true;
 	}
 
 	function onKeyDown(e: KeyboardEvent) {
@@ -50,93 +74,101 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="novelstudio-app">
-	<Header
-		onNewProject={() => (showNewModal = true)}
-		onOpenProject={openFolderDialog}
-		onOpenSettings={() => (showSettingsModal = true)}
-		onOpenPalette={() => (showPalette = true)}
-	/>
+{#if activeHash === '#settings'}
+	<SettingsModal onClose={() => closeWindow('settings')} isDedicatedWindow={true} />
+{:else if activeHash === '#interview'}
+	<DedicatedInterviewView />
+{:else}
+	<div class="novelstudio-app">
+		<Header
+			onNewProject={() => (showNewModal = true)}
+			onOpenProject={openFolderDialog}
+			onOpenSettings={handleOpenSettings}
+			onOpenPalette={() => (showPalette = true)}
+		/>
 
-	{#if project.root}
-		<JourneyRail />
+		{#if project.root}
+			<JourneyRail />
 
-		<main class="workspace-main">
-			<Explorer />
+			<main class="workspace-main">
+				<Explorer />
 
-			<div class="workspace-center">
-				{#if project.view.kind === 'dashboard'}
-					<DashboardView />
-				{:else if project.view.kind === 'file'}
-					<Editor
-						path={project.view.path}
-						targetLine={project.view.line}
-						targetId={project.view.id}
-					/>
-				{:else if project.view.kind === 'analysis'}
-					<AnalysisDashboard />
-				{:else if project.view.kind === 'book'}
-					<BookPreview />
-				{/if}
-			</div>
-
-			<AgentPanel />
-		</main>
-	{:else}
-		<!-- Welcome Screen when no project is loaded -->
-		<div class="welcome-screen">
-			<div class="welcome-hero card">
-				<span class="welcome-icon">❦</span>
-				<h1 class="welcome-title">Welcome to NovelStudio</h1>
-				<p class="welcome-tagline">
-					A professional desktop studio for specification-driven novel writing powered by AI agents.
-				</p>
-
-				<div class="welcome-actions">
-					<button class="btn primary" onclick={() => (showNewModal = true)}>
-						+ Create New Novel
-					</button>
-					<button class="btn" onclick={openFolderDialog}>
-						Open Existing Project...
-					</button>
+				<div class="workspace-center">
+					{#if project.view.kind === 'dashboard'}
+						<DashboardView />
+					{:else if project.view.kind === 'file'}
+						<Editor
+							path={project.view.path}
+							targetLine={project.view.line}
+							targetId={project.view.id}
+						/>
+					{:else if project.view.kind === 'analysis'}
+						<AnalysisDashboard />
+					{:else if project.view.kind === 'book'}
+						<BookPreview />
+					{/if}
 				</div>
 
-				{#if settings.value.recentProjects.length > 0}
-					<div class="recent-projects">
-						<span class="label">Recent Projects</span>
-						<div class="recent-list">
-							{#each settings.value.recentProjects as r}
-								<div class="recent-item" onclick={() => project.open(r.path)}>
-									<span class="recent-title">{r.title}</span>
-									<span class="recent-path">{r.path}</span>
-								</div>
-							{/each}
-						</div>
+				<AgentPanel />
+			</main>
+		{:else}
+			<!-- Welcome Screen when no project is loaded -->
+			<div class="welcome-screen">
+				<div class="welcome-hero card">
+					<span class="welcome-icon">❦</span>
+					<h1 class="welcome-title">Welcome to NovelStudio</h1>
+					<p class="welcome-tagline">
+						A professional desktop studio for specification-driven novel writing powered by AI agents.
+					</p>
+
+					<div class="welcome-actions">
+						<button class="btn primary" onclick={() => (showNewModal = true)}>
+							+ Create New Novel
+						</button>
+						<button class="btn" onclick={openFolderDialog}>
+							Open Existing Project...
+						</button>
 					</div>
-				{/if}
+
+					{#if settings.value.recentProjects.length > 0}
+						<div class="recent-projects">
+							<span class="label">Recent Projects</span>
+							<div class="recent-list">
+								{#each settings.value.recentProjects as r}
+									<div class="recent-item" onclick={() => project.open(r.path)}>
+										<span class="recent-title">{r.title}</span>
+										<span class="recent-path">{r.path}</span>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
+				</div>
 			</div>
-		</div>
+		{/if}
+	</div>
+
+	{#if showNewModal}
+		<NewProjectModal onClose={() => (showNewModal = false)} />
 	{/if}
-</div>
 
-{#if showNewModal}
-	<NewProjectModal onClose={() => (showNewModal = false)} />
-{/if}
+	{#if showSettingsModal}
+		<SettingsModal onClose={() => (showSettingsModal = false)} />
+	{/if}
 
-{#if showSettingsModal}
-	<SettingsModal onClose={() => (showSettingsModal = false)} />
-{/if}
-
-{#if showPalette}
-	<CommandPalette onClose={() => (showPalette = false)} />
+	{#if showPalette}
+		<CommandPalette onClose={() => (showPalette = false)} />
+	{/if}
 {/if}
 
 <style>
 	.novelstudio-app {
 		display: flex;
 		flex-direction: column;
-		height: 100vh;
-		width: 100vw;
+		height: 100%;
+		width: 100%;
+		max-height: 100%;
+		max-width: 100%;
 		overflow: hidden;
 		background: var(--bg);
 	}

@@ -61,6 +61,36 @@ export const secretGet = (name: string) => invoke<string | null>('secret_get', {
 
 export const secretDelete = (name: string) => invoke<void>('secret_delete', { name });
 
+export const openSettingsWindow = async () => {
+	if (inTauri()) return invoke<void>('open_settings_window');
+};
+
+export const openInterviewWindow = async () => {
+	if (inTauri()) return invoke<void>('open_interview_window');
+};
+
+export const closeWindow = async (label: string) => {
+	if (inTauri()) return invoke<void>('close_window', { label });
+};
+
+export const setInterviewPrompt = async (promptJson: string) => {
+	if (inTauri()) return invoke<void>('set_interview_prompt', { promptJson });
+};
+
+export const getInterviewPrompt = async (): Promise<string | null> => {
+	if (inTauri()) return invoke<string | null>('get_interview_prompt');
+	return null;
+};
+
+export const submitInterviewAnswers = async (answersJson: string) => {
+	if (inTauri()) return invoke<void>('submit_interview_answers', { answersJson });
+};
+
+export const pollInterviewAnswers = async (): Promise<string | null> => {
+	if (inTauri()) return invoke<string | null>('poll_interview_answers');
+	return null;
+};
+
 /**
  * Open a native system folder picker dialog.
  * When running in Tauri, opens the native OS Explorer dialog.

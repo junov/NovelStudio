@@ -9,7 +9,10 @@ import {
 	readToolkit,
 	runSpecnovel,
 	secretGet,
-	inTauri
+	inTauri,
+	setInterviewPrompt,
+	openInterviewWindow,
+	pollInterviewAnswers
 } from '$lib/tauri';
 import { project } from '$lib/stores/project.svelte';
 import { settings, PROVIDERS, type ModelChoice } from '$lib/stores/settings.svelte';
@@ -431,17 +434,51 @@ ${skillMd}
 					this.status = 'awaiting_user_input';
 					this.addFeed('question', title, `Presenting ${rawQuestions.length} question(s) to author.`);
 
+					if (inTauri()) {
+						try {
+							await setInterviewPrompt(
+								JSON.stringify({
+									id: tc.id,
+									title,
+									questions: rawQuestions
+								})
+							);
+							await openInterviewWindow();
+						} catch (e) {
+							console.warn('Could not launch separate interview window:', e);
+						}
+					}
+
 					const answers = await new Promise<UserAnswer[]>((resolve) => {
+						let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+						const cleanupAndResolve = (ans: UserAnswer[]) => {
+							if (pollInterval) clearInterval(pollInterval);
+							this.activeQuestion = null;
+							this.status = 'running';
+							resolve(ans);
+						};
+
 						this.activeQuestion = {
 							id: tc.id,
 							title,
 							questions: rawQuestions,
-							resolve: (ans) => {
-								this.activeQuestion = null;
-								this.status = 'running';
-								resolve(ans);
-							}
+							resolve: cleanupAndResolve
 						};
+
+						if (inTauri()) {
+							pollInterval = setInterval(async () => {
+								try {
+									const polled = await pollInterviewAnswers();
+									if (polled) {
+										const parsed = JSON.parse(polled) as UserAnswer[];
+										cleanupAndResolve(parsed);
+									}
+								} catch (e) {
+									console.error('Error polling interview answers:', e);
+								}
+							}, 250);
+						}
 					});
 
 					const summaryAnswers = answers

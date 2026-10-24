@@ -64,7 +64,10 @@
 html,
 body {
 	margin: 0;
+	padding: 0;
+	width: 100%;
 	height: 100%;
+	overflow: hidden;
 	background: var(--bg);
 	color: var(--ink);
 	font-family: var(--font-ui);
@@ -364,17 +367,24 @@ button:focus-visible {
 .modal-backdrop {
 	position: fixed;
 	inset: 0;
-	background: rgba(20, 14, 6, 0.38);
-	backdrop-filter: blur(2px);
-	display: grid;
-	place-items: center;
-	z-index: 100;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(20, 14, 6, 0.45);
+	backdrop-filter: blur(4px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+	overflow: hidden;
 }
 .modal {
-	width: min(640px, 92vw);
-	max-height: 86vh;
-	overflow: auto;
+	width: min(680px, 92vw);
+	max-height: 88vh;
+	overflow-y: auto;
 	padding: 24px 28px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+	position: relative;
+	z-index: 10000;
 }
 .modal h2 {
 	margin-top: 0;

@@ -9,8 +9,8 @@
 use serde::Serialize;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
-use std::sync::OnceLock;
-use tauri::{AppHandle, Manager};
+use std::sync::{Mutex, OnceLock};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 const KEYCHAIN_SERVICE: &str = "dev.junov.novelstudio";
 
@@ -328,6 +328,98 @@ fn secret_get(name: String) -> Result<Option<String>, String> {
     }
 }
 
+static INTERVIEW_PROMPT: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+static INTERVIEW_ANSWERS: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+
+fn prompt_mutex() -> &'static Mutex<Option<String>> {
+    INTERVIEW_PROMPT.get_or_init(|| Mutex::new(None))
+}
+
+fn answers_mutex() -> &'static Mutex<Option<String>> {
+    INTERVIEW_ANSWERS.get_or_init(|| Mutex::new(None))
+}
+
+#[tauri::command]
+fn set_interview_prompt(prompt_json: String) -> Result<(), String> {
+    let mut lock = prompt_mutex().lock().map_err(|e| e.to_string())?;
+    *lock = Some(prompt_json);
+    let mut ans_lock = answers_mutex().lock().map_err(|e| e.to_string())?;
+    *ans_lock = None;
+    Ok(())
+}
+
+#[tauri::command]
+fn get_interview_prompt() -> Result<Option<String>, String> {
+    let lock = prompt_mutex().lock().map_err(|e| e.to_string())?;
+    Ok(lock.clone())
+}
+
+#[tauri::command]
+fn submit_interview_answers(app: AppHandle, answers_json: String) -> Result<(), String> {
+    {
+        let mut lock = answers_mutex().lock().map_err(|e| e.to_string())?;
+        *lock = Some(answers_json);
+    }
+    if let Ok(mut lock) = prompt_mutex().lock() {
+        *lock = None;
+    }
+    if let Some(w) = app.get_webview_window("interview") {
+        let _ = w.close();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn poll_interview_answers() -> Result<Option<String>, String> {
+    let mut lock = answers_mutex().lock().map_err(|e| e.to_string())?;
+    let val = lock.take();
+    Ok(val)
+}
+
+#[tauri::command]
+async fn open_settings_window(app: AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("settings") {
+        let _ = w.show();
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("/#settings".into()))
+        .title("NovelStudio Settings")
+        .inner_size(700.0, 720.0)
+        .min_inner_size(500.0, 500.0)
+        .resizable(true)
+        .center()
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn open_interview_window(app: AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("interview") {
+        let _ = w.show();
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    WebviewWindowBuilder::new(&app, "interview", WebviewUrl::App("/#interview".into()))
+        .title("Author Interview — NovelStudio")
+        .inner_size(740.0, 680.0)
+        .min_inner_size(520.0, 480.0)
+        .resizable(true)
+        .center()
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn close_window(app: AppHandle, label: String) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window(&label) {
+        let _ = w.close();
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn secret_delete(name: String) -> Result<(), String> {
     let entry = keyring::Entry::new(KEYCHAIN_SERVICE, &name).map_err(|e| e.to_string())?;
@@ -360,7 +452,14 @@ pub fn run() {
             scan_markdown,
             secret_set,
             secret_get,
-            secret_delete
+            secret_delete,
+            open_settings_window,
+            open_interview_window,
+            close_window,
+            set_interview_prompt,
+            get_interview_prompt,
+            submit_interview_answers,
+            poll_interview_answers
         ])
         .run(tauri::generate_context!())
         .expect("error while running NovelStudio");

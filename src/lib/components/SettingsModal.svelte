@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { settings, PROVIDERS, type ProviderId } from '$lib/stores/settings.svelte';
 	import { secretGet, secretSet, secretDelete } from '$lib/tauri';
-	import { fetchAvailableModels } from '$lib/agent/providers';
+	import { fetchAvailableModels, formatModelLabel } from '$lib/agent/providers';
 
 	interface Props {
 		onClose: () => void;
@@ -23,6 +23,17 @@
 	});
 	let queryMessage = $state<string | null>(null);
 	let queryError = $state<string | null>(null);
+
+	let isCustomModel = $state(false);
+	let availableModels = $derived(settings.modelsForProvider(settings.value.defaultModel.provider));
+
+	$effect(() => {
+		const curr = settings.value.defaultModel.model;
+		const list = availableModels;
+		if (curr && !list.includes(curr)) {
+			isCustomModel = true;
+		}
+	});
 
 	onMount(async () => {
 		for (const pid of ['anthropic', 'openai', 'gemini'] as ProviderId[]) {
@@ -54,9 +65,10 @@
 			if (models.length > 0) {
 				settings.updateModelCache(pid, models);
 				queryMessage = `✓ Retrieved ${models.length} available models from ${PROVIDERS[pid].label}.`;
-				// If current model is not in list, select the latest one
+				// If current model is not in list, select the flagship/top one
 				if (!models.includes(settings.value.defaultModel.model) && settings.value.defaultModel.provider === pid) {
 					settings.value.defaultModel.model = models[0];
+					isCustomModel = false;
 				}
 			} else {
 				queryMessage = `No chat models returned from ${PROVIDERS[pid].label}.`;
@@ -165,6 +177,7 @@
 							const available = settings.modelsForProvider(p);
 							if (available.length > 0) {
 								settings.value.defaultModel.model = available[0];
+								isCustomModel = false;
 							}
 							if (apiKeys[p]) {
 								queryModels(p);
@@ -179,20 +192,51 @@
 
 				<div class="form-group flex-2">
 					<label for="default-model">
-						Model Name
-						<span class="muted font-normal">(select queried model or type custom)</span>
+						Model Selection
+						<span class="muted font-normal">({availableModels.length} models)</span>
 					</label>
-					<input
+					<select
 						id="default-model"
-						list="models-list"
-						placeholder="e.g. claude-3-7-sonnet-20250219"
-						bind:value={settings.value.defaultModel.model}
-					/>
-					<datalist id="models-list">
-						{#each settings.modelsForProvider(settings.value.defaultModel.provider) as m}
-							<option value={m}>{m}</option>
+						value={isCustomModel ? '__custom__' : settings.value.defaultModel.model}
+						onchange={(e) => {
+							const val = e.currentTarget.value;
+							if (val === '__custom__') {
+								isCustomModel = true;
+							} else {
+								isCustomModel = false;
+								settings.value.defaultModel.model = val;
+							}
+						}}
+					>
+						{#each availableModels as m}
+							<option value={m}>
+								{formatModelLabel(m)} ({m})
+							</option>
 						{/each}
-					</datalist>
+						<option value="__custom__">⚙ Custom Model ID...</option>
+					</select>
+
+					{#if isCustomModel}
+						<div class="custom-model-wrapper">
+							<input
+								type="text"
+								placeholder="Enter custom model identifier..."
+								bind:value={settings.value.defaultModel.model}
+							/>
+							<button
+								type="button"
+								class="btn small ghost"
+								onclick={() => {
+									isCustomModel = false;
+									if (availableModels.length > 0) {
+										settings.value.defaultModel.model = availableModels[0];
+									}
+								}}
+							>
+								Cancel
+							</button>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -320,6 +364,15 @@
 	}
 	.flex-2 {
 		flex: 2;
+	}
+
+	.custom-model-wrapper {
+		display: flex;
+		gap: 8px;
+		margin-top: 6px;
+	}
+	.custom-model-wrapper input {
+		flex: 1;
 	}
 
 	.modal-actions {

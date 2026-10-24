@@ -3,6 +3,7 @@
 	import { settings, PROVIDERS, type ProviderId } from '$lib/stores/settings.svelte';
 	import { agent } from '$lib/agent/engine.svelte';
 	import { pickFolder } from '$lib/tauri';
+	import { formatModelLabel } from '$lib/agent/providers';
 
 	interface Props {
 		onNewProject: () => void;
@@ -88,7 +89,7 @@
 
 		<div class="model-indicator" onclick={onOpenSettings} title="Active Model — Click to configure or query models">
 			<span class="provider-dot {settings.value.defaultModel.provider}"></span>
-			<span class="model-name">{settings.value.defaultModel.model}</span>
+			<span class="model-name">{formatModelLabel(settings.value.defaultModel.model)}</span>
 		</div>
 
 		<button class="icon-btn" onclick={onOpenSettings} title="Settings & Keys">

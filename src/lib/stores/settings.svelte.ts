@@ -3,6 +3,7 @@
  */
 import { load, type Store } from '@tauri-apps/plugin-store';
 import { inTauri } from '$lib/tauri';
+import { filterTopModels } from '$lib/agent/providers';
 
 export type ProviderId = 'openai' | 'anthropic' | 'gemini';
 
@@ -47,7 +48,14 @@ export const PROVIDERS: Record<ProviderId, { label: string; keyName: string; sug
 	gemini: {
 		label: 'Google Gemini',
 		keyName: 'gemini_api_key',
-		suggested: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'],
+		suggested: [
+			'gemini-2.5-pro',
+			'gemini-2.5-flash',
+			'gemini-2.0-flash',
+			'gemini-2.0-flash-lite',
+			'gemini-1.5-pro',
+			'gemini-1.5-flash'
+		],
 		keyUrl: 'https://aistudio.google.com/apikey'
 	}
 };
@@ -100,7 +108,10 @@ class SettingsState {
 
 	modelsForProvider(provider: ProviderId): string[] {
 		const cached = this.value.modelCache[provider];
-		if (cached && cached.length > 0) return cached;
+		if (cached && cached.length > 0) {
+			const filtered = filterTopModels(provider, cached);
+			if (filtered.length > 0) return filtered;
+		}
 		return PROVIDERS[provider].suggested;
 	}
 

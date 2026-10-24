@@ -14,7 +14,41 @@ async function getFetch() {
 			return window.fetch.bind(window);
 		}
 	}
-	return (typeof window !== 'undefined' ? window.fetch.bind(window) : fetch);
+	return typeof window !== 'undefined' ? window.fetch.bind(window) : fetch;
+}
+
+export function formatModelLabel(id: string): string {
+	const map: Record<string, string> = {
+		'gemini-2.5-pro': 'Gemini 2.5 Pro (Flagship)',
+		'gemini-2.5-flash': 'Gemini 2.5 Flash (Fast)',
+		'gemini-2.0-flash': 'Gemini 2.0 Flash (Fast)',
+		'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
+		'gemini-1.5-pro': 'Gemini 1.5 Pro',
+		'gemini-1.5-flash': 'Gemini 1.5 Flash',
+		'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
+		'claude-3-7-sonnet-20250219': 'Claude 3.7 Sonnet (Flagship)',
+		'claude-3-7-sonnet': 'Claude 3.7 Sonnet (Flagship)',
+		'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
+		'claude-3-5-sonnet': 'Claude 3.5 Sonnet',
+		'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku (Fast)',
+		'claude-3-5-haiku': 'Claude 3.5 Haiku (Fast)',
+		'claude-3-opus-20240229': 'Claude 3 Opus',
+		'claude-3-opus': 'Claude 3 Opus',
+		'gpt-4o': 'GPT-4o (Flagship)',
+		'gpt-4o-mini': 'GPT-4o mini (Fast)',
+		'o1': 'o1 (Reasoning)',
+		'o3-mini': 'o3-mini (Reasoning)',
+		'gpt-4-turbo': 'GPT-4 Turbo'
+	};
+	if (map[id]) return map[id];
+	if (id.startsWith('gemini-2.5-pro')) return 'Gemini 2.5 Pro';
+	if (id.startsWith('gemini-2.5-flash')) return 'Gemini 2.5 Flash';
+	if (id.startsWith('gemini-2.0-flash-lite')) return 'Gemini 2.0 Flash Lite';
+	if (id.startsWith('gemini-2.0-flash')) return 'Gemini 2.0 Flash';
+	if (id.startsWith('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
+	if (id.startsWith('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
+	if (id.startsWith('claude-3-5-haiku')) return 'Claude 3.5 Haiku';
+	return id;
 }
 
 // ------------------------------------------------------------------ Anthropic
@@ -376,6 +410,60 @@ export async function callProvider(
 }
 
 // ------------------------------------------------------------------ Live Model Queries
+
+export const TOP_CANONICAL_MODELS: Record<ProviderId, string[]> = {
+	gemini: [
+		'gemini-2.5-pro',
+		'gemini-2.5-flash',
+		'gemini-2.0-flash',
+		'gemini-2.0-flash-lite',
+		'gemini-1.5-pro',
+		'gemini-1.5-flash'
+	],
+	anthropic: [
+		'claude-3-7-sonnet-20250219',
+		'claude-3-5-sonnet-20241022',
+		'claude-3-5-haiku-20241022',
+		'claude-3-opus-20240229'
+	],
+	openai: [
+		'gpt-4o',
+		'gpt-4o-mini',
+		'o3-mini',
+		'o1',
+		'gpt-4-turbo'
+	]
+};
+
+/**
+ * Filter and sort a raw list of model IDs down to the top production suggestions
+ * known to be available to the user (matching the curated options in Antigravity).
+ */
+export function filterTopModels(provider: ProviderId, modelIds: string[]): string[] {
+	const canonical = TOP_CANONICAL_MODELS[provider] || [];
+	const result: string[] = [];
+
+	for (const canon of canonical) {
+		if (modelIds.includes(canon)) {
+			result.push(canon);
+		} else {
+			// Prefix match (e.g. preview variants like 'gemini-2.5-pro-preview-03-25')
+			const prefix = canon.split('-').slice(0, 3).join('-');
+			const match = modelIds.find((id) => id === canon || id.startsWith(`${canon}-`) || id.startsWith(`${prefix}-`));
+			if (match && !result.includes(match)) {
+				result.push(match);
+			}
+		}
+	}
+
+	// If no exact canonical match occurred (e.g. mock or unexpected IDs), fall back to curated canonical
+	if (result.length === 0) {
+		return [...canonical];
+	}
+
+	return result;
+}
+
 async function listAnthropicModels(apiKey: string): Promise<string[]> {
 	const httpFetch = await getFetch();
 	const res = await httpFetch('https://api.anthropic.com/v1/models', {
@@ -390,8 +478,8 @@ async function listAnthropicModels(apiKey: string): Promise<string[]> {
 		throw new Error(`Failed to list Anthropic models (${res.status}): ${err}`);
 	}
 	const data = (await res.json()) as { data?: Array<{ id: string }> };
-	const list = (data.data || []).map((m) => m.id).filter((id) => id.includes('claude'));
-	return list.sort().reverse();
+	const raw = (data.data || []).map((m) => m.id);
+	return filterTopModels('anthropic', raw);
 }
 
 async function listOpenAIModels(apiKey: string): Promise<string[]> {
@@ -407,11 +495,8 @@ async function listOpenAIModels(apiKey: string): Promise<string[]> {
 		throw new Error(`Failed to list OpenAI models (${res.status}): ${err}`);
 	}
 	const data = (await res.json()) as { data?: Array<{ id: string }> };
-	const chatPrefixes = ['gpt-4', 'gpt-5', 'o1', 'o3', 'chatgpt'];
-	const list = (data.data || [])
-		.map((m) => m.id)
-		.filter((id) => chatPrefixes.some((p) => id.startsWith(p)) && !id.includes('realtime') && !id.includes('audio'));
-	return list.sort().reverse();
+	const raw = (data.data || []).map((m) => m.id);
+	return filterTopModels('openai', raw);
 }
 
 async function listGeminiModels(apiKey: string): Promise<string[]> {
@@ -427,18 +512,20 @@ async function listGeminiModels(apiKey: string): Promise<string[]> {
 	const data = (await res.json()) as {
 		models?: Array<{
 			name: string;
+			displayName?: string;
 			supportedGenerationMethods?: string[];
 		}>;
 	};
-	const list = (data.models || [])
+
+	const raw = (data.models || [])
 		.filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
-		.map((m) => m.name.replace(/^models\//, ''))
-		.filter((id) => !id.includes('embedding') && !id.includes('aqa') && !id.includes('imagen'));
-	return list.sort().reverse();
+		.map((m) => m.name.replace(/^models\//, ''));
+
+	return filterTopModels('gemini', raw);
 }
 
 /**
- * Query the provider's API backend to retrieve all models available to this account.
+ * Query the provider's API backend to retrieve top production models available to this account.
  */
 export async function fetchAvailableModels(provider: ProviderId, apiKey: string): Promise<string[]> {
 	if (!apiKey) return [];

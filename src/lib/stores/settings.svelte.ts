@@ -4,13 +4,14 @@
  */
 import { load, type Store } from '@tauri-apps/plugin-store';
 import { inTauri } from '$lib/tauri';
-import { filterTopModels } from '$lib/agent/providers';
+import type { DiscoveredModel, ThinkingLevel } from '$lib/agent/providers';
 
 export type ProviderId = 'openai' | 'anthropic' | 'gemini';
 
 export interface ModelChoice {
 	provider: ProviderId;
 	model: string;
+	thinkingLevel?: ThinkingLevel;
 }
 
 export interface RecentProject {
@@ -28,35 +29,25 @@ export interface Settings {
 	/** Skip per-action approval prompts for agent writes / commands. */
 	autoApprove: boolean;
 	maxAgentSteps: number;
-	/** Cached model lists fetched from providers. */
-	modelCache: Partial<Record<ProviderId, string[]>>;
+	/** Cached models fetched dynamically from providers. */
+	modelCache: Partial<Record<ProviderId, DiscoveredModel[]>>;
 	proseFontSize: number;
 }
 
-export const PROVIDERS: Record<ProviderId, { label: string; keyName: string; suggested: string[]; keyUrl: string }> = {
+export const PROVIDERS: Record<ProviderId, { label: string; keyName: string; keyUrl: string }> = {
 	openai: {
 		label: 'OpenAI',
 		keyName: 'openai_api_key',
-		suggested: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini', 'gpt-4-turbo'],
 		keyUrl: 'https://platform.openai.com/api-keys'
 	},
 	anthropic: {
 		label: 'Anthropic Claude',
 		keyName: 'anthropic_api_key',
-		suggested: ['claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
 		keyUrl: 'https://console.anthropic.com/settings/keys'
 	},
 	gemini: {
 		label: 'Google Gemini',
 		keyName: 'gemini_api_key',
-		suggested: [
-			'gemini-2.5-pro',
-			'gemini-2.5-flash',
-			'gemini-2.0-flash',
-			'gemini-2.0-flash-lite',
-			'gemini-1.5-pro',
-			'gemini-1.5-flash'
-		],
 		keyUrl: 'https://aistudio.google.com/apikey'
 	}
 };
@@ -64,7 +55,7 @@ export const PROVIDERS: Record<ProviderId, { label: string; keyName: string; sug
 const DEFAULTS: Settings = {
 	theme: 'system',
 	recentProjects: [],
-	defaultModel: { provider: 'anthropic', model: 'claude-3-7-sonnet-20250219' },
+	defaultModel: { provider: 'gemini', model: '', thinkingLevel: 'off' },
 	stageModels: {},
 	autoApprove: false,
 	maxAgentSteps: 80,
@@ -109,16 +100,11 @@ class SettingsState {
 		return (stageId && this.value.stageModels[stageId]) || this.value.defaultModel;
 	}
 
-	modelsForProvider(provider: ProviderId): string[] {
-		const cached = this.value.modelCache[provider];
-		if (cached && cached.length > 0) {
-			const filtered = filterTopModels(provider, cached);
-			if (filtered.length > 0) return filtered;
-		}
-		return PROVIDERS[provider].suggested;
+	modelsForProvider(provider: ProviderId): DiscoveredModel[] {
+		return this.value.modelCache[provider] || [];
 	}
 
-	updateModelCache(provider: ProviderId, models: string[]) {
+	updateModelCache(provider: ProviderId, models: DiscoveredModel[]) {
 		this.value.modelCache = {
 			...this.value.modelCache,
 			[provider]: models

@@ -90,6 +90,9 @@
 		<div class="model-indicator" onclick={onOpenSettings} title="Active Model — Click to configure or query models">
 			<span class="provider-dot {settings.value.defaultModel.provider}"></span>
 			<span class="model-name">{formatModelLabel(settings.value.defaultModel.model)}</span>
+			{#if settings.value.defaultModel.thinkingLevel && settings.value.defaultModel.thinkingLevel !== 'off'}
+				<span class="thinking-pill" title="Thinking: {settings.value.defaultModel.thinkingLevel}">🧠 {settings.value.defaultModel.thinkingLevel}</span>
+			{/if}
 		</div>
 
 		<button class="icon-btn" onclick={onOpenSettings} title="Settings & Keys">
@@ -241,6 +244,16 @@
 	}
 	.provider-dot.gemini {
 		background: #3b82f6;
+	}
+
+	.thinking-pill {
+		font-size: 10px;
+		font-weight: 600;
+		text-transform: capitalize;
+		padding: 1px 5px;
+		border-radius: 4px;
+		background: color-mix(in srgb, var(--accent) 15%, transparent);
+		color: var(--accent);
 	}
 
 	.agent-badge {

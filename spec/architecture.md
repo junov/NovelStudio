@@ -42,6 +42,7 @@ flowchart TD
 - **Prose Editing**: TipTap WYSIWYG editor with Markdown serializer and CodeMirror 6 source mode.
 - **Testing**: Vitest (`npm test`) and Cargo (`cargo test`).
 - **AI Integration**: Direct HTTP clients with streaming and tool calling for Anthropic, Google Gemini, and OpenAI.
+- **Dynamic Model Discovery**: Zero hard-coded model identifiers or static whitelists in the codebase. All available models originate directly from the provider API backends (filtered by capability and sorted chronologically), guaranteeing immediate forward compatibility with new model releases.
 - **Credential Storage**: Native OS Keychain via Rust `keyring` crate (Windows Credential Manager: `dev.junov.novelstudio`).
 
 ## Directory Layout

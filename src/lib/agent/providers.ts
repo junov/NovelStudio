@@ -18,38 +18,61 @@ async function getFetch() {
 	return typeof window !== 'undefined' ? window.fetch.bind(window) : fetch;
 }
 
-export function formatModelLabel(id: string): string {
-	const map: Record<string, string> = {
-		'gemini-2.5-pro': 'Gemini 2.5 Pro (Flagship)',
-		'gemini-2.5-flash': 'Gemini 2.5 Flash (Fast)',
-		'gemini-2.0-flash': 'Gemini 2.0 Flash (Fast)',
-		'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
-		'gemini-1.5-pro': 'Gemini 1.5 Pro',
-		'gemini-1.5-flash': 'Gemini 1.5 Flash',
-		'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
-		'claude-3-7-sonnet-20250219': 'Claude 3.7 Sonnet (Flagship)',
-		'claude-3-7-sonnet': 'Claude 3.7 Sonnet (Flagship)',
-		'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-		'claude-3-5-sonnet': 'Claude 3.5 Sonnet',
-		'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku (Fast)',
-		'claude-3-5-haiku': 'Claude 3.5 Haiku (Fast)',
-		'claude-3-opus-20240229': 'Claude 3 Opus',
-		'claude-3-opus': 'Claude 3 Opus',
-		'gpt-4o': 'GPT-4o (Flagship)',
-		'gpt-4o-mini': 'GPT-4o mini (Fast)',
-		'o1': 'o1 (Reasoning)',
-		'o3-mini': 'o3-mini (Reasoning)',
-		'gpt-4-turbo': 'GPT-4 Turbo'
-	};
-	if (map[id]) return map[id];
-	if (id.startsWith('gemini-2.5-pro')) return 'Gemini 2.5 Pro';
-	if (id.startsWith('gemini-2.5-flash')) return 'Gemini 2.5 Flash';
-	if (id.startsWith('gemini-2.0-flash-lite')) return 'Gemini 2.0 Flash Lite';
-	if (id.startsWith('gemini-2.0-flash')) return 'Gemini 2.0 Flash';
-	if (id.startsWith('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
-	if (id.startsWith('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
-	if (id.startsWith('claude-3-5-haiku')) return 'Claude 3.5 Haiku';
-	return id;
+export interface RawModelEntry {
+	id: string;
+	displayName?: string;
+	methods?: string[];
+	created?: number;
+}
+
+export interface DiscoveredModel {
+	id: string;
+	displayName: string;
+	supportsThinking?: boolean;
+}
+
+export type ThinkingLevel = 'off' | 'low' | 'medium' | 'high';
+
+export function formatModelLabel(id: string, displayName?: string): string {
+	if (displayName && displayName.trim()) return displayName.trim();
+	if (!id || !id.trim()) return 'Select Model';
+	const cleaned = id.replace(/^models\//, '');
+	return cleaned
+		.split(/[-_]/)
+		.map((part) => {
+			if (/^(gpt|ai|llm|v\d+)$/i.test(part)) return part.toUpperCase();
+			return part.charAt(0).toUpperCase() + part.slice(1);
+		})
+		.join(' ');
+}
+
+export function getThinkingConfig(provider: ProviderId, level: ThinkingLevel | undefined): Record<string, unknown> {
+	if (!level || level === 'off') return {};
+
+	if (provider === 'anthropic') {
+		const budgetMap = { low: 4000, medium: 16000, high: 32000 };
+		return {
+			anthropicThinking: {
+				type: 'enabled',
+				budget_tokens: budgetMap[level] || 16000
+			}
+		};
+	}
+
+	if (provider === 'openai') {
+		return { openAiReasoningEffort: level };
+	}
+
+	if (provider === 'gemini') {
+		const budgetMap = { low: 4096, medium: 16384, high: 32768 };
+		return {
+			geminiThinkingConfig: {
+				thinkingBudget: budgetMap[level] || 16384
+			}
+		};
+	}
+
+	return {};
 }
 
 // ------------------------------------------------------------------ Anthropic
@@ -58,7 +81,8 @@ async function callAnthropic(
 	model: string,
 	messages: ChatMessage[],
 	systemPrompt: string,
-	tools: ToolDef[]
+	tools: ToolDef[],
+	thinkingLevel?: ThinkingLevel
 ): Promise<LLMResponse> {
 	const httpFetch = await getFetch();
 
@@ -106,6 +130,24 @@ async function callAnthropic(
 		}
 	}
 
+	const reqBody: Record<string, unknown> = {
+		model,
+		system: systemPrompt,
+		messages: anthropicMessages,
+		tools: anthropicTools.length > 0 ? anthropicTools : undefined,
+		max_tokens: 4096
+	};
+
+	if (thinkingLevel && thinkingLevel !== 'off') {
+		const config = getThinkingConfig('anthropic', thinkingLevel) as {
+			anthropicThinking?: { type: string; budget_tokens: number };
+		};
+		if (config.anthropicThinking) {
+			reqBody.thinking = config.anthropicThinking;
+			reqBody.max_tokens = Math.max(4096, config.anthropicThinking.budget_tokens + 4096);
+		}
+	}
+
 	const res = await httpFetch('https://api.anthropic.com/v1/messages', {
 		method: 'POST',
 		headers: {
@@ -113,13 +155,7 @@ async function callAnthropic(
 			'x-api-key': apiKey,
 			'anthropic-version': '2023-06-01'
 		},
-		body: JSON.stringify({
-			model,
-			system: systemPrompt,
-			messages: anthropicMessages,
-			tools: anthropicTools.length > 0 ? anthropicTools : undefined,
-			max_tokens: 4096
-		})
+		body: JSON.stringify(reqBody)
 	});
 
 	if (!res.ok) {
@@ -162,7 +198,8 @@ async function callOpenAI(
 	model: string,
 	messages: ChatMessage[],
 	systemPrompt: string,
-	tools: ToolDef[]
+	tools: ToolDef[],
+	thinkingLevel?: ThinkingLevel
 ): Promise<LLMResponse> {
 	const httpFetch = await getFetch();
 
@@ -206,18 +243,27 @@ async function callOpenAI(
 		}
 	}
 
+	const reqBody: Record<string, unknown> = {
+		model,
+		messages: openAiMessages,
+		tools: openAiTools.length > 0 ? openAiTools : undefined,
+		max_tokens: 4096
+	};
+
+	if (thinkingLevel && thinkingLevel !== 'off') {
+		const config = getThinkingConfig('openai', thinkingLevel);
+		if (config.openAiReasoningEffort) {
+			reqBody.reasoning_effort = config.openAiReasoningEffort;
+		}
+	}
+
 	const res = await httpFetch('https://api.openai.com/v1/chat/completions', {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${apiKey}`
 		},
-		body: JSON.stringify({
-			model,
-			messages: openAiMessages,
-			tools: openAiTools.length > 0 ? openAiTools : undefined,
-			max_tokens: 4096
-		})
+		body: JSON.stringify(reqBody)
 	});
 
 	if (!res.ok) {
@@ -270,7 +316,8 @@ async function callGemini(
 	model: string,
 	messages: ChatMessage[],
 	systemPrompt: string,
-	tools: ToolDef[]
+	tools: ToolDef[],
+	thinkingLevel?: ThinkingLevel
 ): Promise<LLMResponse> {
 	const httpFetch = await getFetch();
 
@@ -337,6 +384,15 @@ async function callGemini(
 		body.tools = [{ functionDeclarations }];
 	}
 
+	if (thinkingLevel && thinkingLevel !== 'off') {
+		const config = getThinkingConfig('gemini', thinkingLevel);
+		if (config.geminiThinkingConfig) {
+			body.generationConfig = {
+				thinkingConfig: config.geminiThinkingConfig
+			};
+		}
+	}
+
 	const res = await httpFetch(url, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -392,7 +448,8 @@ export async function callProvider(
 	model: string,
 	messages: ChatMessage[],
 	systemPrompt: string,
-	tools: ToolDef[]
+	tools: ToolDef[],
+	thinkingLevel?: ThinkingLevel
 ): Promise<LLMResponse> {
 	if (!apiKey) {
 		throw new Error(`API key for provider '${provider}' is not configured. Please open Settings.`);
@@ -400,72 +457,78 @@ export async function callProvider(
 
 	switch (provider) {
 		case 'anthropic':
-			return callAnthropic(apiKey, model, messages, systemPrompt, tools);
+			return callAnthropic(apiKey, model, messages, systemPrompt, tools, thinkingLevel);
 		case 'openai':
-			return callOpenAI(apiKey, model, messages, systemPrompt, tools);
+			return callOpenAI(apiKey, model, messages, systemPrompt, tools, thinkingLevel);
 		case 'gemini':
-			return callGemini(apiKey, model, messages, systemPrompt, tools);
+			return callGemini(apiKey, model, messages, systemPrompt, tools, thinkingLevel);
 		default:
 			throw new Error(`Unknown provider: ${provider}`);
 	}
 }
 
-// ------------------------------------------------------------------ Live Model Queries
-
-export const TOP_CANONICAL_MODELS: Record<ProviderId, string[]> = {
-	gemini: [
-		'gemini-2.5-pro',
-		'gemini-2.5-flash',
-		'gemini-2.0-flash',
-		'gemini-2.0-flash-lite',
-		'gemini-1.5-pro',
-		'gemini-1.5-flash'
-	],
-	anthropic: [
-		'claude-3-7-sonnet-20250219',
-		'claude-3-5-sonnet-20241022',
-		'claude-3-5-haiku-20241022',
-		'claude-3-opus-20240229'
-	],
-	openai: [
-		'gpt-4o',
-		'gpt-4o-mini',
-		'o3-mini',
-		'o1',
-		'gpt-4-turbo'
-	]
-};
+// ------------------------------------------------------------------ Dynamic Model Discovery
 
 /**
- * Filter and sort a raw list of model IDs down to the top production suggestions
- * known to be available to the user (matching the curated options in Antigravity).
+ * Filters and categorizes models dynamically based on provider capabilities
+ * rather than hardcoded model name lists.
  */
-export function filterTopModels(provider: ProviderId, modelIds: string[]): string[] {
-	const canonical = TOP_CANONICAL_MODELS[provider] || [];
-	const result: string[] = [];
-
-	for (const canon of canonical) {
-		if (modelIds.includes(canon)) {
-			result.push(canon);
-		} else {
-			// Prefix match (e.g. preview variants like 'gemini-2.5-pro-preview-03-25')
-			const prefix = canon.split('-').slice(0, 3).join('-');
-			const match = modelIds.find((id) => id === canon || id.startsWith(`${canon}-`) || id.startsWith(`${prefix}-`));
-			if (match && !result.includes(match)) {
-				result.push(match);
-			}
-		}
+export function filterGenerativeModels(provider: ProviderId, models: RawModelEntry[]): DiscoveredModel[] {
+	if (provider === 'gemini') {
+		return models
+			.filter((m) => {
+				if (m.methods && !m.methods.includes('generateContent')) return false;
+				const l = m.id.toLowerCase();
+				if (l.includes('embedding') || l.includes('aqa') || l.includes('imagen')) return false;
+				return true;
+			})
+			.map((m) => ({
+				id: m.id,
+				displayName: m.displayName || formatModelLabel(m.id),
+				supportsThinking: Boolean(
+					m.id.includes('argon') ||
+					m.id.includes('thinking') ||
+					m.id.includes('reasoning') ||
+					m.id.includes('2.5-pro')
+				)
+			}));
 	}
 
-	// If no exact canonical match occurred (e.g. mock or unexpected IDs), fall back to curated canonical
-	if (result.length === 0) {
-		return [...canonical];
+	if (provider === 'anthropic') {
+		const sorted = [...models].sort((a, b) => (b.created || 0) - (a.created || 0));
+		return sorted.map((m) => ({
+			id: m.id,
+			displayName: m.displayName || formatModelLabel(m.id),
+			supportsThinking: Boolean(
+				m.id.includes('opus-5') ||
+				m.id.includes('3-7-sonnet') ||
+				m.id.includes('thinking')
+			)
+		}));
 	}
 
-	return result;
+	if (provider === 'openai') {
+		const nonChatMarkers = ['whisper', 'dall-e', 'tts', 'embedding', 'babbage', 'davinci', 'realtime', 'audio'];
+		const filtered = models.filter((m) => {
+			const l = m.id.toLowerCase();
+			return !nonChatMarkers.some((marker) => l.includes(marker));
+		});
+		const sorted = [...filtered].sort((a, b) => (b.created || 0) - (a.created || 0));
+		return sorted.map((m) => ({
+			id: m.id,
+			displayName: m.displayName || formatModelLabel(m.id),
+			supportsThinking: Boolean(
+				m.id.startsWith('o1') ||
+				m.id.startsWith('o3') ||
+				m.id.includes('reasoning')
+			)
+		}));
+	}
+
+	return models.map((m) => ({ id: m.id, displayName: m.displayName || m.id }));
 }
 
-async function listAnthropicModels(apiKey: string): Promise<string[]> {
+async function listAnthropicModels(apiKey: string): Promise<DiscoveredModel[]> {
 	const httpFetch = await getFetch();
 	const res = await httpFetch('https://api.anthropic.com/v1/models', {
 		method: 'GET',
@@ -478,12 +541,18 @@ async function listAnthropicModels(apiKey: string): Promise<string[]> {
 		const err = await res.text();
 		throw new Error(`Failed to list Anthropic models (${res.status}): ${err}`);
 	}
-	const data = (await res.json()) as { data?: Array<{ id: string }> };
-	const raw = (data.data || []).map((m) => m.id);
-	return filterTopModels('anthropic', raw);
+	const data = (await res.json()) as {
+		data?: Array<{ id: string; display_name?: string; created_at?: string }>;
+	};
+	const raw: RawModelEntry[] = (data.data || []).map((m) => ({
+		id: m.id,
+		displayName: m.display_name,
+		created: m.created_at ? new Date(m.created_at).getTime() / 1000 : 0
+	}));
+	return filterGenerativeModels('anthropic', raw);
 }
 
-async function listOpenAIModels(apiKey: string): Promise<string[]> {
+async function listOpenAIModels(apiKey: string): Promise<DiscoveredModel[]> {
 	const httpFetch = await getFetch();
 	const res = await httpFetch('https://api.openai.com/v1/models', {
 		method: 'GET',
@@ -495,12 +564,15 @@ async function listOpenAIModels(apiKey: string): Promise<string[]> {
 		const err = await res.text();
 		throw new Error(`Failed to list OpenAI models (${res.status}): ${err}`);
 	}
-	const data = (await res.json()) as { data?: Array<{ id: string }> };
-	const raw = (data.data || []).map((m) => m.id);
-	return filterTopModels('openai', raw);
+	const data = (await res.json()) as { data?: Array<{ id: string; created?: number }> };
+	const raw: RawModelEntry[] = (data.data || []).map((m) => ({
+		id: m.id,
+		created: m.created || 0
+	}));
+	return filterGenerativeModels('openai', raw);
 }
 
-async function listGeminiModels(apiKey: string): Promise<string[]> {
+async function listGeminiModels(apiKey: string): Promise<DiscoveredModel[]> {
 	const httpFetch = await getFetch();
 	const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
 	const res = await httpFetch(url, {
@@ -518,17 +590,20 @@ async function listGeminiModels(apiKey: string): Promise<string[]> {
 		}>;
 	};
 
-	const raw = (data.models || [])
-		.filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
-		.map((m) => m.name.replace(/^models\//, ''));
+	const raw: RawModelEntry[] = (data.models || []).map((m) => ({
+		id: m.name.replace(/^models\//, ''),
+		displayName: m.displayName,
+		methods: m.supportedGenerationMethods
+	}));
 
-	return filterTopModels('gemini', raw);
+	return filterGenerativeModels('gemini', raw);
 }
 
 /**
- * Query the provider's API backend to retrieve top production models available to this account.
+ * Query the provider's API backend to retrieve all available text generation models dynamically.
+ * Zero hard-coded model lists; all names originate directly from the service backend.
  */
-export async function fetchAvailableModels(provider: ProviderId, apiKey: string): Promise<string[]> {
+export async function fetchAvailableModels(provider: ProviderId, apiKey: string): Promise<DiscoveredModel[]> {
 	if (!apiKey) return [];
 	switch (provider) {
 		case 'anthropic':

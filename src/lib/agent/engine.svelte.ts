@@ -164,7 +164,8 @@ class AgentEngine {
 					modelChoice.model,
 					this.#messages,
 					systemPrompt,
-					AGENT_TOOLS
+					AGENT_TOOLS,
+					modelChoice.thinkingLevel
 				);
 
 				if (response.promptTokens) this.totalPromptTokens += response.promptTokens;

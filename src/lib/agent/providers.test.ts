@@ -1,83 +1,43 @@
+// @spec MOD-002, MOD-003, MOD-004
 import { describe, it, expect } from 'vitest';
-import { filterTopModels, formatModelLabel, TOP_CANONICAL_MODELS } from './providers';
+import {
+	filterGenerativeModels,
+	formatModelLabel,
+	getThinkingConfig,
+	type RawModelEntry
+} from './providers';
 
-describe('filterTopModels', () => {
-	it('filters Gemini models to only canonical top suggestions', () => {
-		// Mock 46 models returned from raw Gemini v1beta/models API
-		const rawGemini46 = [
-			'gemini-2.5-pro',
-			'gemini-2.5-flash',
-			'gemini-2.0-flash',
-			'gemini-2.0-flash-lite',
-			'gemini-1.5-pro',
-			'gemini-1.5-flash',
-			'gemini-1.5-flash-8b',
-			'gemini-1.0-pro-001',
-			'gemini-1.0-pro-latest',
-			'gemini-1.5-pro-exp-0801',
-			'gemini-1.5-flash-exp-0827',
-			'text-embedding-004',
-			'aqa',
-			'imagen-3.0-generate-002',
-			'chat-bison-001'
+describe('filterGenerativeModels', () => {
+	// @spec MOD-002
+	it('filters out non-generative models and preserves arbitrary new models', () => {
+		const rawGemini: RawModelEntry[] = [
+			{ id: 'gemini-4-argon', displayName: 'Gemini 4 Argon', methods: ['generateContent'] },
+			{ id: 'gemini-3.8-flash', displayName: 'Gemini 3.8 Flash', methods: ['generateContent'] },
+			{ id: 'text-embedding-004', displayName: 'Embeddings', methods: ['embedContent'] },
+			{ id: 'aqa', displayName: 'AQA', methods: ['generateAnswer'] },
+			{ id: 'imagen-3.0', displayName: 'Imagen', methods: ['generateImage'] }
 		];
 
-		const filtered = filterTopModels('gemini', rawGemini46);
-
-		// Should match the top canonical suggestions
-		expect(filtered).toEqual([
-			'gemini-2.5-pro',
-			'gemini-2.5-flash',
-			'gemini-2.0-flash',
-			'gemini-2.0-flash-lite',
-			'gemini-1.5-pro',
-			'gemini-1.5-flash'
-		]);
-	});
-
-	it('filters Anthropic models down to top Claude 3.x models', () => {
-		const rawAnthropic = [
-			'claude-3-7-sonnet-20250219',
-			'claude-3-5-sonnet-20241022',
-			'claude-3-5-haiku-20241022',
-			'claude-3-opus-20240229',
-			'claude-2.1',
-			'claude-2.0',
-			'claude-instant-1.2'
-		];
-
-		const filtered = filterTopModels('anthropic', rawAnthropic);
-		expect(filtered).toEqual([
-			'claude-3-7-sonnet-20250219',
-			'claude-3-5-sonnet-20241022',
-			'claude-3-5-haiku-20241022',
-			'claude-3-opus-20240229'
-		]);
-	});
-
-	it('filters OpenAI models to top GPT-4o and reasoning models', () => {
-		const rawOpenAI = [
-			'gpt-4o',
-			'gpt-4o-mini',
-			'o3-mini',
-			'o1',
-			'gpt-4-turbo',
-			'text-embedding-3-small',
-			'dall-e-3',
-			'tts-1',
-			'whisper-1'
-		];
-
-		const filtered = filterTopModels('openai', rawOpenAI);
-		expect(filtered).toEqual(['gpt-4o', 'gpt-4o-mini', 'o3-mini', 'o1', 'gpt-4-turbo']);
+		const filtered = filterGenerativeModels('gemini', rawGemini);
+		expect(filtered.map((m) => m.id)).toEqual(['gemini-4-argon', 'gemini-3.8-flash']);
 	});
 });
 
 describe('formatModelLabel', () => {
-	it('provides friendly labels for Antigravity-supported models', () => {
-		expect(formatModelLabel('gemini-2.5-pro')).toBe('Gemini 2.5 Pro (Flagship)');
-		expect(formatModelLabel('gemini-2.0-flash')).toBe('Gemini 2.0 Flash (Fast)');
-		expect(formatModelLabel('claude-3-7-sonnet-20250219')).toBe('Claude 3.7 Sonnet (Flagship)');
-		expect(formatModelLabel('gpt-4o')).toBe('GPT-4o (Flagship)');
+	// @spec MOD-003
+	it('formats model labels cleanly using provider displayName or formatted id', () => {
+		expect(formatModelLabel('gemini-4-argon', 'Gemini 4 Argon')).toBe('Gemini 4 Argon');
+		expect(formatModelLabel('claude-opus-5.5', 'Claude Opus 5.5')).toBe('Claude Opus 5.5');
+		expect(formatModelLabel('my-custom-model')).toBe('My Custom Model');
+	});
+});
+
+describe('getThinkingConfig', () => {
+	// @spec MOD-004
+	it('provides valid reasoning payloads for reasoning models', () => {
+		expect(getThinkingConfig('openai', 'high')).toEqual({ openAiReasoningEffort: 'high' });
+		expect(getThinkingConfig('gemini', 'medium')).toEqual({ geminiThinkingConfig: { thinkingBudget: 16384 } });
+		expect(getThinkingConfig('anthropic', 'low')).toEqual({ anthropicThinking: { type: 'enabled', budget_tokens: 4000 } });
+		expect(getThinkingConfig('anthropic', 'off')).toEqual({});
 	});
 });

@@ -27,11 +27,14 @@
 
 	let isCustomModel = $state(false);
 	let availableModels = $derived(settings.modelsForProvider(settings.value.defaultModel.provider));
+	let currentModelMetadata = $derived(
+		availableModels.find((m) => m.id === settings.value.defaultModel.model)
+	);
 
 	$effect(() => {
 		const curr = settings.value.defaultModel.model;
-		const list = availableModels;
-		if (curr && !list.includes(curr)) {
+		const list = availableModels.map((m) => m.id);
+		if (curr && list.length > 0 && !list.includes(curr)) {
 			isCustomModel = true;
 		}
 	});
@@ -66,9 +69,9 @@
 			if (models.length > 0) {
 				settings.updateModelCache(pid, models);
 				queryMessage = `✓ Retrieved ${models.length} available models from ${PROVIDERS[pid].label}.`;
-				// If current model is not in list, select the flagship/top one
-				if (!models.includes(settings.value.defaultModel.model) && settings.value.defaultModel.provider === pid) {
-					settings.value.defaultModel.model = models[0];
+				// If current model is empty or not in retrieved models, select the top one
+				if (!models.some((m) => m.id === settings.value.defaultModel.model) && settings.value.defaultModel.provider === pid) {
+					settings.value.defaultModel.model = models[0].id;
 					isCustomModel = false;
 				}
 			} else {
@@ -177,7 +180,7 @@
 							const p = settings.value.defaultModel.provider;
 							const available = settings.modelsForProvider(p);
 							if (available.length > 0) {
-								settings.value.defaultModel.model = available[0];
+								settings.value.defaultModel.model = available[0].id;
 								isCustomModel = false;
 							}
 							if (apiKeys[p]) {
@@ -210,8 +213,8 @@
 						}}
 					>
 						{#each availableModels as m}
-							<option value={m}>
-								{formatModelLabel(m)} ({m})
+							<option value={m.id}>
+								{formatModelLabel(m.id, m.displayName)} ({m.id})
 							</option>
 						{/each}
 						<option value="__custom__">⚙ Custom Model ID...</option>
@@ -230,7 +233,7 @@
 								onclick={() => {
 									isCustomModel = false;
 									if (availableModels.length > 0) {
-										settings.value.defaultModel.model = availableModels[0];
+										settings.value.defaultModel.model = availableModels[0].id;
 									}
 								}}
 							>
@@ -238,6 +241,29 @@
 							</button>
 						</div>
 					{/if}
+				</div>
+			</div>
+
+			<div class="form-row">
+				<div class="form-group flex-1">
+					<label for="thinking-level">
+						Thinking / Reasoning Level
+						{#if currentModelMetadata?.supportsThinking}
+							<span class="badge">Reasoning Capable</span>
+						{/if}
+					</label>
+					<select
+						id="thinking-level"
+						bind:value={settings.value.defaultModel.thinkingLevel}
+					>
+						<option value="off">Off (Standard)</option>
+						<option value="low">Low (Light Reasoning)</option>
+						<option value="medium">Medium (Balanced)</option>
+						<option value="high">High (Deep Deliberation)</option>
+					</select>
+					<span class="muted font-small">
+						Extended thinking tokens or reasoning effort for models supporting chain-of-thought.
+					</span>
 				</div>
 			</div>
 		</div>
@@ -309,6 +335,20 @@
 	}
 	.font-normal {
 		font-weight: 400;
+	}
+
+	.badge {
+		display: inline-block;
+		font-size: 10px;
+		font-weight: 600;
+		background: color-mix(in srgb, var(--accent) 18%, transparent);
+		color: var(--accent);
+		padding: 2px 6px;
+		border-radius: 4px;
+		margin-left: 6px;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		vertical-align: middle;
 	}
 
 	.info-banner {

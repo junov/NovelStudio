@@ -86,7 +86,7 @@
 			</div>
 		{/if}
 
-		<div class="model-indicator" title="Active Model">
+		<div class="model-indicator" onclick={onOpenSettings} title="Active Model — Click to configure or query models">
 			<span class="provider-dot {settings.value.defaultModel.provider}"></span>
 			<span class="model-name">{settings.value.defaultModel.model}</span>
 		</div>

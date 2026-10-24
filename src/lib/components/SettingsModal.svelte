@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { settings, PROVIDERS, type ProviderId } from '$lib/stores/settings.svelte';
 	import { secretGet, secretSet, secretDelete } from '$lib/tauri';
-	import { PIPELINE } from '$lib/stages';
+	import { fetchAvailableModels } from '$lib/agent/providers';
 
 	interface Props {
 		onClose: () => void;
@@ -16,13 +16,58 @@
 		gemini: ''
 	});
 	let isSaving = $state(false);
+	let isQuerying = $state<Record<ProviderId, boolean>>({
+		anthropic: false,
+		openai: false,
+		gemini: false
+	});
+	let queryMessage = $state<string | null>(null);
+	let queryError = $state<string | null>(null);
 
 	onMount(async () => {
 		for (const pid of ['anthropic', 'openai', 'gemini'] as ProviderId[]) {
 			const val = await secretGet(PROVIDERS[pid].keyName);
 			if (val) apiKeys[pid] = val;
 		}
+
+		// Auto-query models if an API key is configured and cache is empty
+		const currentProv = settings.value.defaultModel.provider;
+		if (apiKeys[currentProv] && (!settings.value.modelCache[currentProv] || settings.value.modelCache[currentProv]!.length === 0)) {
+			queryModels(currentProv);
+		}
 	});
+
+	async function queryModels(pid: ProviderId) {
+		const key = apiKeys[pid]?.trim();
+		if (!key) {
+			queryError = `Please enter an API key for ${PROVIDERS[pid].label} first.`;
+			queryMessage = null;
+			return;
+		}
+
+		isQuerying[pid] = true;
+		queryError = null;
+		queryMessage = `Querying available models from ${PROVIDERS[pid].label}...`;
+
+		try {
+			const models = await fetchAvailableModels(pid, key);
+			if (models.length > 0) {
+				settings.updateModelCache(pid, models);
+				queryMessage = `✓ Retrieved ${models.length} available models from ${PROVIDERS[pid].label}.`;
+				// If current model is not in list, select the latest one
+				if (!models.includes(settings.value.defaultModel.model) && settings.value.defaultModel.provider === pid) {
+					settings.value.defaultModel.model = models[0];
+				}
+			} else {
+				queryMessage = `No chat models returned from ${PROVIDERS[pid].label}.`;
+			}
+		} catch (e) {
+			queryError = e instanceof Error ? e.message : String(e);
+			queryMessage = null;
+		} finally {
+			isQuerying[pid] = false;
+		}
+	}
 
 	async function saveKeys() {
 		isSaving = true;
@@ -50,11 +95,23 @@
 	<div class="modal card" onclick={(e) => e.stopPropagation()}>
 		<h2>Settings & AI Model Configuration</h2>
 
+		<!-- Feedback Messages -->
+		{#if queryMessage}
+			<div class="info-banner ok">
+				<span>{queryMessage}</span>
+			</div>
+		{/if}
+		{#if queryError}
+			<div class="info-banner err">
+				<span>⚠ {queryError}</span>
+			</div>
+		{/if}
+
 		<!-- OS Keychain API Keys -->
 		<div class="section">
 			<h3 class="section-title">API Keys (Stored Securely in OS Keychain)</h3>
 			<p class="muted font-small">
-				Your credentials are saved into the OS Credential Manager / Keychain, never in plain project text.
+				Your credentials are saved directly into the OS Credential Manager / Keychain, never in plain project files.
 			</p>
 
 			{#each Object.entries(PROVIDERS) as [pid, meta]}
@@ -62,7 +119,17 @@
 				<div class="form-group">
 					<div class="label-row">
 						<label for="key-{pid}">{meta.label}</label>
-						<a href={meta.keyUrl} target="_blank" class="external-link">Get API Key ↗</a>
+						<div class="label-actions">
+							<button
+								class="btn small ghost text-btn"
+								onclick={() => queryModels(pId)}
+								disabled={isQuerying[pId] || !apiKeys[pId]}
+								title="Query backend to list all available models for this key"
+							>
+								{isQuerying[pId] ? 'Querying...' : '↻ Query Models'}
+							</button>
+							<a href={meta.keyUrl} target="_blank" class="external-link">Get Key ↗</a>
+						</div>
 					</div>
 					<input
 						id="key-{pid}"
@@ -76,7 +143,17 @@
 
 		<!-- Model Selection -->
 		<div class="section">
-			<h3 class="section-title">Default AI Model</h3>
+			<div class="section-header-row">
+				<h3 class="section-title">AI Model Selection</h3>
+				<button
+					class="btn small ghost"
+					onclick={() => queryModels(settings.value.defaultModel.provider)}
+					disabled={isQuerying[settings.value.defaultModel.provider] || !apiKeys[settings.value.defaultModel.provider]}
+				>
+					{isQuerying[settings.value.defaultModel.provider] ? 'Refreshing...' : '↻ Fetch Models from Provider'}
+				</button>
+			</div>
+
 			<div class="form-row">
 				<div class="form-group flex-1">
 					<label for="default-provider">Provider</label>
@@ -85,7 +162,13 @@
 						bind:value={settings.value.defaultModel.provider}
 						onchange={() => {
 							const p = settings.value.defaultModel.provider;
-							settings.value.defaultModel.model = PROVIDERS[p].suggested[0];
+							const available = settings.modelsForProvider(p);
+							if (available.length > 0) {
+								settings.value.defaultModel.model = available[0];
+							}
+							if (apiKeys[p]) {
+								queryModels(p);
+							}
 						}}
 					>
 						{#each Object.entries(PROVIDERS) as [pid, meta]}
@@ -94,13 +177,22 @@
 					</select>
 				</div>
 
-				<div class="form-group flex-1">
-					<label for="default-model">Model</label>
-					<select id="default-model" bind:value={settings.value.defaultModel.model}>
-						{#each PROVIDERS[settings.value.defaultModel.provider].suggested as m}
+				<div class="form-group flex-2">
+					<label for="default-model">
+						Model Name
+						<span class="muted font-normal">(select queried model or type custom)</span>
+					</label>
+					<input
+						id="default-model"
+						list="models-list"
+						placeholder="e.g. claude-3-7-sonnet-20250219"
+						bind:value={settings.value.defaultModel.model}
+					/>
+					<datalist id="models-list">
+						{#each settings.modelsForProvider(settings.value.defaultModel.provider) as m}
 							<option value={m}>{m}</option>
 						{/each}
-					</select>
+					</datalist>
 				</div>
 			</div>
 		</div>
@@ -157,12 +249,36 @@
 		margin-bottom: 12px;
 	}
 	.section-title {
-		margin: 0 0 4px;
+		margin: 0;
 		font-size: 14px;
+	}
+	.section-header-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 10px;
 	}
 	.font-small {
 		font-size: 11.5px;
-		margin-top: 0;
+		margin: 4px 0 10px;
+	}
+	.font-normal {
+		font-weight: 400;
+	}
+
+	.info-banner {
+		padding: 8px 12px;
+		border-radius: var(--radius);
+		font-size: 12.5px;
+		margin-bottom: 14px;
+	}
+	.info-banner.ok {
+		background: color-mix(in srgb, var(--ok) 15%, transparent);
+		color: var(--ok);
+	}
+	.info-banner.err {
+		background: color-mix(in srgb, var(--err) 15%, transparent);
+		color: var(--err);
 	}
 
 	.form-group {
@@ -180,6 +296,16 @@
 		justify-content: space-between;
 		align-items: center;
 	}
+	.label-actions {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.text-btn {
+		padding: 0 4px;
+		font-size: 11px;
+		color: var(--accent);
+	}
 	.external-link {
 		font-size: 11px;
 		text-decoration: none;
@@ -191,6 +317,9 @@
 	}
 	.flex-1 {
 		flex: 1;
+	}
+	.flex-2 {
+		flex: 2;
 	}
 
 	.modal-actions {

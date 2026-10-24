@@ -35,19 +35,19 @@ export const PROVIDERS: Record<ProviderId, { label: string; keyName: string; sug
 	openai: {
 		label: 'OpenAI',
 		keyName: 'openai_api_key',
-		suggested: ['gpt-5', 'gpt-5-mini', 'gpt-4.1'],
+		suggested: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini', 'gpt-4-turbo'],
 		keyUrl: 'https://platform.openai.com/api-keys'
 	},
 	anthropic: {
 		label: 'Anthropic Claude',
 		keyName: 'anthropic_api_key',
-		suggested: ['claude-sonnet-4-5', 'claude-opus-4-1', 'claude-haiku-4-5'],
+		suggested: ['claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
 		keyUrl: 'https://console.anthropic.com/settings/keys'
 	},
 	gemini: {
 		label: 'Google Gemini',
 		keyName: 'gemini_api_key',
-		suggested: ['gemini-2.5-pro', 'gemini-2.5-flash'],
+		suggested: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'],
 		keyUrl: 'https://aistudio.google.com/apikey'
 	}
 };
@@ -55,7 +55,7 @@ export const PROVIDERS: Record<ProviderId, { label: string; keyName: string; sug
 const DEFAULTS: Settings = {
 	theme: 'system',
 	recentProjects: [],
-	defaultModel: { provider: 'anthropic', model: 'claude-sonnet-4-5' },
+	defaultModel: { provider: 'anthropic', model: 'claude-3-7-sonnet-20250219' },
 	stageModels: {},
 	autoApprove: false,
 	maxAgentSteps: 80,
@@ -96,6 +96,20 @@ class SettingsState {
 
 	modelFor(stageId: string | undefined): ModelChoice {
 		return (stageId && this.value.stageModels[stageId]) || this.value.defaultModel;
+	}
+
+	modelsForProvider(provider: ProviderId): string[] {
+		const cached = this.value.modelCache[provider];
+		if (cached && cached.length > 0) return cached;
+		return PROVIDERS[provider].suggested;
+	}
+
+	updateModelCache(provider: ProviderId, models: string[]) {
+		this.value.modelCache = {
+			...this.value.modelCache,
+			[provider]: models
+		};
+		void this.save();
 	}
 
 	addRecent(path: string, title: string) {

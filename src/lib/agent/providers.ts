@@ -374,3 +374,82 @@ export async function callProvider(
 			throw new Error(`Unknown provider: ${provider}`);
 	}
 }
+
+// ------------------------------------------------------------------ Live Model Queries
+async function listAnthropicModels(apiKey: string): Promise<string[]> {
+	const httpFetch = await getFetch();
+	const res = await httpFetch('https://api.anthropic.com/v1/models', {
+		method: 'GET',
+		headers: {
+			'x-api-key': apiKey,
+			'anthropic-version': '2023-06-01'
+		}
+	});
+	if (!res.ok) {
+		const err = await res.text();
+		throw new Error(`Failed to list Anthropic models (${res.status}): ${err}`);
+	}
+	const data = (await res.json()) as { data?: Array<{ id: string }> };
+	const list = (data.data || []).map((m) => m.id).filter((id) => id.includes('claude'));
+	return list.sort().reverse();
+}
+
+async function listOpenAIModels(apiKey: string): Promise<string[]> {
+	const httpFetch = await getFetch();
+	const res = await httpFetch('https://api.openai.com/v1/models', {
+		method: 'GET',
+		headers: {
+			Authorization: `Bearer ${apiKey}`
+		}
+	});
+	if (!res.ok) {
+		const err = await res.text();
+		throw new Error(`Failed to list OpenAI models (${res.status}): ${err}`);
+	}
+	const data = (await res.json()) as { data?: Array<{ id: string }> };
+	const chatPrefixes = ['gpt-4', 'gpt-5', 'o1', 'o3', 'chatgpt'];
+	const list = (data.data || [])
+		.map((m) => m.id)
+		.filter((id) => chatPrefixes.some((p) => id.startsWith(p)) && !id.includes('realtime') && !id.includes('audio'));
+	return list.sort().reverse();
+}
+
+async function listGeminiModels(apiKey: string): Promise<string[]> {
+	const httpFetch = await getFetch();
+	const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+	const res = await httpFetch(url, {
+		method: 'GET'
+	});
+	if (!res.ok) {
+		const err = await res.text();
+		throw new Error(`Failed to list Gemini models (${res.status}): ${err}`);
+	}
+	const data = (await res.json()) as {
+		models?: Array<{
+			name: string;
+			supportedGenerationMethods?: string[];
+		}>;
+	};
+	const list = (data.models || [])
+		.filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+		.map((m) => m.name.replace(/^models\//, ''))
+		.filter((id) => !id.includes('embedding') && !id.includes('aqa') && !id.includes('imagen'));
+	return list.sort().reverse();
+}
+
+/**
+ * Query the provider's API backend to retrieve all models available to this account.
+ */
+export async function fetchAvailableModels(provider: ProviderId, apiKey: string): Promise<string[]> {
+	if (!apiKey) return [];
+	switch (provider) {
+		case 'anthropic':
+			return listAnthropicModels(apiKey);
+		case 'openai':
+			return listOpenAIModels(apiKey);
+		case 'gemini':
+			return listGeminiModels(apiKey);
+		default:
+			return [];
+	}
+}

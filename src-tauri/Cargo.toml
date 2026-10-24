@@ -1,0 +1,25 @@
+[package]
+name = "novelstudio"
+version = "0.1.0"
+description = "NovelStudio - a GUI for the SpecNovelist spec-driven novel writing process"
+authors = ["junov"]
+license = "MIT"
+edition = "2021"
+
+[lib]
+name = "novelstudio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-http = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-store = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+walkdir = "2"

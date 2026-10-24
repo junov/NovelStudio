@@ -1,0 +1,3 @@
+[submodule "third_party/specnovelist"]
+	path = third_party/specnovelist
+	url = https://github.com/junov/SpecNovelist.git

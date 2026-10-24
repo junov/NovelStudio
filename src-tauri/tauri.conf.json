@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "NovelStudio",
+  "version": "0.1.0",
+  "identifier": "dev.junov.novelstudio",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "NovelStudio",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 960,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../third_party/specnovelist/scripts/": "specnovelist/scripts/",
+      "../third_party/specnovelist/templates/": "specnovelist/templates/",
+      "../third_party/specnovelist/.agents/": "specnovelist/.agents/",
+      "../third_party/specnovelist/AGENTS.md": "specnovelist/AGENTS.md",
+      "../third_party/specnovelist/README.md": "specnovelist/README.md",
+      "../third_party/specnovelist/STARTING_FROM_SCRATCH.md": "specnovelist/STARTING_FROM_SCRATCH.md",
+      "resources/python/": "python/"
+    }
+  }
+}

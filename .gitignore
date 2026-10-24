@@ -1,0 +1,19 @@
+node_modules/
+/build/
+/.svelte-kit/
+/package/
+.env
+.env.*
+!.env.example
+vite.config.*.timestamp-*
+
+# Tauri / Rust
+/src-tauri/target/
+/src-tauri/gen/schemas/
+
+# Embedded Python runtime (fetched at build time)
+/src-tauri/resources/python/*
+!/src-tauri/resources/python/README.md
+
+.DS_Store
+Thumbs.db

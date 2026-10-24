@@ -61,6 +61,32 @@ export const secretGet = (name: string) => invoke<string | null>('secret_get', {
 
 export const secretDelete = (name: string) => invoke<void>('secret_delete', { name });
 
+/**
+ * Open a native system folder picker dialog.
+ * When running in Tauri, opens the native OS Explorer dialog.
+ * When running in a browser, prompts for a local path.
+ */
+export async function pickFolder(): Promise<string | null> {
+	if (inTauri()) {
+		try {
+			const res = await invoke<string | null>('pick_folder');
+			if (res) return res;
+		} catch (e) {
+			console.warn('Native pick_folder failed, falling back to plugin:', e);
+		}
+		try {
+			const { open } = await import('@tauri-apps/plugin-dialog');
+			const selected = await open({ directory: true, multiple: false });
+			return typeof selected === 'string' ? selected : null;
+		} catch (e) {
+			console.error('Folder picker dialog error:', e);
+			return null;
+		}
+	}
+	// Browser fallback
+	return prompt('Enter full folder path on your machine (e.g. C:\\Users\\...\\MyNovel):');
+}
+
 /** Run a specnovel command with `--json` and parse its stdout. */
 export async function specnovelJson<T>(project: string, args: string[]): Promise<T> {
 	const out = await runSpecnovel(project, [...args, '--json']);

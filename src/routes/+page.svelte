@@ -13,7 +13,7 @@
 	import NewProjectModal from '$lib/components/NewProjectModal.svelte';
 	import SettingsModal from '$lib/components/SettingsModal.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
-	import { inTauri } from '$lib/tauri';
+	import { pickFolder } from '$lib/tauri';
 
 	let showNewModal = $state(false);
 	let showSettingsModal = $state(false);
@@ -33,23 +33,10 @@
 	});
 
 	async function openFolderDialog() {
-		if (inTauri()) {
-			try {
-				const { open } = await import('@tauri-apps/plugin-dialog');
-				const selected = await open({ directory: true, multiple: false });
-				if (typeof selected === 'string') {
-					await project.open(selected);
-					settings.addRecent(selected, project.title);
-				}
-			} catch (e) {
-				console.error(e);
-			}
-		} else {
-			const p = prompt('Enter novel project root directory:');
-			if (p) {
-				await project.open(p);
-				settings.addRecent(p, project.title);
-			}
+		const selected = await pickFolder();
+		if (selected) {
+			await project.open(selected);
+			settings.addRecent(selected, project.title);
 		}
 	}
 

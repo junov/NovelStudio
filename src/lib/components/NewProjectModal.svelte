@@ -2,7 +2,7 @@
 	import { project } from '$lib/stores/project.svelte';
 	import { settings } from '$lib/stores/settings.svelte';
 	import { agent } from '$lib/agent/engine.svelte';
-	import { ensureDir, runSpecnovel, inTauri } from '$lib/tauri';
+	import { ensureDir, runSpecnovel, pickFolder } from '$lib/tauri';
 
 	interface Props {
 		onClose: () => void;
@@ -18,16 +18,9 @@
 	let errorMessage = $state<string | null>(null);
 
 	async function browseFolder() {
-		if (inTauri()) {
-			try {
-				const { open } = await import('@tauri-apps/plugin-dialog');
-				const selected = await open({ directory: true, multiple: false });
-				if (typeof selected === 'string') {
-					projectPath = selected;
-				}
-			} catch (e) {
-				console.error(e);
-			}
+		const selected = await pickFolder();
+		if (selected) {
+			projectPath = selected;
 		}
 	}
 

@@ -2,7 +2,7 @@
 	import { project } from '$lib/stores/project.svelte';
 	import { settings, PROVIDERS, type ProviderId } from '$lib/stores/settings.svelte';
 	import { agent } from '$lib/agent/engine.svelte';
-	import { inTauri } from '$lib/tauri';
+	import { pickFolder } from '$lib/tauri';
 
 	interface Props {
 		onNewProject: () => void;
@@ -14,19 +14,10 @@
 	let { onNewProject, onOpenProject, onOpenSettings, onOpenPalette }: Props = $props();
 
 	async function selectFolder() {
-		if (inTauri()) {
-			try {
-				const { open } = await import('@tauri-apps/plugin-dialog');
-				const selected = await open({ directory: true, multiple: false });
-				if (typeof selected === 'string') {
-					await project.open(selected);
-					settings.addRecent(selected, project.title);
-				}
-			} catch (e) {
-				console.error(e);
-			}
-		} else {
-			onOpenProject();
+		const selected = await pickFolder();
+		if (selected) {
+			await project.open(selected);
+			settings.addRecent(selected, project.title);
 		}
 	}
 </script>

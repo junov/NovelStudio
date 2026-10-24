@@ -193,6 +193,17 @@ async fn run_git(project: String, args: Vec<String>) -> Result<CmdOutput, String
     .map_err(|e| e.to_string())?
 }
 
+/// Show a native system folder picker dialog.
+#[tauri::command]
+async fn pick_folder() -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let folder = rfd::FileDialog::new().pick_folder();
+        Ok(folder.map(|p| p.to_string_lossy().to_string()))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 fn ensure_dir(path: String) -> Result<(), String> {
     std::fs::create_dir_all(&path).map_err(|e| e.to_string())
@@ -337,6 +348,7 @@ pub fn run() {
             toolkit_info,
             run_specnovel,
             run_git,
+            pick_folder,
             ensure_dir,
             path_exists,
             read_text,

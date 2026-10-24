@@ -25,6 +25,6 @@ export default defineConfig({
 		watch: { ignored: ['**/src-tauri/**', '**/third_party/**'] }
 	},
 	test: {
-		include: ['src/**/*.test.ts']
+		include: ['src/**/*.test.ts', 'test/**/*.test.ts']
 	}
 });

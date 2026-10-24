@@ -5,6 +5,8 @@
 //! * running `specnovel.py` and `git` inside a novel project,
 //! * project-scoped file IO (all paths are confined to the project root),
 //! * OS keychain access for provider API keys.
+//!
+//! @spec PROJ-001, MOD-001, AGT-002
 
 use serde::Serialize;
 use std::path::{Component, Path, PathBuf};

@@ -1,6 +1,7 @@
 /**
  * SpecNovelist entity model: ID prefixes, wiki-link parsing, definitions and backlinks.
  * Regexes mirror `specnovel.py` (ID_PATTERN, ID_HEADING_RE, REF_RE).
+ * @spec BBL-001, BBL-002
  */
 
 export const ID_PATTERN = '[A-Z][A-Z0-9]*-\\d{3,}';

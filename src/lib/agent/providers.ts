@@ -1,5 +1,6 @@
 /**
  * Unified multi-provider LLM client for Anthropic, OpenAI, and Gemini.
+ * @spec MOD-002, MOD-003
  */
 import { inTauri } from '$lib/tauri';
 import type { ChatMessage, LLMResponse, ToolCall, ToolDef } from './types';

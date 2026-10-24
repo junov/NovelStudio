@@ -1,5 +1,6 @@
 /**
  * App-wide settings persisted with tauri-plugin-store (API keys live in the OS keychain instead).
+ * @spec MOD-001, PROJ-002
  */
 import { load, type Store } from '@tauri-apps/plugin-store';
 import { inTauri } from '$lib/tauri';
@@ -93,7 +94,9 @@ class SettingsState {
 	async save() {
 		const snapshot = $state.snapshot(this.value);
 		if (this.#store) await this.#store.set('settings', snapshot);
-		else localStorage.setItem('novelstudio.settings', JSON.stringify(snapshot));
+		else if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('novelstudio.settings', JSON.stringify(snapshot));
+		}
 		this.applyTheme();
 	}
 

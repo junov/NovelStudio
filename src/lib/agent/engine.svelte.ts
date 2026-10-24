@@ -1,5 +1,6 @@
 /**
  * The core SpecNovelist agent execution loop.
+ * @spec AGT-001, AGT-002
  */
 import {
 	readText,

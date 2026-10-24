@@ -1,5 +1,6 @@
 /**
  * Thin typed wrappers around the Rust commands in `src-tauri/src/lib.rs`.
+ * @spec PROJ-001, MOD-001, AGT-002
  */
 import { invoke } from '@tauri-apps/api/core';
 

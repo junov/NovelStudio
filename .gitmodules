@@ -1,3 +1,6 @@
 [submodule "third_party/specnovelist"]
 	path = third_party/specnovelist
 	url = https://github.com/junov/SpecNovelist.git
+[submodule "third_party/specdrive"]
+	path = third_party/specdrive
+	url = https://github.com/junov/SpecDrive.git

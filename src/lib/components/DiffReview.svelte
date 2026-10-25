@@ -82,6 +82,8 @@
 		border: 1px solid var(--accent);
 		background: var(--paper);
 		overflow: hidden;
+		flex-shrink: 0;
+		min-height: fit-content;
 	}
 
 	.diff-header {

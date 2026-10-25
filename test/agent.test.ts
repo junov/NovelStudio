@@ -2,6 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import { AGENT_TOOLS } from '../src/lib/agent/tools';
 import { initAnswers } from '../src/lib/components/InterviewCard.svelte';
+import { parseAskUserQuestions } from '../src/lib/agent/engine.svelte';
+import { renderMarkdown } from '../src/lib/markdown';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import type { AskUserRequest } from '../src/lib/agent/types';
@@ -73,6 +75,18 @@ describe('AGT-002: Inline Author Interview in Agent Feed', () => {
 		expect(cancelMethod).toContain('this.activeQuestion = null');
 		expect(cancelMethod).toContain("this.status = 'idle'");
 	});
+
+	// @spec AGT-002
+	it('prevents zero-height flexbox collapse on interview card and feed entries', () => {
+		const cardSource = readFileSync(resolve(__dirname, '../src/lib/components/InterviewCard.svelte'), 'utf-8');
+		const panelSource = readFileSync(resolve(__dirname, '../src/lib/components/AgentPanel.svelte'), 'utf-8');
+		const diffSource = readFileSync(resolve(__dirname, '../src/lib/components/DiffReview.svelte'), 'utf-8');
+
+		expect(cardSource).toContain('flex-shrink: 0;');
+		expect(cardSource).toContain('min-height: fit-content;');
+		expect(panelSource).toContain('flex-shrink: 0;');
+		expect(diffSource).toContain('flex-shrink: 0;');
+	});
 });
 
 describe('AGT-005: Author Interview Card Schema and Form Controls', () => {
@@ -115,6 +129,10 @@ describe('AGT-005: Author Interview Card Schema and Form Controls', () => {
 
 	// @spec AGT-005
 	it('renders markdown guidance, sequential numbering, option pills, and freeform inputs', () => {
+		const html = renderMarkdown("In storytelling craft, a **[logline](https://en.wikipedia.org/wiki/Logline)** is a 1–2 sentence summary that answers: *Who is the protagonist, what urgent mission drives them, what antagonistic force opposes them, and what happens if they fail?* In this sci-fi retelling of *Little Red Riding Hood*, we need to anchor Red, the 'Wolf', and 'Grandmother'.");
+		expect(html).toContain('https://en.wikipedia.org/wiki/Logline');
+		expect(html).toContain('<strong>');
+
 		const cardSource = readFileSync(resolve(__dirname, '../src/lib/components/InterviewCard.svelte'), 'utf-8');
 
 		// Sequential question numbering
@@ -140,9 +158,63 @@ describe('AGT-005: Author Interview Card Schema and Form Controls', () => {
 		// Answer packaging on submit
 		expect(cardSource).toContain('submitAll');
 		expect(cardSource).toContain('questionId: q.id');
-		expect(cardSource).toContain('selected: a?.selected');
-		expect(cardSource).toContain('text: a?.text?.trim()');
-		expect(cardSource).toContain('skipped: a?.skipped');
+		expect(cardSource).toContain('selected: a.selected.length > 0 ? a.selected : undefined');
+		expect(cardSource).toContain('text: a.text?.trim()');
+		expect(cardSource).toContain('skipped: a.skipped');
+	});
+
+	// @spec AGT-005
+	it('uses valid HTML phrasing content inside option buttons to avoid parser errors', () => {
+		const cardSource = readFileSync(resolve(__dirname, '../src/lib/components/InterviewCard.svelte'), 'utf-8');
+		// Valid HTML requires phrasing content inside <button>; <div> inside <button> is prohibited
+		expect(cardSource).toContain('<span class="opt-body">');
+		expect(cardSource).not.toContain('<div class="opt-body">');
+	});
+
+	// @spec AGT-005
+	it('defensively normalizes tool arguments with parseAskUserQuestions', () => {
+		// Case 1: Standard object array
+		const parsedStandard = parseAskUserQuestions({
+			questions: [
+				{
+					id: 'q1',
+					prompt: 'Logline',
+					options: [{ label: 'Opt 1', description: 'Desc 1' }]
+				}
+			]
+		});
+		expect(parsedStandard).toHaveLength(1);
+		expect(parsedStandard[0].id).toBe('q1');
+		expect(parsedStandard[0].prompt).toBe('Logline');
+		expect(parsedStandard[0].options?.[0].label).toBe('Opt 1');
+
+		// Case 2: JSON string encoded questions
+		const parsedJsonString = parseAskUserQuestions({
+			questions: JSON.stringify([
+				{
+					prompt: 'What genre?',
+					options: ['Cyberpunk', 'Solarpunk']
+				}
+			])
+		});
+		expect(parsedJsonString).toHaveLength(1);
+		expect(parsedJsonString[0].id).toBe('q_1');
+		expect(parsedJsonString[0].prompt).toBe('What genre?');
+		expect(parsedJsonString[0].options?.[0].label).toBe('Cyberpunk');
+		expect(parsedJsonString[0].options?.[1].label).toBe('Solarpunk');
+
+		// Case 3: Single question at top level
+		const parsedSingle = parseAskUserQuestions({
+			prompt: 'Standalone question?',
+			options: [{ label: 'Yes' }, { label: 'No' }]
+		});
+		expect(parsedSingle).toHaveLength(1);
+		expect(parsedSingle[0].prompt).toBe('Standalone question?');
+		expect(parsedSingle[0].id).toBe('q_1');
+
+		// Case 4: Invalid/empty arguments
+		expect(parseAskUserQuestions({})).toEqual([]);
+		expect(parseAskUserQuestions({ questions: 'invalid json' })).toEqual([]);
 	});
 });
 

@@ -6,7 +6,9 @@
 		for (const q of req?.questions || []) {
 			const initialSelected: string[] = [];
 			if (q.options && q.recommendedIndex !== undefined && q.options[q.recommendedIndex]) {
-				initialSelected.push(q.options[q.recommendedIndex].label);
+				const rec = q.options[q.recommendedIndex];
+				const recLabel = typeof rec === 'string' ? rec : rec.label;
+				if (recLabel) initialSelected.push(recLabel);
 			} else if (q.defaultValue) {
 				initialSelected.push(q.defaultValue);
 			}
@@ -34,11 +36,18 @@
 
 	let { request }: Props = $props();
 
-	// Initialize synchronously so initial render cycle is never undefined
-	let answers = $state<Record<string, { selected: string[]; text: string; skipped: boolean }>>(initAnswers(request));
-	let currentRequestId = $state(request?.id);
+	// Initialize and ensure reactive synchronization with request
+	let answers = $state<Record<string, { selected: string[]; text: string; skipped: boolean }>>({});
+	let currentRequestId = $state<string | undefined>(undefined);
 
-	$effect(() => {
+	function ensureAnswer(qid: string) {
+		if (!answers[qid]) {
+			answers[qid] = { selected: [], text: '', skipped: false };
+		}
+		return answers[qid];
+	}
+
+	$effect.pre(() => {
 		if (request && request.id !== currentRequestId) {
 			currentRequestId = request.id;
 			answers = initAnswers(request);
@@ -46,61 +55,59 @@
 	});
 
 	function toggleOption(q: AskUserQuestion, optLabel: string) {
-		if (!answers[q.id]) {
-			answers[q.id] = { selected: [], text: '', skipped: false };
-		}
-		const current = answers[q.id].selected || [];
+		const ans = ensureAnswer(q.id);
+		const current = ans.selected || [];
 		if (q.isMultiSelect) {
 			if (current.includes(optLabel)) {
-				answers[q.id].selected = current.filter((x) => x !== optLabel);
+				ans.selected = current.filter((x) => x !== optLabel);
 			} else {
-				answers[q.id].selected = [...current, optLabel];
+				ans.selected = [...current, optLabel];
 			}
 		} else {
-			answers[q.id].selected = [optLabel];
+			ans.selected = [optLabel];
 		}
-		answers[q.id].skipped = false;
+		ans.skipped = false;
 	}
 
 	function skipQuestion(qid: string) {
-		if (!answers[qid]) {
-			answers[qid] = { selected: [], text: '', skipped: true };
-		} else {
-			answers[qid].skipped = true;
-			answers[qid].selected = [];
-			answers[qid].text = '';
+		const ans = ensureAnswer(qid);
+		ans.skipped = !ans.skipped;
+		if (ans.skipped) {
+			ans.selected = [];
+			ans.text = '';
 		}
 	}
 
 	function submitAll() {
-		const result: UserAnswer[] = request.questions.map((q) => {
-			const a = answers[q.id];
+		const result: UserAnswer[] = (request?.questions || []).map((q) => {
+			const a = answers[q.id] || { selected: [], text: '', skipped: false };
 			return {
 				questionId: q.id,
-				selected: a?.selected,
-				text: a?.text?.trim() || undefined,
-				skipped: a?.skipped
+				selected: a.selected.length > 0 ? a.selected : undefined,
+				text: a.text?.trim() || undefined,
+				skipped: a.skipped || undefined
 			};
 		});
-		request.resolve(result);
+		request?.resolve(result);
 	}
 </script>
 
 <div class="interview-card card">
 	<div class="card-header">
 		<span class="card-icon">✦</span>
-		<h3 class="card-title">{request.title || 'Discovery Interview'}</h3>
+		<h3 class="card-title">{request?.title || 'Discovery Interview'}</h3>
 	</div>
 
 	<div class="card-body">
-		{#each request.questions as q, i}
-			{@const ans = answers[q.id] || { selected: [], text: '', skipped: false }}
+		{#each request?.questions || [] as q, i}
+			{@const ans = ensureAnswer(q.id)}
 			<div class="question-block" class:is-skipped={ans.skipped}>
 				<div class="question-head">
 					<span class="q-num">Q{i + 1}</span>
 					<span class="q-prompt">{q.prompt}</span>
 					{#if q.allowSkip !== false}
 						<button
+							type="button"
 							class="skip-btn"
 							class:active={ans.skipped}
 							onclick={() => skipQuestion(q.id)}
@@ -120,25 +127,28 @@
 					{#if q.options && q.options.length > 0}
 						<div class="options-grid">
 							{#each q.options as opt}
-								{@const isSelected = Boolean(ans.selected?.includes(opt.label))}
+								{@const optLabel = typeof opt === 'string' ? opt : opt.label}
+								{@const optDesc = typeof opt === 'object' ? opt.description : undefined}
+								{@const isSelected = Boolean(ans.selected?.includes(optLabel))}
 								<button
+									type="button"
 									class="option-pill"
 									class:selected={isSelected}
-									onclick={() => toggleOption(q, opt.label)}
+									onclick={() => toggleOption(q, optLabel)}
 								>
 									<span class="opt-check">{isSelected ? '●' : '○'}</span>
-									<div class="opt-body">
-										<span class="opt-label">{opt.label}</span>
-										{#if opt.description}
-											<span class="opt-desc">{opt.description}</span>
+									<span class="opt-body">
+										<span class="opt-label">{optLabel}</span>
+										{#if optDesc}
+											<span class="opt-desc">{optDesc}</span>
 										{/if}
-									</div>
+									</span>
 								</button>
 							{/each}
 						</div>
 					{/if}
 
-					{#if q.allowFreeform !== false && answers[q.id]}
+					{#if q.allowFreeform !== false}
 						<div class="write-in-row">
 							<input
 								type="text"
@@ -156,7 +166,7 @@
 	</div>
 
 	<div class="card-footer">
-		<button class="btn primary" onclick={submitAll}>
+		<button type="button" class="btn primary" onclick={submitAll}>
 			Confirm & Proceed →
 		</button>
 	</div>
@@ -170,6 +180,8 @@
 		box-shadow: var(--shadow);
 		overflow: hidden;
 		border-radius: var(--radius);
+		flex-shrink: 0;
+		min-height: fit-content;
 	}
 
 	.card-header {

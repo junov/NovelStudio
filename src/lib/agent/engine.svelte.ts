@@ -23,6 +23,7 @@ import type {
 	AskUserRequest,
 	ChatMessage,
 	FeedItem,
+	QuestionCardOption,
 	ToolCall,
 	ToolResult,
 	UserAnswer
@@ -40,6 +41,71 @@ function cleanHtmlText(html: string): string {
 		.replace(/\s+/g, ' ')
 		.trim()
 		.slice(0, 15000);
+}
+
+/**
+ * Safely normalize ask_user tool arguments into AskUserQuestion[].
+ * Handles array of question objects, JSON-encoded strings, single top-level question format,
+ * string options, and missing IDs.
+ * @spec AGT-002, AGT-005
+ */
+export function parseAskUserQuestions(args: Record<string, unknown>): AskUserQuestion[] {
+	let raw: unknown = args?.questions;
+	if (typeof raw === 'string') {
+		try {
+			raw = JSON.parse(raw);
+		} catch {
+			raw = [];
+		}
+	}
+	if (!Array.isArray(raw) && args?.prompt) {
+		// Single question top-level format
+		raw = [args];
+	}
+	if (!Array.isArray(raw)) {
+		return [];
+	}
+
+	return (raw as Record<string, unknown>[]).map((q, idx) => {
+		const id = String(q.id || `q_${idx + 1}`);
+		const prompt = String(q.prompt || `Question ${idx + 1}`);
+		const details = q.details ? String(q.details) : undefined;
+		const allowFreeform = q.allowFreeform !== false;
+		const allowSkip = q.allowSkip !== false;
+		const isMultiSelect = Boolean(q.isMultiSelect);
+		const recommendedIndex = typeof q.recommendedIndex === 'number' ? q.recommendedIndex : undefined;
+		const defaultValue = q.defaultValue ? String(q.defaultValue) : undefined;
+
+		let options: QuestionCardOption[] | undefined;
+		if (Array.isArray(q.options)) {
+			options = q.options.map((opt: unknown) => {
+				if (typeof opt === 'string') {
+					return { label: opt };
+				}
+				if (typeof opt === 'object' && opt !== null) {
+					const o = opt as Record<string, unknown>;
+					return {
+						label: String(o.label || ''),
+						description: o.description ? String(o.description) : undefined,
+						isDefault: Boolean(o.isDefault)
+					};
+				}
+				return { label: String(opt) };
+			});
+		}
+
+		return {
+			id,
+			prompt,
+			details,
+			options,
+			allowFreeform,
+			allowSkip,
+			isMultiSelect,
+			recommendedIndex,
+			defaultValue
+		};
+	});
 }
 
 class AgentEngine {
@@ -429,8 +495,8 @@ ${skillMd}
 				}
 
 				case 'ask_user': {
-					// @spec AGT-002
-					const rawQuestions = (tc.args.questions as AskUserQuestion[]) || [];
+					// @spec AGT-002, AGT-005
+					const rawQuestions = parseAskUserQuestions(tc.args);
 					const title = tc.args.title ? String(tc.args.title) : 'Author Interview';
 
 					this.status = 'awaiting_user_input';

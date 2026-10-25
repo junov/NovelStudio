@@ -262,6 +262,7 @@
 		border: 1px solid var(--line);
 		font-size: 12px;
 		user-select: text;
+		flex-shrink: 0;
 	}
 	.feed-entry.error {
 		border-color: var(--err);

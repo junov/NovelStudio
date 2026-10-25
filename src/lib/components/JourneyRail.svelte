@@ -1,15 +1,50 @@
 <script lang="ts">
 	/**
 	 * Pipeline Journey Rail
-	 * @spec AGT-008, AGT-009 (Issue #8)
+	 * @spec AGT-008, AGT-009, JRN-001, JRN-002 (Issue #7, #8)
 	 */
 	import { project } from '$lib/stores/project.svelte';
 	import { PIPELINE, type PipelineStage } from '$lib/stages';
 	import { agent } from '$lib/agent/engine.svelte';
+	import { getStageActionInfo } from '$lib/stagesHover';
+	import JourneyHoverCard from './JourneyHoverCard.svelte';
 
-	function getStageState(stage: PipelineStage) {
+	let railContainer = $state<HTMLDivElement | null>(null);
+
+	let activeHover = $state<{
+		type: 'step' | 'pill' | 'play';
+		stage: PipelineStage;
+		stageIndex: number;
+		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string };
+		targetRect: DOMRect;
+		railRect: DOMRect;
+	} | null>(null);
+
+	function showHover(
+		type: 'step' | 'pill' | 'play',
+		stage: PipelineStage,
+		stageIndex: number,
+		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string },
+		el: HTMLElement
+	) {
+		if (!railContainer) return;
+		activeHover = {
+			type,
+			stage,
+			stageIndex,
+			stageState,
+			targetRect: el.getBoundingClientRect(),
+			railRect: railContainer.getBoundingClientRect()
+		};
+	}
+
+	function hideHover() {
+		activeHover = null;
+	}
+
+	function getStageState(stage: PipelineStage): { status: 'needs-sync' | 'synced' | 'pending'; badge: string } {
 		const status = project.status;
-		if (!status) return { status: 'idle', label: '' };
+		if (!status) return { status: 'pending', badge: '' };
 
 		const syncName = stage.sync;
 		const baseline = syncName ? status.baselines[syncName] : null;
@@ -36,14 +71,17 @@
 	}
 
 	function runStageSkill(stage: PipelineStage) {
+		const action = getStageActionInfo(stage, project.status);
+		if (!action.isActionable) return;
 		agent.run(stage.skill, stage.prompt, stage.id);
 	}
 </script>
 
-<div class="journey-rail">
+<div class="journey-rail" bind:this={railContainer}>
 	<div class="stages-track">
 		{#each PIPELINE as stage, i}
 			{@const st = getStageState(stage)}
+			{@const action = getStageActionInfo(stage, project.status)}
 			<div
 				class="stage-node {st.status}"
 				onclick={() => {
@@ -52,26 +90,44 @@
 						project.openFile(stage.paths[0]);
 					}
 				}}
-				title="{stage.label}: {stage.description}"
 			>
-				<div class="node-badge-row">
+				<div
+					class="node-badge-row"
+					onmouseenter={(e) => showHover('step', stage, i, st, e.currentTarget)}
+					onmouseleave={hideHover}
+				>
 					<span class="node-step">{i + 1}</span>
 					<span class="node-label">{stage.label}</span>
 				</div>
 
 				<div class="node-meta">
 					{#if st.badge}
-						<span class="pill {st.status}">{st.badge}</span>
+						<span
+							class="pill {st.status}"
+							onmouseenter={(e) => {
+								e.stopPropagation();
+								showHover('pill', stage, i, st, e.currentTarget);
+							}}
+							onmouseleave={hideHover}
+						>
+							{st.badge}
+						</span>
 					{/if}
 				</div>
 
 				<button
 					class="run-skill-btn"
+					class:disabled={!action.isActionable}
+					disabled={!action.isActionable || agent.status === 'running'}
 					onclick={(e) => {
 						e.stopPropagation();
 						runStageSkill(stage);
 					}}
-					title="Run {stage.skill}"
+					onmouseenter={(e) => {
+						e.stopPropagation();
+						showHover('play', stage, i, st, e.currentTarget);
+					}}
+					onmouseleave={hideHover}
 				>
 					▶
 				</button>
@@ -82,10 +138,23 @@
 			{/if}
 		{/each}
 	</div>
+
+	{#if activeHover && railContainer}
+		<JourneyHoverCard
+			type={activeHover.type}
+			stage={activeHover.stage}
+			stageIndex={activeHover.stageIndex}
+			stageState={activeHover.stageState}
+			status={project.status}
+			targetRect={activeHover.targetRect}
+			railRect={activeHover.railRect}
+		/>
+	{/if}
 </div>
 
 <style>
 	.journey-rail {
+		position: relative;
 		background: var(--bg-elev);
 		border-bottom: 1px solid var(--line);
 		padding: 10px 16px;
@@ -173,10 +242,19 @@
 		place-items: center;
 		cursor: pointer;
 		margin-left: 4px;
+		transition: all 0.15s ease;
 	}
-	.run-skill-btn:hover {
+	.run-skill-btn:hover:not(.disabled) {
 		background: var(--accent);
 		color: var(--accent-ink);
+	}
+	.run-skill-btn.disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+	.run-skill-btn.disabled:hover {
+		background: var(--bg-sunken);
+		color: var(--ink-soft);
 	}
 
 	.stage-connector {

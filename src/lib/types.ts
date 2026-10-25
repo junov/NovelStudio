@@ -7,6 +7,11 @@ export interface CommitInfo {
 	[k: string]: unknown;
 }
 
+export interface DriftItem {
+	change?: string;
+	file: string;
+}
+
 export interface StatusJson {
 	title: string;
 	baselines: Record<string, CommitInfo | string | null>;
@@ -14,9 +19,10 @@ export interface StatusJson {
 	scenes: { outline: number; abridged: number; manuscript: number };
 	words: { abridged: number; manuscript: number };
 	pending: { abridged: number; manuscript: number };
-	graphics: { active: number; pending: number; inactive: number };
+	pending_items?: Record<string, string[]>;
+	graphics: { active: number; pending: number; inactive: number; pending_items?: string[] };
 	placeholders: { total: number; untracked: number };
-	drift: Record<string, string[]>;
+	drift: Record<string, Array<DriftItem | string>>;
 	errors: string[];
 	warnings: string[];
 	infos: string[];

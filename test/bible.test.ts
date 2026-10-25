@@ -1,4 +1,4 @@
-// @spec BBL-001, BBL-002, BBL-003
+// @spec BBL-001, BBL-002, BBL-003, BBL-004
 import { describe, it, expect } from 'vitest';
 import { parseFile, prefixOf, prefixInfo } from '../src/lib/entities';
 import { renderMarkdown, renderWikiChips } from '../src/lib/markdown';
@@ -107,5 +107,29 @@ describe('BBL-003: Centralized Wiki-Link Navigation and Target Item Scrolling', 
 		expect(panelSource).toContain('renderWikiChips');
 		expect(workCardSource).toContain('use:wikiLinks');
 		expect(workCardSource).toContain('renderWikiChips');
+	});
+});
+
+describe('BBL-004: Collapsible and Resizable Navigation Pane', () => {
+	const explorerSrc = readFileSync(resolve(__dirname, '../src/lib/components/Explorer.svelte'), 'utf-8');
+
+	// @spec BBL-004
+	it('implements drag-resizable width with persistence in Explorer.svelte', () => {
+		expect(explorerSrc).toContain('class="resize-handle"');
+		expect(explorerSrc).toContain('handlePointerDown');
+		expect(explorerSrc).toContain('handleDoubleClick');
+		expect(explorerSrc).toContain('novelstudio.explorer_width');
+		expect(explorerSrc).toContain('MIN_WIDTH');
+		expect(explorerSrc).toContain('MAX_WIDTH');
+	});
+
+	// @spec BBL-004
+	it('implements collapsible navigation pane with toggle controls and collapsed strip', () => {
+		expect(explorerSrc).toContain('isCollapsed');
+		expect(explorerSrc).toContain('toggleCollapse');
+		expect(explorerSrc).toContain('novelstudio.explorer_collapsed');
+		expect(explorerSrc).toContain('class="collapse-btn');
+		expect(explorerSrc).toContain('class="expand-btn');
+		expect(explorerSrc).toContain('class="collapsed-strip"');
 	});
 });

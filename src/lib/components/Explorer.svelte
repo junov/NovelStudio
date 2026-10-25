@@ -1,14 +1,77 @@
 <script lang="ts">
 	/**
 	 * Explorer sidebar: Story Bible and Files navigators with Git review/accept flow.
-	 * @spec REV-001, REV-002, BBL-001
+	 * @spec REV-001, REV-002, BBL-001, BBL-004
 	 */
+	import { onMount } from 'svelte';
 	import { project } from '$lib/stores/project.svelte';
 	import { PREFIXES, prefixOf, type Definition } from '$lib/entities';
 	import { runSpecnovel } from '$lib/tauri';
 
+	const DEFAULT_WIDTH = 280;
+	const MIN_WIDTH = 200;
+	const MAX_WIDTH = 600;
+
 	type Tab = 'bible' | 'files';
 	let currentTab = $state<Tab>('bible');
+	let sidebarWidth = $state(DEFAULT_WIDTH);
+	let isCollapsed = $state(false);
+	let isDragging = $state(false);
+
+	onMount(() => {
+		const savedWidth = localStorage.getItem('novelstudio.explorer_width');
+		if (savedWidth) {
+			const n = parseInt(savedWidth, 10);
+			if (!isNaN(n) && n >= MIN_WIDTH && n <= MAX_WIDTH) {
+				sidebarWidth = n;
+			}
+		}
+
+		const savedCollapsed = localStorage.getItem('novelstudio.explorer_collapsed');
+		if (savedCollapsed === 'true') {
+			isCollapsed = true;
+		}
+	});
+
+	function handlePointerDown(e: PointerEvent) {
+		e.preventDefault();
+		isDragging = true;
+		const startX = e.clientX;
+		const startWidth = sidebarWidth;
+		document.body.style.userSelect = 'none';
+
+		function onPointerMove(ev: PointerEvent) {
+			const delta = ev.clientX - startX;
+			const maxAllowed = Math.min(MAX_WIDTH, window.innerWidth * 0.5);
+			const newWidth = Math.max(MIN_WIDTH, Math.min(maxAllowed, startWidth + delta));
+			sidebarWidth = Math.round(newWidth);
+			if (isCollapsed) {
+				isCollapsed = false;
+				localStorage.setItem('novelstudio.explorer_collapsed', 'false');
+			}
+		}
+
+		function onPointerUp() {
+			isDragging = false;
+			document.body.style.userSelect = '';
+			window.removeEventListener('pointermove', onPointerMove);
+			window.removeEventListener('pointerup', onPointerUp);
+			localStorage.setItem('novelstudio.explorer_width', String(sidebarWidth));
+		}
+
+		window.addEventListener('pointermove', onPointerMove);
+		window.addEventListener('pointerup', onPointerUp);
+	}
+
+	function handleDoubleClick() {
+		sidebarWidth = DEFAULT_WIDTH;
+		localStorage.setItem('novelstudio.explorer_width', String(DEFAULT_WIDTH));
+	}
+
+	function toggleCollapse() {
+		isCollapsed = !isCollapsed;
+		localStorage.setItem('novelstudio.explorer_collapsed', String(isCollapsed));
+	}
 
 	// Group definitions by entity prefix
 	const groupedDefs = $derived(() => {
@@ -43,23 +106,80 @@
 	}
 </script>
 
-<aside class="explorer-sidebar">
-	<div class="sidebar-tabs">
-		<button
-			class="tab-btn"
-			class:active={currentTab === 'bible'}
-			onclick={() => (currentTab = 'bible')}
-		>
-			Story Bible
-		</button>
-		<button
-			class="tab-btn"
-			class:active={currentTab === 'files'}
-			onclick={() => (currentTab = 'files')}
-		>
-			Files
-		</button>
-	</div>
+<aside
+	class="explorer-sidebar"
+	class:collapsed={isCollapsed}
+	class:dragging={isDragging}
+	style="width: {isCollapsed ? '38px' : `${sidebarWidth}px`};"
+>
+	{#if isCollapsed}
+		<div class="collapsed-strip">
+			<button
+				class="expand-btn icon-btn"
+				onclick={toggleCollapse}
+				title="Expand Navigation Pane"
+				aria-label="Expand Navigation Pane"
+			>
+				»
+			</button>
+			<button
+				class="strip-tab-btn"
+				class:active={currentTab === 'bible'}
+				onclick={() => {
+					currentTab = 'bible';
+					isCollapsed = false;
+					localStorage.setItem('novelstudio.explorer_collapsed', 'false');
+				}}
+				title="Story Bible"
+			>
+				📖
+			</button>
+			<button
+				class="strip-tab-btn"
+				class:active={currentTab === 'files'}
+				onclick={() => {
+					currentTab = 'files';
+					isCollapsed = false;
+					localStorage.setItem('novelstudio.explorer_collapsed', 'false');
+				}}
+				title="Files"
+			>
+				📁
+			</button>
+		</div>
+	{:else}
+		<div
+			class="resize-handle"
+			class:dragging={isDragging}
+			onpointerdown={handlePointerDown}
+			ondblclick={handleDoubleClick}
+			title="Drag to resize navigation pane (Double-click to reset)"
+		></div>
+
+		<div class="sidebar-tabs">
+			<button
+				class="tab-btn"
+				class:active={currentTab === 'bible'}
+				onclick={() => (currentTab = 'bible')}
+			>
+				Story Bible
+			</button>
+			<button
+				class="tab-btn"
+				class:active={currentTab === 'files'}
+				onclick={() => (currentTab = 'files')}
+			>
+				Files
+			</button>
+			<button
+				class="collapse-btn icon-btn"
+				onclick={toggleCollapse}
+				title="Collapse Navigation Pane"
+				aria-label="Collapse Navigation Pane"
+			>
+				«
+			</button>
+		</div>
 
 	<div class="sidebar-content">
 		{#if currentTab === 'bible'}
@@ -169,23 +289,119 @@
 			</div>
 		{/if}
 	</div>
+	{/if}
 </aside>
 
 <style>
 	.explorer-sidebar {
-		width: 280px;
+		position: relative;
+		flex-shrink: 0;
 		background: var(--bg-elev);
 		border-right: 1px solid var(--line);
 		display: flex;
 		flex-direction: column;
 		height: 100%;
 		user-select: none;
+		transition: width 0.15s ease;
+	}
+
+	.explorer-sidebar.dragging {
+		transition: none;
+	}
+
+	.resize-handle {
+		position: absolute;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		width: 6px;
+		cursor: col-resize;
+		z-index: 10;
+		transition: background 0.15s ease;
+	}
+
+	.resize-handle:hover,
+	.resize-handle.dragging {
+		background: var(--accent);
+	}
+
+	.collapsed-strip {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 8px 0;
+		gap: 8px;
+		height: 100%;
+		background: var(--bg-sunken);
+	}
+
+	.expand-btn {
+		width: 26px;
+		height: 26px;
+		border-radius: var(--radius);
+		border: 1px solid var(--line);
+		background: var(--paper);
+		color: var(--ink-soft);
+		font-size: 14px;
+		display: grid;
+		place-items: center;
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+
+	.expand-btn:hover {
+		background: var(--accent);
+		color: var(--accent-ink);
+		border-color: var(--accent);
+	}
+
+	.strip-tab-btn {
+		width: 28px;
+		height: 28px;
+		border-radius: var(--radius);
+		border: none;
+		background: none;
+		font-size: 14px;
+		display: grid;
+		place-items: center;
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+
+	.strip-tab-btn:hover {
+		background: var(--bg-elev);
+	}
+
+	.strip-tab-btn.active {
+		background: var(--paper);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 	}
 
 	.sidebar-tabs {
 		display: flex;
+		align-items: center;
 		border-bottom: 1px solid var(--line);
 		background: var(--bg-sunken);
+	}
+
+	.collapse-btn {
+		width: 24px;
+		height: 24px;
+		margin-right: 6px;
+		border-radius: var(--radius);
+		border: none;
+		background: none;
+		color: var(--ink-faint);
+		font-size: 13px;
+		display: grid;
+		place-items: center;
+		cursor: pointer;
+		transition: color 0.15s ease, background 0.15s ease;
+	}
+
+	.collapse-btn:hover {
+		color: var(--ink);
+		background: var(--paper);
 	}
 	.tab-btn {
 		flex: 1;

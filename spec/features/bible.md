@@ -55,3 +55,21 @@ Acceptance:
   then the view scrolls directly to the position of that item within the open document without failing or ignoring the click.
 
 Notes: Linked to #4.
+
+### BBL-004: Collapsible and Resizable Navigation Pane
+WHEN an author interacts with the Explorer navigation pane in the workspace,
+THE SYSTEM SHALL allow resizing the pane width by dragging its right-hand border and collapsing the pane into a compact vertical strip, preserving user preferences across sessions.
+
+Acceptance:
+- Given the navigation pane rendered in the workspace layout,
+  when the author drags the resize handle on the right border,
+  then the pane width adjusts dynamically between minimum and maximum constraints (200px to 600px).
+- Given the author resizes or resets the navigation pane width,
+  when the window reloads or restarts,
+  then the configured width is restored from persistent storage.
+- Given the author clicks the collapse toggle button in the navigation pane header,
+  when triggered,
+  then the navigation pane collapses to a compact icon strip and expands the central workspace.
+- Given the navigation pane is in a collapsed state,
+  when the author clicks the expand button or an icon tab shortcut,
+  then the pane re-expands to its previously configured width.

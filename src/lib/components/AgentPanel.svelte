@@ -1,13 +1,61 @@
 <script lang="ts">
 	/**
 	 * Agent activity feed and interactive task panel.
-	 * @spec AGT-002, AGT-003
+	 * @spec AGT-002, AGT-003, AGT-004
 	 */
+	import { onMount } from 'svelte';
 	import { agent } from '$lib/agent/engine.svelte';
 	import InterviewCard from './InterviewCard.svelte';
 	import DiffReview from './DiffReview.svelte';
 
+	const DEFAULT_WIDTH = 360;
+	const MIN_WIDTH = 280;
+	const MAX_WIDTH = 800;
+
 	let customPrompt = $state('');
+	let panelWidth = $state(DEFAULT_WIDTH);
+	let isDragging = $state(false);
+
+	onMount(() => {
+		const saved = localStorage.getItem('novelstudio.agent_panel_width');
+		if (saved) {
+			const n = parseInt(saved, 10);
+			if (!isNaN(n) && n >= MIN_WIDTH && n <= MAX_WIDTH) {
+				panelWidth = n;
+			}
+		}
+	});
+
+	function handlePointerDown(e: PointerEvent) {
+		e.preventDefault();
+		isDragging = true;
+		const startX = e.clientX;
+		const startWidth = panelWidth;
+		document.body.style.userSelect = 'none';
+
+		function onPointerMove(ev: PointerEvent) {
+			const delta = startX - ev.clientX;
+			const maxAllowed = Math.min(MAX_WIDTH, window.innerWidth * 0.7);
+			const newWidth = Math.max(MIN_WIDTH, Math.min(maxAllowed, startWidth + delta));
+			panelWidth = Math.round(newWidth);
+		}
+
+		function onPointerUp() {
+			isDragging = false;
+			document.body.style.userSelect = '';
+			window.removeEventListener('pointermove', onPointerMove);
+			window.removeEventListener('pointerup', onPointerUp);
+			localStorage.setItem('novelstudio.agent_panel_width', String(panelWidth));
+		}
+
+		window.addEventListener('pointermove', onPointerMove);
+		window.addEventListener('pointerup', onPointerUp);
+	}
+
+	function handleDoubleClick() {
+		panelWidth = DEFAULT_WIDTH;
+		localStorage.setItem('novelstudio.agent_panel_width', String(DEFAULT_WIDTH));
+	}
 
 	function handleSend() {
 		if (!customPrompt.trim()) return;
@@ -17,7 +65,14 @@
 	}
 </script>
 
-<aside class="agent-panel">
+<aside class="agent-panel" style="width: {panelWidth}px;">
+	<div
+		class="resize-handle"
+		class:dragging={isDragging}
+		onpointerdown={handlePointerDown}
+		ondblclick={handleDoubleClick}
+		title="Drag to resize panel (Double-click to reset)"
+	></div>
 	<div class="panel-header">
 		<div class="header-status">
 			<span class="status-indicator {agent.status}"></span>
@@ -100,12 +155,29 @@
 
 <style>
 	.agent-panel {
-		width: 360px;
+		position: relative;
 		background: var(--bg-elev);
 		border-left: 1px solid var(--line);
 		display: flex;
 		flex-direction: column;
 		height: 100%;
+		flex-shrink: 0;
+	}
+
+	.resize-handle {
+		position: absolute;
+		left: -4px;
+		top: 0;
+		bottom: 0;
+		width: 8px;
+		cursor: col-resize;
+		z-index: 10;
+		user-select: none;
+	}
+	.resize-handle:hover,
+	.resize-handle.dragging {
+		background: var(--accent);
+		opacity: 0.5;
 	}
 
 	.panel-header {

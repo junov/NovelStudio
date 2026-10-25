@@ -41,3 +41,21 @@ Acceptance:
 - Given chrome header controls or status indicators in the agent panel,
   when rendered,
   then non-content chrome elements preserve standard UI affordances while the feed content remains selectable.
+
+### AGT-004: Drag-Resizable Agent Panel Width
+WHEN an author drags the left border of the agent activity panel,
+THE SYSTEM SHALL dynamically resize the width of the agent feed, constrain the width within defined minimum and maximum boundaries, and persist the author's preferred width across sessions.
+
+Acceptance:
+- Given the agent activity panel rendered on the workspace layout,
+  when viewed,
+  then a vertical resize handle is provided along its left boundary with an appropriate resize cursor affordance (col-resize).
+- Given the author drags the resize handle horizontally,
+  when dragged left or right,
+  then the agent panel width adjusts smoothly while respecting minimum (280px) and maximum (800px) limits.
+- Given an adjusted panel width,
+  when the window or app is reloaded,
+  then the persisted width preference is restored.
+- Given the author double-clicks the resize handle,
+  when clicked,
+  then the panel width resets to its default baseline width (360px).

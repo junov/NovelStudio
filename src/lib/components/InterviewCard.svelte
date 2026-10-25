@@ -1,4 +1,8 @@
 <script lang="ts">
+	/**
+	 * Inline author interview question card component.
+	 * @spec AGT-002
+	 */
 	import type { AskUserQuestion, AskUserRequest, UserAnswer } from '$lib/agent/types';
 
 	interface Props {
@@ -7,13 +11,9 @@
 
 	let { request }: Props = $props();
 
-	// Store answers per question id
-	let answers = $state<Record<string, { selected: string[]; text: string; skipped: boolean }>>({});
-
-	// Initialize defaults
-	$effect(() => {
+	export function initAnswers(req: AskUserRequest): Record<string, { selected: string[]; text: string; skipped: boolean }> {
 		const map: Record<string, { selected: string[]; text: string; skipped: boolean }> = {};
-		for (const q of request.questions) {
+		for (const q of req?.questions || []) {
 			const initialSelected: string[] = [];
 			if (q.options && q.recommendedIndex !== undefined && q.options[q.recommendedIndex]) {
 				initialSelected.push(q.options[q.recommendedIndex].label);
@@ -26,11 +26,25 @@
 				skipped: false
 			};
 		}
-		answers = map;
+		return map;
+	}
+
+	// Initialize synchronously so initial render cycle is never undefined
+	let answers = $state<Record<string, { selected: string[]; text: string; skipped: boolean }>>(initAnswers(request));
+	let currentRequestId = $state(request.id);
+
+	$effect(() => {
+		if (request.id !== currentRequestId) {
+			currentRequestId = request.id;
+			answers = initAnswers(request);
+		}
 	});
 
 	function toggleOption(q: AskUserQuestion, optLabel: string) {
-		const current = answers[q.id]?.selected || [];
+		if (!answers[q.id]) {
+			answers[q.id] = { selected: [], text: '', skipped: false };
+		}
+		const current = answers[q.id].selected || [];
 		if (q.isMultiSelect) {
 			if (current.includes(optLabel)) {
 				answers[q.id].selected = current.filter((x) => x !== optLabel);
@@ -44,9 +58,13 @@
 	}
 
 	function skipQuestion(qid: string) {
-		answers[qid].skipped = true;
-		answers[qid].selected = [];
-		answers[qid].text = '';
+		if (!answers[qid]) {
+			answers[qid] = { selected: [], text: '', skipped: true };
+		} else {
+			answers[qid].skipped = true;
+			answers[qid].selected = [];
+			answers[qid].text = '';
+		}
 	}
 
 	function submitAll() {
@@ -71,18 +89,18 @@
 
 	<div class="card-body">
 		{#each request.questions as q, i}
-			{@const ans = answers[q.id]}
-			<div class="question-block" class:is-skipped={ans?.skipped}>
+			{@const ans = answers[q.id] || { selected: [], text: '', skipped: false }}
+			<div class="question-block" class:is-skipped={ans.skipped}>
 				<div class="question-head">
 					<span class="q-num">Q{i + 1}</span>
 					<span class="q-prompt">{q.prompt}</span>
 					{#if q.allowSkip !== false}
 						<button
 							class="skip-btn"
-							class:active={ans?.skipped}
+							class:active={ans.skipped}
 							onclick={() => skipQuestion(q.id)}
 						>
-							{ans?.skipped ? 'Skipped ✓' : 'Skip / Decide later'}
+							{ans.skipped ? 'Skipped ✓' : 'Skip / Decide later'}
 						</button>
 					{/if}
 				</div>
@@ -91,11 +109,11 @@
 					<p class="q-details">{q.details}</p>
 				{/if}
 
-				{#if !ans?.skipped}
+				{#if !ans.skipped}
 					{#if q.options && q.options.length > 0}
 						<div class="options-grid">
 							{#each q.options as opt}
-								{@const isSelected = ans?.selected.includes(opt.label)}
+								{@const isSelected = Boolean(ans.selected?.includes(opt.label))}
 								<button
 									class="option-pill"
 									class:selected={isSelected}
@@ -111,14 +129,14 @@
 						</div>
 					{/if}
 
-					{#if q.allowFreeform !== false}
+					{#if q.allowFreeform !== false && answers[q.id]}
 						<div class="write-in-row">
 							<input
 								type="text"
 								placeholder="Or specify custom input / nuances..."
 								bind:value={answers[q.id].text}
 								oninput={() => {
-									answers[q.id].skipped = false;
+									if (answers[q.id]) answers[q.id].skipped = false;
 								}}
 							/>
 						</div>

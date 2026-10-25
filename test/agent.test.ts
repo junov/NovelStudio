@@ -34,6 +34,13 @@ describe('AGT-002: Inline Author Interview in Agent Feed', () => {
 		expect(askUserCase).not.toContain('openInterviewWindow');
 		expect(askUserCase).toContain('this.activeQuestion');
 	});
+
+	// @spec AGT-002
+	it('initializes interview answers synchronously to prevent undefined dereferences during initial render', () => {
+		const cardSource = readFileSync(resolve(__dirname, '../src/lib/components/InterviewCard.svelte'), 'utf-8');
+		expect(cardSource).toContain('initAnswers');
+		expect(cardSource).not.toMatch(/let answers = \$state\((\{\}|<[^>]+>\(\{\}\))\);/);
+	});
 });
 
 describe('AGT-003: Selectable and Copyable Agent Feed Content', () => {

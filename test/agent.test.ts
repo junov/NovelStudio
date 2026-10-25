@@ -1,6 +1,8 @@
-// @spec AGT-001, AGT-002
+// @spec AGT-001, AGT-002, AGT-003
 import { describe, it, expect } from 'vitest';
 import { AGENT_TOOLS } from '../src/lib/agent/tools';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 describe('AGT-001: Tool Execution Safety and Approval Gate', () => {
 	// @spec AGT-001
@@ -14,11 +16,32 @@ describe('AGT-001: Tool Execution Safety and Approval Gate', () => {
 	});
 });
 
-describe('AGT-002: Author Interview in Dedicated Window', () => {
+describe('AGT-002: Inline Author Interview in Agent Feed', () => {
 	// @spec AGT-002
-	it('declares ask_user tool with questions schema', () => {
+	it('declares ask_user tool with questions schema for inline author interaction', () => {
 		const askTool = AGENT_TOOLS.find((t) => t.name === 'ask_user');
 		expect(askTool).toBeDefined();
 		expect(askTool?.parameters.required).toContain('questions');
+	});
+
+	// @spec AGT-002
+	it('configures activeQuestion directly in agent engine without external window requirements', () => {
+		const engineSource = readFileSync(resolve(__dirname, '../src/lib/agent/engine.svelte.ts'), 'utf-8');
+		const askUserCase = engineSource.substring(
+			engineSource.indexOf("case 'ask_user':"),
+			engineSource.indexOf("default:")
+		);
+		expect(askUserCase).not.toContain('openInterviewWindow');
+		expect(askUserCase).toContain('this.activeQuestion');
+	});
+});
+
+describe('AGT-003: Selectable and Copyable Agent Feed Content', () => {
+	// @spec AGT-003
+	it('configures user-select: text on panel feed and entry contents', () => {
+		const panelSource = readFileSync(resolve(__dirname, '../src/lib/components/AgentPanel.svelte'), 'utf-8');
+		expect(panelSource).toContain('.panel-feed');
+		expect(panelSource).toContain('user-select: text');
+		expect(panelSource).toContain('.entry-content');
 	});
 });

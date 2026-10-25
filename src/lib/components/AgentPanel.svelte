@@ -1,4 +1,8 @@
 <script lang="ts">
+	/**
+	 * Agent activity feed and interactive task panel.
+	 * @spec AGT-002, AGT-003
+	 */
 	import { agent } from '$lib/agent/engine.svelte';
 	import InterviewCard from './InterviewCard.svelte';
 	import DiffReview from './DiffReview.svelte';
@@ -102,7 +106,6 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		user-select: none;
 	}
 
 	.panel-header {
@@ -112,6 +115,7 @@
 		padding: 10px 14px;
 		border-bottom: 1px solid var(--line);
 		background: var(--paper);
+		user-select: none;
 	}
 	.header-status {
 		display: flex;
@@ -146,6 +150,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
+		user-select: text;
 	}
 
 	.empty-feed {
@@ -157,6 +162,7 @@
 		color: var(--ink-faint);
 		height: 100%;
 		padding: 20px;
+		user-select: none;
 	}
 	.empty-icon {
 		font-size: 32px;
@@ -170,6 +176,7 @@
 		background: var(--paper);
 		border: 1px solid var(--line);
 		font-size: 12px;
+		user-select: text;
 	}
 	.feed-entry.error {
 		border-color: var(--err);
@@ -192,6 +199,7 @@
 		border-radius: 3px;
 		background: var(--bg-sunken);
 		color: var(--ink-faint);
+		user-select: none;
 	}
 	.entry-title {
 		font-weight: 600;
@@ -199,10 +207,12 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		user-select: text;
 	}
 	.entry-time {
 		font-size: 10px;
 		color: var(--ink-faint);
+		user-select: none;
 	}
 
 	.entry-content {
@@ -215,12 +225,17 @@
 		max-height: 140px;
 		overflow-y: auto;
 		white-space: pre-wrap;
+		user-select: text;
+	}
+	.entry-content code {
+		user-select: text;
 	}
 
 	.panel-footer {
 		border-top: 1px solid var(--line);
 		background: var(--paper);
 		padding: 10px 12px;
+		user-select: none;
 	}
 	.token-meter {
 		font-size: 11px;

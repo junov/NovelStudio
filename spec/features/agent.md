@@ -18,14 +18,26 @@ Acceptance:
   when accepted,
   then the file is committed to disk and the agent resumes execution.
 
-### AGT-002: Author Interview in Dedicated Window
+### AGT-002: Inline Author Interview in Agent Feed
 WHEN an AI agent requests structured author feedback via ask_user,
-THE SYSTEM SHALL launch an interactive interview session in a dedicated native window and deliver the author's responses back to the running agent engine.
+THE SYSTEM SHALL display an interactive interview card inline directly within the agent activity feed and deliver the author's responses back to the running agent engine upon submission.
 
 Acceptance:
-- Given an agent invokes the ask_user tool with questions,
-  when running in Tauri desktop mode,
-  then setInterviewPrompt stores the prompt and openInterviewWindow launches the dedicated window.
-- Given author responses are submitted in the interview window,
-  when submitInterviewAnswers is called,
-  then the answers are delivered back to the main window engine and the interview window closes.
+- Given an agent invokes the ask_user tool with structured questions,
+  when executed,
+  then the agent status transitions to awaiting_user_input and an interactive InterviewCard renders inline within the agent feed without launching an external window.
+- Given an author selects options, types write-in text, or skips questions in the inline interview card,
+  when the author clicks submit,
+  then the answers are delivered back to the agent engine, activeQuestion is cleared, and agent execution resumes.
+
+### AGT-003: Selectable and Copyable Agent Feed Content
+WHEN an author views entries in the agent activity feed,
+THE SYSTEM SHALL enable text selection and copying across feed entries, titles, outputs, code blocks, and conversation messages.
+
+Acceptance:
+- Given an author views any activity feed item or content output in the agent panel,
+  when attempting to select text,
+  then text selection is permitted (user-select: text) and content can be copied to the clipboard.
+- Given chrome header controls or status indicators in the agent panel,
+  when rendered,
+  then non-content chrome elements preserve standard UI affordances while the feed content remains selectable.

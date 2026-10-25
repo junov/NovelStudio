@@ -23,7 +23,7 @@
 <script lang="ts">
 	/**
 	 * Inline author interview question card component.
-	 * @spec AGT-002
+	 * @spec AGT-002, AGT-005
 	 */
 	import { renderMarkdown } from '$lib/markdown';
 	import { wikiLinks } from '$lib/actions';

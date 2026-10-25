@@ -20,15 +20,21 @@ Acceptance:
 
 ### AGT-002: Inline Author Interview in Agent Feed
 WHEN an AI agent requests structured author feedback via ask_user,
-THE SYSTEM SHALL display an interactive interview card inline directly within the agent activity feed and deliver the author's responses back to the running agent engine upon submission.
+THE SYSTEM SHALL display an interactive interview card inline directly within the agent activity feed at the active stream position, maintain viewport auto-scroll to the card, and deliver the author's responses back to the running agent engine upon submission without generating empty placeholder feed entries.
 
 Acceptance:
 - Given an agent invokes the ask_user tool with structured questions,
   when executed,
-  then the agent status transitions to awaiting_user_input and an interactive InterviewCard renders inline within the agent feed without launching an external window.
-- Given an author selects options, types write-in text, or skips questions in the inline interview card,
-  when the author clicks submit,
-  then the answers are delivered back to the agent engine, activeQuestion is cleared, and agent execution resumes.
+  then the agent status transitions to awaiting_user_input and an interactive InterviewCard renders inline at the active bottom position of the agent feed without launching an external window.
+- Given an active interview card rendered in the feed,
+  when mounted,
+  then the activity feed smoothly auto-scrolls to bring the interview card into view, and no empty placeholder feed entries (such as "Presenting N question(s) to author") are added to the feed stream.
+- Given an author submits their answers or skips questions in the inline interview card,
+  when confirmed,
+  then activeQuestion is cleared, a permanent completed interview summary entry is appended to the feed history, and agent execution resumes with the structured answers.
+- Given an active interview request awaiting user input,
+  when the author clicks Cancel in the agent panel header,
+  then the pending interview request is canceled, activeQuestion is cleared, and agent status returns to idle.
 
 ### AGT-003: Selectable and Copyable Agent Feed Content
 WHEN an author views entries in the agent activity feed,
@@ -59,3 +65,33 @@ Acceptance:
 - Given the author double-clicks the resize handle,
   when clicked,
   then the panel width resets to its default baseline width (360px).
+
+### AGT-005: Author Interview Card Schema and Form Controls
+WHEN an author interacts with an active InterviewCard,
+THE SYSTEM SHALL render all fields defined by the ask_user tool schema (round title, batched questions, craft guidance with formatted markdown and links, selectable options with labels and descriptions, recommended pre-selection, multi-select toggles, freeform write-in inputs, and skip controls) and package author answers conforming to the user answer schema.
+
+Acceptance:
+- Given an ask_user tool call with an optional title and an array of 1 to 4 questions,
+  when rendered,
+  then the InterviewCard displays the header title, numbers each question sequentially (e.g. Q1, Q2), and displays the question prompt.
+- Given a question containing craft context in its details field,
+  when rendered,
+  then the details text is parsed as formatted markdown with clickable wiki-links and external URLs.
+- Given a question with selectable options,
+  when rendered,
+  then each option displays its label, optional descriptive text beneath the label, and a selection indicator.
+- Given a question specifying recommendedIndex or defaultValue,
+  when initialized,
+  then the designated option is automatically pre-selected.
+- Given a question with isMultiSelect set to false or omitted,
+  when the author selects an option,
+  then single-select (radio) behavior is enforced; when isMultiSelect is true, multiple options can be toggled independently (checkbox behavior).
+- Given a question with allowFreeform set to true or omitted,
+  when viewed,
+  then a write-in text input is rendered allowing custom author nuances and specifications; typing in the field un-skips the question.
+- Given a question with allowSkip set to true or omitted,
+  when viewed,
+  then a skip toggle button is rendered allowing the author to defer or skip the question without blocking submission; questions with allowSkip set to false do not display a skip button.
+- Given an author submits the interview,
+  when confirmed,
+  then answers are returned as an array of objects matching the UserAnswer schema containing questionId, selected option labels (if any), custom text (if any), and skipped status.

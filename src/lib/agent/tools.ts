@@ -115,6 +115,7 @@ export const AGENT_TOOLS: ToolDef[] = [
 		}
 	},
 	{
+		// @spec AGT-002, AGT-005
 		name: 'ask_user',
 		description: 'Interview the author by displaying one or more structured question cards with choices, recommended defaults, or freeform input. Execution pauses until the user responds.',
 		parameters: {

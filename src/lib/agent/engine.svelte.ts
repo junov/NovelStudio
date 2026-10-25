@@ -434,7 +434,6 @@ ${skillMd}
 					const title = tc.args.title ? String(tc.args.title) : 'Author Interview';
 
 					this.status = 'awaiting_user_input';
-					this.addFeed('question', title, `Presenting ${rawQuestions.length} question(s) to author.`);
 
 					const answers = await new Promise<UserAnswer[]>((resolve) => {
 						this.activeQuestion = {
@@ -459,7 +458,7 @@ ${skillMd}
 						})
 						.join('\n');
 
-					this.addFeed('answer', 'Author responses', summaryAnswers, undefined, 'success');
+					this.addFeed('question', title, summaryAnswers, { questions: rawQuestions, answers }, 'success');
 
 					return {
 						callId: tc.id,

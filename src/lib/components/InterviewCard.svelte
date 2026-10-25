@@ -1,15 +1,5 @@
-<script lang="ts">
-	/**
-	 * Inline author interview question card component.
-	 * @spec AGT-002
-	 */
+<script module lang="ts">
 	import type { AskUserQuestion, AskUserRequest, UserAnswer } from '$lib/agent/types';
-
-	interface Props {
-		request: AskUserRequest;
-	}
-
-	let { request }: Props = $props();
 
 	export function initAnswers(req: AskUserRequest): Record<string, { selected: string[]; text: string; skipped: boolean }> {
 		const map: Record<string, { selected: string[]; text: string; skipped: boolean }> = {};
@@ -28,13 +18,28 @@
 		}
 		return map;
 	}
+</script>
+
+<script lang="ts">
+	/**
+	 * Inline author interview question card component.
+	 * @spec AGT-002
+	 */
+	import { renderMarkdown } from '$lib/markdown';
+	import { wikiLinks } from '$lib/actions';
+
+	interface Props {
+		request: AskUserRequest;
+	}
+
+	let { request }: Props = $props();
 
 	// Initialize synchronously so initial render cycle is never undefined
 	let answers = $state<Record<string, { selected: string[]; text: string; skipped: boolean }>>(initAnswers(request));
-	let currentRequestId = $state(request.id);
+	let currentRequestId = $state(request?.id);
 
 	$effect(() => {
-		if (request.id !== currentRequestId) {
+		if (request && request.id !== currentRequestId) {
 			currentRequestId = request.id;
 			answers = initAnswers(request);
 		}
@@ -106,7 +111,9 @@
 				</div>
 
 				{#if q.details}
-					<p class="q-details">{q.details}</p>
+					<div class="q-details markdown-details" use:wikiLinks>
+						{@html renderMarkdown(q.details)}
+					</div>
 				{/if}
 
 				{#if !ans.skipped}
@@ -120,10 +127,12 @@
 									onclick={() => toggleOption(q, opt.label)}
 								>
 									<span class="opt-check">{isSelected ? '●' : '○'}</span>
-									<span class="opt-label">{opt.label}</span>
-									{#if opt.description}
-										<span class="opt-desc">{opt.description}</span>
-									{/if}
+									<div class="opt-body">
+										<span class="opt-label">{opt.label}</span>
+										{#if opt.description}
+											<span class="opt-desc">{opt.description}</span>
+										{/if}
+									</div>
 								</button>
 							{/each}
 						</div>
@@ -155,11 +164,12 @@
 
 <style>
 	.interview-card {
-		margin: 12px 0;
+		margin: 8px 0 12px 0;
 		border: 1px solid var(--accent);
 		background: var(--paper);
 		box-shadow: var(--shadow);
 		overflow: hidden;
+		border-radius: var(--radius);
 	}
 
 	.card-header {
@@ -222,6 +232,7 @@
 		font-size: 13.5px;
 		flex: 1;
 		color: var(--ink);
+		line-height: 1.35;
 	}
 	.skip-btn {
 		background: none;
@@ -231,6 +242,7 @@
 		cursor: pointer;
 		padding: 2px 6px;
 		border-radius: 4px;
+		white-space: nowrap;
 	}
 	.skip-btn:hover {
 		background: var(--bg-sunken);
@@ -248,16 +260,31 @@
 		line-height: 1.45;
 	}
 
+	.markdown-details :global(p) {
+		margin: 0 0 6px 0;
+	}
+	.markdown-details :global(p:last-child) {
+		margin-bottom: 0;
+	}
+	.markdown-details :global(a) {
+		color: var(--accent);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.markdown-details :global(strong) {
+		color: var(--ink);
+	}
+
 	.options-grid {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: 8px;
 	}
 	.option-pill {
 		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 6px 10px;
+		align-items: flex-start;
+		gap: 10px;
+		padding: 8px 12px;
 		background: var(--bg-sunken);
 		border: 1px solid var(--line);
 		border-radius: var(--radius);
@@ -273,24 +300,34 @@
 		background: var(--accent-soft);
 		border-color: var(--accent);
 		color: var(--ink);
-		font-weight: 500;
 	}
 	.opt-check {
 		font-size: 12px;
 		color: var(--accent);
+		margin-top: 1px;
+		flex-shrink: 0;
 	}
-	.opt-label {
+	.opt-body {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
 		flex: 1;
 	}
+	.opt-label {
+		font-weight: 600;
+		line-height: 1.35;
+		color: var(--ink);
+	}
 	.opt-desc {
-		font-size: 11px;
-		color: var(--ink-faint);
+		font-size: 11.5px;
+		color: var(--ink-soft);
+		line-height: 1.4;
 	}
 
 	.write-in-row input {
 		width: 100%;
 		font-size: 12px;
-		padding: 5px 10px;
+		padding: 6px 10px;
 	}
 
 	.card-footer {

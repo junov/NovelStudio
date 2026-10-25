@@ -41,6 +41,21 @@ describe('AGT-002: Inline Author Interview in Agent Feed', () => {
 		expect(cardSource).toContain('initAnswers');
 		expect(cardSource).not.toMatch(/let answers = \$state\((\{\}|<[^>]+>\(\{\}\))\);/);
 	});
+
+	// @spec AGT-002
+	it('does not log confusing placeholder cards and places InterviewCard inline after feed items', () => {
+		const engineSource = readFileSync(resolve(__dirname, '../src/lib/agent/engine.svelte.ts'), 'utf-8');
+		const panelSource = readFileSync(resolve(__dirname, '../src/lib/components/AgentPanel.svelte'), 'utf-8');
+
+		// Ensure no dummy 'Presenting N question(s)' placeholder feed item is generated
+		expect(engineSource).not.toContain('Presenting');
+
+		// Ensure InterviewCard is rendered after the feed loop (inline with latest activity)
+		const eachFeedIndex = panelSource.indexOf('{#each agent.feed as item}');
+		const interviewCardIndex = panelSource.indexOf('<InterviewCard');
+		expect(eachFeedIndex).toBeGreaterThan(-1);
+		expect(interviewCardIndex).toBeGreaterThan(eachFeedIndex);
+	});
 });
 
 describe('AGT-003: Selectable and Copyable Agent Feed Content', () => {

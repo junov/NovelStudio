@@ -15,6 +15,19 @@
 	let customPrompt = $state('');
 	let panelWidth = $state(DEFAULT_WIDTH);
 	let isDragging = $state(false);
+	let feedContainer = $state<HTMLDivElement | null>(null);
+
+	$effect(() => {
+		// Auto-scroll to bottom on feed updates, active question, or active approval
+		const _len = agent.feed.length;
+		const _q = agent.activeQuestion;
+		const _a = agent.activeApproval;
+		if (feedContainer) {
+			setTimeout(() => {
+				feedContainer?.scrollTo({ top: feedContainer.scrollHeight, behavior: 'smooth' });
+			}, 30);
+		}
+	});
 
 	onMount(() => {
 		const saved = localStorage.getItem('novelstudio.agent_panel_width');
@@ -102,15 +115,7 @@
 		</div>
 	</div>
 
-	<div class="panel-feed">
-		{#if agent.activeQuestion}
-			<InterviewCard request={agent.activeQuestion} />
-		{/if}
-
-		{#if agent.activeApproval}
-			<DiffReview request={agent.activeApproval} />
-		{/if}
-
+	<div class="panel-feed" bind:this={feedContainer}>
 		{#if agent.feed.length === 0 && !agent.activeQuestion && !agent.activeApproval}
 			<div class="empty-feed">
 				<span class="empty-icon">❦</span>
@@ -130,6 +135,14 @@
 				{/if}
 			</div>
 		{/each}
+
+		{#if agent.activeQuestion}
+			<InterviewCard request={agent.activeQuestion} />
+		{/if}
+
+		{#if agent.activeApproval}
+			<DiffReview request={agent.activeApproval} />
+		{/if}
 	</div>
 
 	<div class="panel-footer">

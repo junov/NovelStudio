@@ -84,26 +84,74 @@ describe('JRN-001: Contextual Hover Cards for Journey Rail Elements (Issue #7)',
 	});
 
 	// @spec JRN-001
-	it('correctly handles object-shaped drift items from specnovel without git flags or [object Object]', () => {
+	it('lists upstream items that have changed since last sync for outline drift pill', () => {
 		const status = createMockStatus({
+			upstream_drift: {
+				outline: [
+					{ change: 'M', file: 'kb/characters/CHR-001.md' } as any,
+					{ change: 'A', file: 'story/brief.md' } as any
+				]
+			},
 			drift: {
 				outline: [
-					{ change: 'M', file: 'outline/outline.md' } as any,
-					{ change: 'A', file: 'kb/places/PLC-001.md' } as any
+					{ change: 'M', file: 'kb/characters/CHR-001.md' } as any,
+					{ change: 'A', file: 'story/brief.md' } as any,
+					{ change: 'M', file: 'outline/outline.md' } as any
 				]
 			}
 		});
 		const outlineStage = PIPELINE.find((s) => s.id === 'outline')!;
-		const pillInfo = getStagePillInfo(outlineStage, status, '2 drift', 'needs-sync');
+		const pillInfo = getStagePillInfo(outlineStage, status, '3 drift', 'needs-sync');
 
-		// Strips Git diff porcelain flags (e.g. "M ", "A ")
-		expect(pillInfo.items).toContain('outline/outline.md');
-		expect(pillInfo.items).toContain('kb/places/PLC-001.md');
-		expect(pillInfo.items).not.toContain('M outline/outline.md');
-		expect(pillInfo.items.every((it) => typeof it === 'string' && !it.includes('[object Object]'))).toBe(true);
+		expect(pillInfo.title).toBe('Upstream Changes Detected');
+		expect(pillInfo.items).toContain('kb/characters/CHR-001.md');
+		expect(pillInfo.items).toContain('story/brief.md');
+		expect(pillInfo.items).not.toContain('outline/outline.md');
+		expect(pillInfo.description).toContain('2 upstream item(s)');
 
 		const actionInfo = getStageActionInfo(outlineStage, status);
-		expect(actionInfo.items).toContain('outline/outline.md');
+		expect(actionInfo.items).toContain('kb/characters/CHR-001.md');
+		expect(actionInfo.items).toContain('story/brief.md');
+	});
+
+	// @spec JRN-001
+	it('distinguishes internal outline changes when no upstream items have drifted', () => {
+		const status = createMockStatus({
+			upstream_drift: {
+				outline: []
+			},
+			drift: {
+				outline: ['outline/outline.md']
+			}
+		});
+		const outlineStage = PIPELINE.find((s) => s.id === 'outline')!;
+		const pillInfo = getStagePillInfo(outlineStage, status, '1 drift', 'needs-sync');
+
+		expect(pillInfo.title).toBe('Outline Changes Detected');
+		expect(pillInfo.items).toEqual(['outline/outline.md']);
+		expect(pillInfo.description).toContain('Outline since last sync');
+	});
+
+	// @spec JRN-001
+	it('correctly handles object-shaped drift items from specnovel without git flags or [object Object]', () => {
+		const status = createMockStatus({
+			drift: {
+				brief: [
+					{ change: 'M', file: 'story/synopsis.md' } as any,
+					{ change: 'A', file: 'story/brief.md' } as any
+				]
+			}
+		});
+		const briefStage = PIPELINE.find((s) => s.id === 'brief')!;
+		const pillInfo = getStagePillInfo(briefStage, status, '2 drift', 'needs-sync');
+
+		// Strips Git diff porcelain flags (e.g. "M ", "A ")
+		expect(pillInfo.items).toContain('story/synopsis.md');
+		expect(pillInfo.items).toContain('story/brief.md');
+		expect(pillInfo.items).not.toContain('M story/synopsis.md');
+		expect(pillInfo.items.every((it) => typeof it === 'string' && !it.includes('[object Object]'))).toBe(true);
+
+		const actionInfo = getStageActionInfo(briefStage, status);
 		expect(actionInfo.items.every((it) => typeof it === 'string' && !it.includes('[object Object]'))).toBe(true);
 	});
 

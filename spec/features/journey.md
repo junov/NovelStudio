@@ -16,7 +16,7 @@ Acceptance:
   then it displays the full stage title, sequence position, comprehensive stage description, associated paths, and the assigned skill.
 - Given an author hovers over a status pill (drift, pending, or synced),
   when the hover card appears,
-  then it displays a description of the state represented by the pill without Git-specific terminology or commit hashes, enumerating affected items or files contributing to drift, and enumerating pending items or scenes requiring generation for pending status pills.
+  then it displays a description of the state represented by the pill without Git-specific terminology or commit hashes, enumerating affected items or files contributing to drift (for the outline stage, specifically listing upstream items from story/ and kb/ that have changed since the outline was last synced, distinguishing upstream drift from outline-internal changes), and enumerating pending items or scenes requiring generation for pending status pills.
 - Given an author hovers over a stage action play button,
   when the hover card appears,
   then it displays a dynamic craft-oriented action title (such as "Draft Manuscript Prose" or "Investigate Research Questions") and description of the exact actions that will be performed upon clicking without referencing raw skill names (e.g. novel-write, novel-sync), referencing current project context and relevant entities.

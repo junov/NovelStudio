@@ -98,6 +98,35 @@ export function getStagePillInfo(
 	const driftItems = rawDrift.map(formatDriftItem).filter(Boolean);
 
 	if (pillStatus === 'needs-sync') {
+		if (stage.id === 'outline') {
+			const rawUpstream = status?.upstream_drift?.outline ?? [];
+			const upstreamItems = rawUpstream.map(formatDriftItem).filter(Boolean);
+			const inferredUpstream = driftItems.filter(
+				(item) => item.startsWith('story/') || item.startsWith('kb/')
+			);
+			const allUpstream = Array.from(new Set([...upstreamItems, ...inferredUpstream]));
+
+			if (allUpstream.length > 0) {
+				return {
+					title: 'Upstream Changes Detected',
+					badge,
+					status: pillStatus,
+					description: `${allUpstream.length} upstream item(s) have changed since ${stage.label} was last accepted.`,
+					items: allUpstream
+				};
+			}
+
+			if (driftItems.length > 0) {
+				return {
+					title: 'Outline Changes Detected',
+					badge,
+					status: pillStatus,
+					description: `${driftItems.length} item(s) have changed in ${stage.label} since last sync.`,
+					items: driftItems
+				};
+			}
+		}
+
 		if (driftItems.length > 0) {
 			return {
 				title: `Upstream Changes Detected`,
@@ -216,7 +245,12 @@ export function getStageActionInfo(stage: PipelineStage, status: StatusJson | nu
 		case 'outline': {
 			const hasBaseline = Boolean(status.baselines?.['outline']);
 			const sceneCount = status.scenes?.outline ?? 0;
-			const hasWork = !hasBaseline || drift.length > 0 || sceneCount === 0;
+			const rawUpstream = status?.upstream_drift?.outline ?? [];
+			const upstreamItems = rawUpstream.map(formatDriftItem).filter(Boolean);
+			const allUpstream = Array.from(
+				new Set([...upstreamItems, ...drift.filter((d) => d.startsWith('story/') || d.startsWith('kb/'))])
+			);
+			const hasWork = !hasBaseline || allUpstream.length > 0 || drift.length > 0 || sceneCount === 0;
 			if (!hasWork) {
 				return {
 					isActionable: false,
@@ -229,8 +263,11 @@ export function getStageActionInfo(stage: PipelineStage, status: StatusJson | nu
 			return {
 				isActionable: true,
 				title: 'Structure Story Outline',
-				description: `Build or update chapter and scene DAG in outline/outline.md.`,
-				items: drift
+				description:
+					allUpstream.length > 0
+						? `Update outline story DAG to incorporate ${allUpstream.length} changed upstream item(s).`
+						: `Build or update chapter and scene DAG in outline/outline.md.`,
+				items: allUpstream.length > 0 ? allUpstream : drift
 			};
 		}
 

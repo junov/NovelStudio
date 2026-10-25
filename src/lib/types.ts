@@ -23,6 +23,7 @@ export interface StatusJson {
 	graphics: { active: number; pending: number; inactive: number; pending_items?: string[] };
 	placeholders: { total: number; untracked: number };
 	drift: Record<string, Array<DriftItem | string>>;
+	upstream_drift?: Record<string, Array<DriftItem | string>>;
 	errors: string[];
 	warnings: string[];
 	infos: string[];

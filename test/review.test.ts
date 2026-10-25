@@ -38,11 +38,12 @@ describe('REV-001: Unstaged Change Tracking and Navigator Visual Cues', () => {
 	});
 
 	// @spec REV-001
-	it('renders visual cues for modified items across Story Bible, Outline, and Files navigators', () => {
+	it('renders visual cues for modified items across Story Bible and Files navigators', () => {
 		expect(explorerSrc).toContain('class="change-cue"');
 		expect(explorerSrc).toContain('hasItemUnstagedChanges(item.id)');
-		expect(explorerSrc).toContain('hasItemUnstagedChanges(scn.id)');
 		expect(explorerSrc).toContain('hasUnstagedChanges(file.path)');
+		// Redundant Outline tab is removed; outline items are consolidated in Story Bible
+		expect(explorerSrc).not.toContain("currentTab === 'outline'");
 	});
 });
 

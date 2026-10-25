@@ -38,7 +38,7 @@ Acceptance:
 - Given an author clicks a wiki-link chip (`[[TARGET]]`) in any rendered Markdown document,
   when clicked,
   then the system executes the centralized navigation handler (`project.openId`), opening the target entity's defining file.
-- Given an author clicks an entity item in the Story Bible or outline explorer,
+- Given an author clicks an entity item in the Story Bible explorer,
   when clicked,
   then the same centralized navigation handler is invoked to open the defining document.
 - Given a wiki-link appearing in the agent activity feed,

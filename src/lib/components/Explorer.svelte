@@ -1,13 +1,13 @@
 <script lang="ts">
 	/**
-	 * Explorer sidebar: Story Bible, Outline, and Files navigators with Git review/accept flow.
+	 * Explorer sidebar: Story Bible and Files navigators with Git review/accept flow.
 	 * @spec REV-001, REV-002, BBL-001
 	 */
 	import { project } from '$lib/stores/project.svelte';
 	import { PREFIXES, prefixOf, type Definition } from '$lib/entities';
 	import { runSpecnovel } from '$lib/tauri';
 
-	type Tab = 'bible' | 'outline' | 'files';
+	type Tab = 'bible' | 'files';
 	let currentTab = $state<Tab>('bible');
 
 	// Group definitions by entity prefix
@@ -21,13 +21,6 @@
 			groups[k].sort((a, b) => a.id.localeCompare(b.id));
 		}
 		return groups;
-	});
-
-	// Outline scenes in reading order
-	const outlineScenes = $derived(() => {
-		return Object.values(project.defs)
-			.filter((d) => d.id.startsWith('SCN-') && d.path.startsWith('outline/'))
-			.sort((a, b) => a.line - b.line);
 	});
 
 	// Quick create next entity
@@ -58,13 +51,6 @@
 			onclick={() => (currentTab = 'bible')}
 		>
 			Story Bible
-		</button>
-		<button
-			class="tab-btn"
-			class:active={currentTab === 'outline'}
-			onclick={() => (currentTab = 'outline')}
-		>
-			Outline
 		</button>
 		<button
 			class="tab-btn"
@@ -131,45 +117,6 @@
 							{/each}
 						</div>
 					</details>
-				{/each}
-			</div>
-		{:else if currentTab === 'outline'}
-			<div class="outline-list">
-				<div class="section-header">
-					<span>Scenes ({outlineScenes().length})</span>
-					<button
-						class="btn small ghost"
-						onclick={() => project.openFile('outline/outline.md')}
-					>
-						Edit outline.md
-					</button>
-				</div>
-				{#each outlineScenes() as scn}
-					<div class="scene-item" onclick={() => project.openId(scn.id)}>
-						<span class="scn-id">{scn.id}</span>
-						<span class="scn-title">{scn.title}</span>
-						{#if project.hasItemUnstagedChanges(scn.id)}
-							<span class="change-cue" title="Unstaged changes">●</span>
-							<!-- svelte-ignore a11y_click_events_have_key_events -->
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div class="review-actions" onclick={(e) => e.stopPropagation()}>
-								<button
-									class="review-btn accept"
-									onclick={() => project.acceptItem(scn.id)}
-									title="Accept unstaged changes for {scn.id}"
-								>
-									Accept
-								</button>
-								<button
-									class="review-btn revert"
-									onclick={() => project.revertItem(scn.id)}
-									title="Revert unstaged changes for {scn.id}"
-								>
-									Revert
-								</button>
-							</div>
-						{/if}
-					</div>
 				{/each}
 			</div>
 		{:else}
@@ -320,38 +267,6 @@
 	}
 	.entity-name {
 		color: var(--ink);
-		text-overflow: ellipsis;
-		overflow: hidden;
-		white-space: nowrap;
-	}
-
-	.section-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 6px 12px;
-		font-weight: 600;
-		font-size: 12px;
-		color: var(--ink-soft);
-	}
-	.scene-item {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 5px 12px;
-		font-size: 12px;
-		cursor: pointer;
-	}
-	.scene-item:hover {
-		background: var(--bg-sunken);
-	}
-	.scn-id {
-		font-family: var(--font-mono);
-		font-size: 11px;
-		color: var(--accent);
-		font-weight: 600;
-	}
-	.scn-title {
 		text-overflow: ellipsis;
 		overflow: hidden;
 		white-space: nowrap;

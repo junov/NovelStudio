@@ -8,30 +8,30 @@ prefix: REV
 
 ### REV-001: Unstaged Change Tracking and Navigator Visual Cues
 WHEN an author or agent modifies files in the project workspace,
-THE SYSTEM SHALL retain all modifications as unstaged Git changes and reactively display visual change indicators in the Story Bible, Outline, and Files navigators.
+THE SYSTEM SHALL retain all modifications as unstaged Git changes and reactively display visual change indicators in the Story Bible and Files navigators.
 
 Acceptance:
 - Given any manual edit in the editor or file modification executed by an agent,
   when written to disk,
   then the changes remain unstaged in Git and are detected by the project state.
-- Given a file, Story Bible entity, or Outline scene with unstaged Git changes,
+- Given a file or Story Bible entity (including outline scenes, parts, and chapters) with unstaged Git changes,
   when viewed in their respective navigators,
   then a distinct visual indicator is displayed marking the item as modified.
 
 Notes: Linked to #6.
 
 ### REV-002: Navigator Item and File Accept and Revert Actions
-WHEN an item in the Story Bible, Outline, or Files navigator has unstaged changes,
+WHEN an item in the Story Bible or Files navigator has unstaged changes,
 THE SYSTEM SHALL display paired Accept and Revert buttons next to the item, committing the item's changes on accept or restoring the committed version on revert, and immediately dismiss the buttons once either action is triggered.
 
 Acceptance:
-- Given an item in the Story Bible, Outline, or Files navigator with unstaged changes,
+- Given an item in the Story Bible or Files navigator with unstaged changes,
   when displayed,
   then both an Accept button and a Revert button are rendered alongside the item.
 - Given an author clicks the Accept button on a file in the Files navigator,
   when clicked,
   then the unstaged changes for that file are committed to Git and the accept/revert buttons disappear.
-- Given an author clicks the Accept button on an entity in the Story Bible or Outline navigator,
+- Given an author clicks the Accept button on an entity in the Story Bible navigator,
   when clicked,
   then the unstaged changes for that specific item are committed to Git and the buttons disappear.
 - Given an author clicks the Revert button on an item or file,

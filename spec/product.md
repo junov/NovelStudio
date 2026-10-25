@@ -11,9 +11,9 @@ NovelStudio is a professional desktop environment for specification-driven novel
 ## Scope & Core Capabilities
 
 ### In Scope
-- **Project Scaffolding & Journey Rail**: Interactive visual pipeline guiding authors through 8 distinct stages (Brief, Research, Story Bible, Outline, Drafting, Critique, Revision, Compilation).
+- **Project Scaffolding & Journey Rail**: Interactive visual pipeline guiding authors through 7 distinct sequential delivery stages (Brief, Research, Outline, Graphics, Abridged, Manuscript, Publish).
 - **Dual-Mode Writing Editor**: Switching between structural Markdown editing (CodeMirror 6 "edit" mode) and rendered Markdown ("preview" mode) with live bidirectional wiki-link resolution.
-- **Living Story Bible Explorer**: Categorized catalog of characters, places, items, factions, lore, and outline scenes with status badges and entity cards.
+- **Living Story Bible Explorer**: Categorized catalog of characters, places, items, factions, lore, and outline scenes with status badges and entity cards, continuously accessible throughout writing.
 - **Autonomous Agent Loop & Tools**: Embedded pair-programmer loop calling LLM APIs directly with SpecNovelist tools (`read_file`, `write_file`, `specnovel`, `ask_user`, `read_toolkit_doc`).
 - **Secure Multi-Provider AI Integration**: Direct API connections to Anthropic Claude, Google Gemini, and OpenAI with encrypted credentials stored in OS Keychain (Windows Credential Manager).
 - **Distraction-Free Dedicated Windows**: Multi-window architecture providing separate native windows for AI configuration settings and interactive author interview sessions.
@@ -26,7 +26,7 @@ NovelStudio is a professional desktop environment for specification-driven novel
 
 ## Glossary
 - **SpecNovelist**: The specification-driven novel development methodology where structured Markdown files specify narrative intent before prose is written.
-- **Story Bible**: The curated encyclopedia of entities (`kb/characters/`, `kb/places/`, `kb/lore/`) defining canonical facts.
+- **Story Bible**: The curated encyclopedia of entities (`kb/characters/`, `kb/places/`, `kb/lore/`) defining canonical facts, continuously authored across all stages.
 - **Wiki-link**: Cross-reference syntax `[[ID]]` or `[[ID|Label]]` connecting prose and scenes directly to Story Bible entities.
-- **Journey Rail**: The 8-stage progress tracker representing the path from concept brief to finished book.
+- **Journey Rail**: The 7-stage progress tracker representing the path from concept brief to finished book.
 - **Walking Skeleton**: The minimal end-to-end executable pipeline slice.

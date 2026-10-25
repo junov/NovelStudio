@@ -49,11 +49,11 @@ She arrived at [[PLC-005]].
 });
 
 describe('Pipeline Stages', () => {
-	it('has 8 core pipeline stages in sequence', () => {
+	// @spec AGT-008
+	it('has 7 core pipeline stages in sequence without story bible', () => {
 		expect(PIPELINE.map((s) => s.id)).toEqual([
 			'brief',
 			'research',
-			'bible',
 			'outline',
 			'graphics',
 			'abridged',

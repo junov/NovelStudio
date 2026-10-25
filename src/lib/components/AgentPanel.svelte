@@ -8,6 +8,7 @@
 	import { groupFeedItems } from '$lib/agent/feed';
 	import { wikiLinks } from '$lib/actions';
 	import { renderWikiChips } from '$lib/markdown';
+	import { routeUserPrompt } from '$lib/agent/router';
 	import InterviewCard from './InterviewCard.svelte';
 	import DiffReview from './DiffReview.svelte';
 	import WorkCard from './WorkCard.svelte';
@@ -80,7 +81,8 @@
 		if (!customPrompt.trim()) return;
 		const text = customPrompt.trim();
 		customPrompt = '';
-		agent.run(agent.currentSkill || 'novel-sync', text);
+		const routedSkill = routeUserPrompt(text);
+		agent.run(routedSkill, text);
 	}
 </script>
 

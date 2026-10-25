@@ -82,14 +82,15 @@ export const AGENT_TOOLS: ToolDef[] = [
 		}
 	},
 	{
+		// @spec REV-004
 		name: 'specnovel',
-		description: 'Execute a SpecNovelist CLI command (specnovel.py) such as "status", "check", "dag", "impact", "next-id", "delta", "accept", "audit", "stats", "placeholders", "feedback".',
+		description: 'Execute a SpecNovelist CLI command (specnovel.py) such as "status", "check", "dag", "impact", "next-id", "delta", "audit", "stats", "placeholders", "feedback". Note: "accept" and Git commits are strictly prohibited for agents.',
 		parameters: {
 			type: 'object',
 			properties: {
 				subcommand: {
 					type: 'string',
-					description: 'Subcommand name, e.g. "check", "dag", "impact", "next-id", "audit", "accept".'
+					description: 'Subcommand name, e.g. "check", "dag", "impact", "next-id", "audit". ("accept" is blocked by guardrails).'
 				},
 				args: {
 					type: 'array',

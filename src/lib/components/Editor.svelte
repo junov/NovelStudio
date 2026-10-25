@@ -1,13 +1,15 @@
 <script lang="ts">
 	/**
-	 * Document viewer and Markdown editor with graphics preview and target scrolling.
-	 * @spec EDT-001, EDT-002, BBL-003
+	 * Document viewer and Markdown editor with graphics preview, side-by-side diff mode, and target scrolling.
+	 * @spec REV-003, EDT-001, EDT-002, BBL-003
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { project } from '$lib/stores/project.svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import { wikiLinks } from '$lib/actions';
 	import { isGraphic, isRasterImage, isBinary, isEditable, getMimeType } from '$lib/formats';
+	import { getHeadFileContent } from '$lib/git';
+	import { diffHighlighter } from '$lib/diffHighlight';
 	import { EditorView, basicSetup } from 'codemirror';
 	import { EditorState } from '@codemirror/state';
 	import { markdown } from '@codemirror/lang-markdown';
@@ -20,11 +22,15 @@
 
 	let { path, targetLine, targetId }: Props = $props();
 
-	let mode = $state<'preview' | 'edit'>('preview');
+	let mode = $state<'preview' | 'edit' | 'diff'>('preview');
 	let content = $state('');
+	let headContent = $state('');
 	let graphicUrl = $state<string | null>(null);
 	let isDirty = $state(false);
 	let isSaving = $state(false);
+
+	const hasUnstaged = $derived(() => project.hasUnstagedChanges(path));
+
 	let wordCount = $derived(() => {
 		const words = content.trim().match(/\S+/g);
 		return words ? words.length : 0;
@@ -32,7 +38,10 @@
 
 	let previewContainer: HTMLDivElement | null = $state(null);
 	let cmContainer: HTMLDivElement | null = $state(null);
+	let cmHeadContainer: HTMLDivElement | null = $state(null);
 	let cmView: EditorView | null = null;
+	let cmHeadView: EditorView | null = null;
+	let unbindScrollSync: (() => void) | null = null;
 
 	// Backlinks referencing this file or ID
 	const currentBacklinks = $derived(() => {
@@ -56,8 +65,11 @@
 		}
 	}
 
-	function setMode(newMode: 'preview' | 'edit') {
+	function setMode(newMode: 'preview' | 'edit' | 'diff') {
 		if (newMode === 'edit' && !isEditable(path)) {
+			return;
+		}
+		if (newMode === 'diff' && !hasUnstaged()) {
 			return;
 		}
 		mode = newMode;
@@ -66,41 +78,86 @@
 	function scrollToTarget(tId?: string, tLine?: number) {
 		if (!tId && !tLine) return;
 
-		let el: HTMLElement | null = null;
-		if (tId) {
-			el = document.getElementById(tId);
-			if (!el) {
-				el = document.querySelector(`.editor-body [data-id="${tId}"], .editor-body [data-wiki="${tId}"]`);
+		// In preview mode, locate DOM elements, headings, or data-line attributes
+		if (mode === 'preview') {
+			let el: HTMLElement | null = null;
+			if (tId) {
+				el = document.getElementById(tId);
+				if (!el) {
+					el = document.querySelector(`.editor-body [data-id="${tId}"], .editor-body [data-wiki="${tId}"]`);
+				}
+				if (!el) {
+					const headings = Array.from(
+						document.querySelectorAll(
+							'.editor-body h1, .editor-body h2, .editor-body h3, .editor-body h4, .editor-body h5, .editor-body h6, .editor-body [data-line]'
+						)
+					);
+					el = (headings.find((h) => h.textContent?.includes(tId)) as HTMLElement) || null;
+				}
 			}
-			if (!el) {
-				const headings = Array.from(
-					document.querySelectorAll(
-						'.editor-body h1, .editor-body h2, .editor-body h3, .editor-body h4, .editor-body h5, .editor-body h6, .editor-body [data-line]'
-					)
-				);
-				el = (headings.find((h) => h.textContent?.includes(tId)) as HTMLElement) || null;
+			if (!el && tLine) {
+				el = document.querySelector(`.editor-body [data-line="${tLine}"]`) as HTMLElement;
 			}
-		}
-		if (!el && tLine) {
-			el = document.querySelector(`.editor-body [data-line="${tLine}"]`) as HTMLElement;
+
+			if (el) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				el.classList.add('highlight-target');
+				setTimeout(() => el?.classList.remove('highlight-target'), 2000);
+				return;
+			}
 		}
 
-		if (el) {
-			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-			el.classList.add('highlight-target');
-			setTimeout(() => el?.classList.remove('highlight-target'), 2000);
-			return;
-		}
+		// In edit or diff mode, scroll the CodeMirror editor view(s)
+		if (mode === 'edit' || mode === 'diff') {
+			let targetLineNumber = tLine;
+			if (!targetLineNumber && tId && cmView) {
+				for (let i = 1; i <= cmView.state.doc.lines; i++) {
+					const lineText = cmView.state.doc.line(i).text;
+					if (lineText.includes(tId)) {
+						targetLineNumber = i;
+						break;
+					}
+				}
+			}
 
-		if (cmView && tLine) {
-			try {
-				const lineObj = cmView.state.doc.line(Math.min(Math.max(1, tLine), cmView.state.doc.lines));
-				cmView.dispatch({
-					selection: { anchor: lineObj.from },
-					effects: EditorView.scrollIntoView(lineObj.from, { y: 'center' })
-				});
-			} catch (e) {
-				console.error('Failed to scroll CodeMirror to line:', e);
+			if (cmView && targetLineNumber) {
+				try {
+					const clamped = Math.min(Math.max(1, targetLineNumber), cmView.state.doc.lines);
+					const lineObj = cmView.state.doc.line(clamped);
+					cmView.dispatch({
+						selection: { anchor: lineObj.from, head: lineObj.to },
+						effects: EditorView.scrollIntoView(lineObj.from, { y: 'center' })
+					});
+				} catch (e) {
+					console.error('Failed to scroll CodeMirror cmView:', e);
+				}
+			}
+
+			// In diff mode, scroll the baseline HEAD view as well
+			if (mode === 'diff' && cmHeadView) {
+				let headLineNumber = tLine;
+				if (!headLineNumber && tId) {
+					for (let i = 1; i <= cmHeadView.state.doc.lines; i++) {
+						const lineText = cmHeadView.state.doc.line(i).text;
+						if (lineText.includes(tId)) {
+							headLineNumber = i;
+							break;
+						}
+					}
+				}
+
+				if (headLineNumber) {
+					try {
+						const clampedHead = Math.min(Math.max(1, headLineNumber), cmHeadView.state.doc.lines);
+						const lineObjHead = cmHeadView.state.doc.line(clampedHead);
+						cmHeadView.dispatch({
+							selection: { anchor: lineObjHead.from, head: lineObjHead.to },
+							effects: EditorView.scrollIntoView(lineObjHead.from, { y: 'center' })
+						});
+					} catch (e) {
+						console.error('Failed to scroll CodeMirror cmHeadView:', e);
+					}
+				}
 			}
 		}
 	}
@@ -108,7 +165,13 @@
 	async function loadFile() {
 		cleanupGraphic();
 		try {
+			if (project.root) {
+				headContent = await getHeadFileContent(project.root, path);
+			}
+
 			if (!isEditable(path)) {
+				mode = 'preview';
+			} else if (mode === 'diff' && !hasUnstaged()) {
 				mode = 'preview';
 			}
 
@@ -165,29 +228,86 @@
 	}
 
 	function initEditors() {
+		if (unbindScrollSync) {
+			unbindScrollSync();
+			unbindScrollSync = null;
+		}
 		if (cmView) {
 			cmView.destroy();
 			cmView = null;
 		}
+		if (cmHeadView) {
+			cmHeadView.destroy();
+			cmHeadView = null;
+		}
 
-		if (mode === 'edit' && isEditable(path) && cmContainer) {
+		if ((mode === 'edit' || mode === 'diff') && isEditable(path) && cmContainer) {
+			const leftExtensions = [
+				basicSetup,
+				markdown(),
+				EditorView.updateListener.of((update) => {
+					if (update.docChanged) {
+						content = update.state.doc.toString();
+						isDirty = true;
+					}
+				})
+			];
+			if (mode === 'diff') {
+				leftExtensions.push(diffHighlighter(() => headContent, true));
+			}
+
 			const startState = EditorState.create({
 				doc: content,
-				extensions: [
-					basicSetup,
-					markdown(),
-					EditorView.updateListener.of((update) => {
-						if (update.docChanged) {
-							content = update.state.doc.toString();
-							isDirty = true;
-						}
-					})
-				]
+				extensions: leftExtensions
 			});
 			cmView = new EditorView({
 				state: startState,
 				parent: cmContainer
 			});
+		}
+
+		if (mode === 'diff' && cmHeadContainer) {
+			const headState = EditorState.create({
+				doc: headContent,
+				extensions: [
+					basicSetup,
+					markdown(),
+					EditorState.readOnly.of(true),
+					diffHighlighter(() => content, false)
+				]
+			});
+			cmHeadView = new EditorView({
+				state: headState,
+				parent: cmHeadContainer
+			});
+
+			setTimeout(() => {
+				const leftScroller = cmContainer?.querySelector('.cm-scroller');
+				const rightScroller = cmHeadContainer?.querySelector('.cm-scroller');
+				if (leftScroller && rightScroller) {
+					let isSyncing = false;
+					const onLeft = () => {
+						if (isSyncing) return;
+						isSyncing = true;
+						rightScroller.scrollTop = leftScroller.scrollTop;
+						rightScroller.scrollLeft = leftScroller.scrollLeft;
+						requestAnimationFrame(() => { isSyncing = false; });
+					};
+					const onRight = () => {
+						if (isSyncing) return;
+						isSyncing = true;
+						leftScroller.scrollTop = rightScroller.scrollTop;
+						leftScroller.scrollLeft = rightScroller.scrollLeft;
+						requestAnimationFrame(() => { isSyncing = false; });
+					};
+					leftScroller.addEventListener('scroll', onLeft);
+					rightScroller.addEventListener('scroll', onRight);
+					unbindScrollSync = () => {
+						leftScroller.removeEventListener('scroll', onLeft);
+						rightScroller.removeEventListener('scroll', onRight);
+					};
+				}
+			}, 60);
 		}
 	}
 
@@ -204,9 +324,18 @@
 			setTimeout(() => {
 				initEditors();
 				if (targetId || targetLine) {
-					scrollToTarget(targetId, targetLine);
+					setTimeout(() => {
+						scrollToTarget(targetId, targetLine);
+					}, 80);
 				}
 			}, 30);
+		}
+	});
+
+	$effect(() => {
+		// If unstaged changes disappear while in diff mode, return to preview
+		if (!hasUnstaged() && mode === 'diff') {
+			mode = 'preview';
 		}
 	});
 
@@ -224,7 +353,9 @@
 
 	onDestroy(() => {
 		cleanupGraphic();
+		if (unbindScrollSync) unbindScrollSync();
 		if (cmView) cmView.destroy();
+		if (cmHeadView) cmHeadView.destroy();
 	});
 
 	// Auto-save on Ctrl+S
@@ -273,6 +404,17 @@
 				>
 					<span class="mode-icon">✏️</span> Edit
 				</button>
+				{#if hasUnstaged()}
+					<button
+						class="toggle-btn diff-btn"
+						class:active={mode === 'diff'}
+						onclick={() => setMode('diff')}
+						title="Diff mode (+/- unstaged changes)"
+						aria-label="Diff mode"
+					>
+						<span class="mode-icon">+/-</span> Diff
+					</button>
+				{/if}
 			</div>
 
 			{#if isEditable(path)}
@@ -287,7 +429,7 @@
 		</div>
 	</div>
 
-	<div class="editor-body">
+	<div class="editor-body" class:diff-mode={mode === 'diff'}>
 		{#if mode === 'preview'}
 			{#if isGraphic(path) && graphicUrl}
 				<div class="graphic-preview-container">
@@ -307,6 +449,22 @@
 					{@html renderMarkdown(content, { titleOf: project.titleOf })}
 				</div>
 			{/if}
+		{:else if mode === 'diff'}
+			<div class="side-by-side-diff">
+				<div class="diff-pane left-pane">
+					<div class="pane-header">
+						<span>New (Editable)</span>
+						{#if isDirty}<span class="dirty-dot" title="Unsaved changes">●</span>{/if}
+					</div>
+					<div class="codemirror-wrapper diff-cm-wrapper" bind:this={cmContainer}></div>
+				</div>
+				<div class="diff-pane right-pane">
+					<div class="pane-header">
+						<span>Committed Baseline (HEAD)</span>
+					</div>
+					<div class="codemirror-wrapper diff-cm-wrapper" bind:this={cmHeadContainer}></div>
+				</div>
+			</div>
 		{:else}
 			<div class="codemirror-wrapper" bind:this={cmContainer}></div>
 		{/if}
@@ -420,12 +578,109 @@
 	.mode-icon {
 		font-size: 12px;
 		line-height: 1;
+		font-family: var(--font-mono);
 	}
 
 	.editor-body {
 		flex: 1;
 		overflow-y: auto;
 		padding: 32px 40px;
+	}
+	.editor-body.diff-mode {
+		padding: 0;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.side-by-side-diff {
+		display: flex;
+		flex: 1;
+		height: 100%;
+		min-height: 0;
+		width: 100%;
+		gap: 0;
+	}
+	.diff-pane {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		min-height: 0;
+		overflow: hidden;
+		border: none;
+		border-radius: 0;
+		background: var(--paper);
+	}
+	.diff-pane.left-pane {
+		border-right: 1px solid var(--line);
+	}
+	.pane-header {
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		padding: 6px 12px;
+		background: var(--bg-sunken);
+		border-bottom: 1px solid var(--line);
+		color: var(--ink-soft);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-shrink: 0;
+	}
+	.left-pane .pane-header {
+		color: var(--accent);
+	}
+	.right-pane .pane-header {
+		color: var(--ink-faint);
+	}
+
+	.diff-cm-wrapper {
+		flex: 1;
+		height: 100%;
+		min-height: 0;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+
+	:global(.diff-cm-wrapper .cm-editor) {
+		height: 100% !important;
+		flex: 1;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+	}
+	:global(.diff-cm-wrapper .cm-scroller) {
+		height: 100% !important;
+		flex: 1;
+		overflow: auto !important;
+	}
+	:global(.diff-cm-wrapper .cm-scroller::-webkit-scrollbar) {
+		width: 10px;
+		height: 10px;
+		display: block;
+	}
+	:global(.diff-cm-wrapper .cm-scroller::-webkit-scrollbar-thumb) {
+		background: var(--line-strong);
+		border-radius: 6px;
+		border: 2px solid var(--paper);
+	}
+	:global(.diff-cm-wrapper .cm-scroller::-webkit-scrollbar-thumb:hover) {
+		background: var(--ink-soft);
+	}
+	:global(.diff-cm-wrapper .cm-scroller::-webkit-scrollbar-track) {
+		background: var(--bg-sunken);
+	}
+
+	:global(.diff-cm-wrapper .cm-diff-added) {
+		background-color: rgba(46, 125, 50, 0.16) !important;
+		border-left: 3px solid #2e7d32 !important;
+	}
+	:global(.diff-cm-wrapper .cm-diff-removed) {
+		background-color: rgba(198, 40, 40, 0.16) !important;
+		border-left: 3px solid #c62828 !important;
 	}
 
 	.graphic-preview-container {

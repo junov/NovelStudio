@@ -1,4 +1,8 @@
 <script lang="ts">
+	/**
+	 * Explorer sidebar: Story Bible, Outline, and Files navigators with Git review/accept flow.
+	 * @spec REV-001, REV-002, BBL-001
+	 */
 	import { project } from '$lib/stores/project.svelte';
 	import { PREFIXES, prefixOf, type Definition } from '$lib/entities';
 	import { runSpecnovel } from '$lib/tauri';
@@ -102,6 +106,27 @@
 								>
 									<span class="entity-id" style="color: hsl({info.hue} 60% 45%)">{item.id}</span>
 									<span class="entity-name">{item.title}</span>
+									{#if project.hasItemUnstagedChanges(item.id)}
+										<span class="change-cue" title="Unstaged changes">●</span>
+										<!-- svelte-ignore a11y_click_events_have_key_events -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<div class="review-actions" onclick={(e) => e.stopPropagation()}>
+											<button
+												class="review-btn accept"
+												onclick={() => project.acceptItem(item.id)}
+												title="Accept unstaged changes for {item.id}"
+											>
+												Accept
+											</button>
+											<button
+												class="review-btn revert"
+												onclick={() => project.revertItem(item.id)}
+												title="Revert unstaged changes for {item.id}"
+											>
+												Revert
+											</button>
+										</div>
+									{/if}
 								</div>
 							{/each}
 						</div>
@@ -123,6 +148,27 @@
 					<div class="scene-item" onclick={() => project.openId(scn.id)}>
 						<span class="scn-id">{scn.id}</span>
 						<span class="scn-title">{scn.title}</span>
+						{#if project.hasItemUnstagedChanges(scn.id)}
+							<span class="change-cue" title="Unstaged changes">●</span>
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="review-actions" onclick={(e) => e.stopPropagation()}>
+								<button
+									class="review-btn accept"
+									onclick={() => project.acceptItem(scn.id)}
+									title="Accept unstaged changes for {scn.id}"
+								>
+									Accept
+								</button>
+								<button
+									class="review-btn revert"
+									onclick={() => project.revertItem(scn.id)}
+									title="Revert unstaged changes for {scn.id}"
+								>
+									Revert
+								</button>
+							</div>
+						{/if}
 					</div>
 				{/each}
 			</div>
@@ -136,6 +182,27 @@
 					>
 						<span class="file-icon">{file.path.endsWith('.md') ? '📄' : '📁'}</span>
 						<span class="file-path">{file.path}</span>
+						{#if project.hasUnstagedChanges(file.path)}
+							<span class="change-cue" title="Unstaged changes">●</span>
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="review-actions" onclick={(e) => e.stopPropagation()}>
+								<button
+									class="review-btn accept"
+									onclick={() => project.acceptFile(file.path)}
+									title="Accept unstaged changes for {file.path}"
+								>
+									Accept
+								</button>
+								<button
+									class="review-btn revert"
+									onclick={() => project.revertFile(file.path)}
+									title="Revert unstaged changes for {file.path}"
+								>
+									Revert
+								</button>
+							</div>
+						{/if}
 					</div>
 				{/each}
 			</div>
@@ -315,5 +382,47 @@
 		white-space: nowrap;
 		font-family: var(--font-mono);
 		font-size: 11.5px;
+	}
+
+	.change-cue {
+		color: var(--accent);
+		font-size: 10px;
+		margin-left: 4px;
+		flex-shrink: 0;
+	}
+	.review-actions {
+		display: flex;
+		align-items: center;
+		gap: 3px;
+		margin-left: auto;
+		flex-shrink: 0;
+	}
+	.review-btn {
+		font-size: 10px;
+		font-weight: 600;
+		padding: 1px 5px;
+		border-radius: 3px;
+		border: 1px solid var(--line);
+		cursor: pointer;
+		line-height: 1.2;
+		transition: all 0.12s ease;
+	}
+	.review-btn.accept {
+		background: color-mix(in srgb, #2e7d32 15%, transparent);
+		color: #2e7d32;
+		border-color: color-mix(in srgb, #2e7d32 40%, transparent);
+	}
+	.review-btn.accept:hover {
+		background: #2e7d32;
+		color: white;
+	}
+	.review-btn.revert {
+		background: color-mix(in srgb, #c62828 15%, transparent);
+		color: #c62828;
+		border-color: color-mix(in srgb, #c62828 40%, transparent);
+	}
+	.review-btn.revert:hover {
+		background: #c62828;
+		color: white;
 	}
 </style>

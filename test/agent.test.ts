@@ -1,15 +1,17 @@
-// @spec AGT-001, AGT-002, AGT-003, AGT-004, AGT-005, AGT-006
+// @spec AGT-001, AGT-002, AGT-003, AGT-004, AGT-005, AGT-006, AGT-007, AGT-008
 import { describe, it, expect } from 'vitest';
 import { AGENT_TOOLS } from '../src/lib/agent/tools';
 import { initAnswers } from '../src/lib/components/InterviewCard.svelte';
 import { parseAskUserQuestions } from '../src/lib/agent/engine.svelte';
 import { groupFeedItems, isWorkItemType } from '../src/lib/agent/feed';
+import { routeUserPrompt } from '../src/lib/agent/router';
+import { PIPELINE } from '../src/lib/stages';
 import { renderMarkdown } from '../src/lib/markdown';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import type { AskUserRequest, FeedItem } from '../src/lib/agent/types';
 
-describe('AGT-001: Tool Execution Safety and Approval Gate', () => {
+describe('AGT-001: Unstaged File Execution for Agent Tools', () => {
 	// @spec AGT-001
 	it('declares write_file and delete_file tools with path schemas', () => {
 		const writeTool = AGENT_TOOLS.find((t) => t.name === 'write_file');
@@ -18,6 +20,14 @@ describe('AGT-001: Tool Execution Safety and Approval Gate', () => {
 		expect(deleteTool).toBeDefined();
 		expect(writeTool?.parameters.required).toContain('path');
 		expect(writeTool?.parameters.required).toContain('content');
+	});
+
+	// @spec AGT-001
+	it('writes directly to disk as unstaged changes and refreshes git status without blocking feed approval', () => {
+		const engineSource = readFileSync(resolve(__dirname, '../src/lib/agent/engine.svelte.ts'), 'utf-8');
+		expect(engineSource).toContain('refreshGitStatus');
+		const writeCase = engineSource.substring(engineSource.indexOf("case 'write_file'"), engineSource.indexOf("case 'specnovel'"));
+		expect(writeCase).not.toContain('awaiting_approval');
 	});
 });
 
@@ -391,5 +401,81 @@ describe('AGT-006: Grouped Activity Feed Work Cards with In-Progress Indicator',
 		expect(panelSource).toContain('WorkCard');
 		expect(panelSource).toContain('groupFeedItems');
 		expect(panelSource).toContain('groupedFeed');
+	});
+});
+
+describe('AGT-007: Interactive Skill Routing for Author Feed Messages', () => {
+	// @spec AGT-007
+	it('routes Story Bible entities, character details, places, or worldbuilding to novel-author', () => {
+		expect(routeUserPrompt('Create a new character named Dr. Elena Voss')).toBe('novel-author');
+		expect(routeUserPrompt('Update [[CHR-001]] to include an allergy')).toBe('novel-author');
+		expect(routeUserPrompt('Add a secret underground place in the city')).toBe('novel-author');
+		expect(routeUserPrompt('What if the villain has a change of heart?')).toBe('novel-author');
+		expect(routeUserPrompt('Establish a world rule for the magic system')).toBe('novel-author');
+	});
+
+	// @spec AGT-007
+	it('routes real-world facts or research questions to novel-research', () => {
+		expect(routeUserPrompt('Look up the melting point of titanium')).toBe('novel-research');
+		expect(routeUserPrompt('Research the history of the canal in 1890')).toBe('novel-research');
+		expect(routeUserPrompt('Fact-check the historical date of the battle')).toBe('novel-research');
+		expect(routeUserPrompt('Verify facts for [[RQ-001]]')).toBe('novel-research');
+	});
+
+	// @spec AGT-007
+	it('routes scene structure, chapter sequence, and story DAG to novel-outline', () => {
+		expect(routeUserPrompt('Update the outline to reorder scenes 3 and 4')).toBe('novel-outline');
+		expect(routeUserPrompt('Check the story dag prerequisites')).toBe('novel-outline');
+		expect(routeUserPrompt('Add a scene where Karl escapes')).toBe('novel-outline');
+		expect(routeUserPrompt('Change the chapter sequence in Part 1')).toBe('novel-outline');
+		expect(routeUserPrompt('Edit [[SCN-002]] outline structure')).toBe('novel-outline');
+	});
+
+	// @spec AGT-007
+	it('routes narrative drafting and prose rendering to novel-write or novel-abridge', () => {
+		expect(routeUserPrompt('Draft the prose for chapter 1')).toBe('novel-write');
+		expect(routeUserPrompt('Write the scene with intense dialogue')).toBe('novel-write');
+		expect(routeUserPrompt('Render prose for manuscript')).toBe('novel-write');
+		expect(routeUserPrompt('Create an abridged draft for chapter 2')).toBe('novel-abridge');
+		expect(routeUserPrompt('Generate a condensed pacing draft')).toBe('novel-abridge');
+	});
+
+	// @spec AGT-007
+	it('defaults ambiguous or general creative messages to novel-author', () => {
+		expect(routeUserPrompt('Hello, can you help me?')).toBe('novel-author');
+		expect(routeUserPrompt('Brainstorm some ideas for the next arc')).toBe('novel-author');
+		expect(routeUserPrompt('Tell me what you think of this premise')).toBe('novel-author');
+		expect(routeUserPrompt('')).toBe('novel-author');
+	});
+
+	// @spec AGT-007
+	it('integrates routing in AgentPanel prompt handler', () => {
+		const panelSource = readFileSync(resolve(__dirname, '../src/lib/components/AgentPanel.svelte'), 'utf-8');
+		expect(panelSource).toContain('routeUserPrompt');
+		expect(panelSource).toContain('routeUserPrompt(text)');
+	});
+});
+
+describe('AGT-008: Journey Rail Pipeline Stages and Story Bible Decoupling', () => {
+	// @spec AGT-008
+	it('displays exactly 7 sequential stages excluding Story Bible', () => {
+		expect(PIPELINE.length).toBe(7);
+		const stageIds = PIPELINE.map((s) => s.id);
+		expect(stageIds).toEqual(['brief', 'research', 'outline', 'graphics', 'abridged', 'manuscript', 'publish']);
+		expect(stageIds).not.toContain('bible');
+	});
+
+	// @spec AGT-008
+	it('JourneyRail component iterates over PIPELINE without any Story Bible stage node', () => {
+		const railSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
+		expect(railSource).toContain('{#each PIPELINE as stage, i}');
+		expect(railSource).not.toContain("id === 'bible'");
+	});
+
+	// @spec AGT-008
+	it('Story Bible remains accessible in Explorer navigator while decoupled from Journey Rail', () => {
+		const explorerSource = readFileSync(resolve(__dirname, '../src/lib/components/Explorer.svelte'), 'utf-8');
+		expect(explorerSource).toContain("currentTab === 'bible'");
+		expect(explorerSource).toContain('Story Bible');
 	});
 });

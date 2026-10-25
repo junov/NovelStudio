@@ -6,17 +6,22 @@ status: active
 
 ## Requirements
 
-### AGT-001: Tool Execution Safety and Approval Gate
-WHEN an AI agent attempts to modify or delete project files and autoApprove is disabled,
-THE SYSTEM SHALL halt execution, present a visual diff review to the author, and require explicit approval before modifying the file system.
+### AGT-001: Unstaged File Execution for Agent Tools
+WHEN an AI agent executes tools that modify or delete project files,
+THE SYSTEM SHALL execute the file modifications directly to disk leaving them unstaged in Git for author review and acceptance, without halting execution for modal approval in the feed and without permitting agent-driven Git commits.
 
 Acceptance:
-- Given autoApprove is false and the agent executes write_file,
+- Given an agent executes write_file or delete_file,
   when invoked,
-  then agent status transitions to awaiting_approval and registers an active approval request.
-- Given the author approves the write,
-  when accepted,
-  then the file is committed to disk and the agent resumes execution.
+  then the file modifications are applied directly to disk as unstaged changes and the agent continues execution.
+- Given file modifications applied by an agent,
+  when inspected in Git,
+  then the changes remain unstaged and are reflected in the project review state.
+- Given any tool invocation attempting to commit changes or advance baselines,
+  when intercepted,
+  then the agent is strictly blocked from committing.
+
+Notes: Linked to #6.
 
 ### AGT-002: Inline Author Interview in Agent Feed
 WHEN an AI agent requests structured author feedback via ask_user,
@@ -129,3 +134,42 @@ Acceptance:
   then they break the consecutive work grouping and render as standalone feed cards at their chronological positions.
 
 Notes: Linked to #2.
+
+### AGT-007: Interactive Skill Routing for Author Feed Messages
+WHEN an author submits a message or instruction in the agent feed prompt bar,
+THE SYSTEM SHALL evaluate the author's input to select the most appropriate SpecNovelist skill (defaulting to novel-author for creative, story-bible, or worldbuilding requests, or routing to novel-research, novel-outline, novel-sync, novel-abridge, novel-write, novel-verify, or novel-publish based on intent), display the routed skill in the agent status header, and execute the agent loop under that skill's system context.
+
+Acceptance:
+- Given an author submits an instruction targeting Story Bible entities, character details, places, or worldbuilding,
+  when the agent routing step evaluates the prompt,
+  then the skill is routed to novel-author.
+- Given an author submits an instruction targeting real-world facts or research questions (e.g. historical dates, science facts, source verification),
+  when the agent routing step evaluates the prompt,
+  then the skill is routed to novel-research.
+- Given an author submits an instruction targeting scene structure, chapter sequence, or story DAG ordering,
+  when the agent routing step evaluates the prompt,
+  then the skill is routed to novel-outline.
+- Given an author submits an instruction targeting narrative drafting or prose rendering,
+  when the agent routing step evaluates the prompt,
+  then the skill is routed to novel-abridge or novel-write based on target fidelity.
+- Given an ambiguous, open-ended, or general creative authoring message with no explicit pipeline stage target,
+  when evaluated,
+  then the system defaults to routing the request to novel-author.
+- Given a routed skill is determined,
+  when the agent starts running,
+  then agent.currentSkill is updated to the routed skill, displayed in the panel header, and the corresponding skill documentation is included in the execution context.
+
+### AGT-008: Journey Rail Pipeline Stages and Story Bible Decoupling
+WHEN an author views or interacts with stages on the Journey Rail,
+THE SYSTEM SHALL present the linear artifact delivery stages (Brief, Research, Outline, Graphics, Abridged, Manuscript, Publish) and omit the Story Bible as a pipeline stage, maintaining Story Bible management as a continuous, non-sequential knowledge base accessible via the Story Bible explorer and interactive agent feed.
+
+Acceptance:
+- Given the Journey Rail rendered across the top of the workspace layout,
+  when viewed,
+  then the Journey Rail displays exactly 7 sequential stages (Brief, Research, Outline, Graphics, Abridged, Manuscript, Publish) and excludes Story Bible.
+- Given the author works in any project stage,
+  when managing characters, locations, or lore,
+  then the Story Bible remains continuously accessible via the Explorer panel and through agent chat.
+- Given automated progression or next-step actions in the Journey Rail,
+  when determining the next pipeline step,
+  then the system transitions across the 7 linear delivery stages without evaluating or executing a Story Bible pipeline step.

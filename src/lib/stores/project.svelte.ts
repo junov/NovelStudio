@@ -12,6 +12,7 @@ import {
 } from '$lib/tauri';
 import { parseFile, preferDefinition, type Definition, type Reference } from '$lib/entities';
 import type { StatusJson } from '$lib/types';
+import { getUnstagedFiles, acceptGitFile, revertGitFile } from '$lib/git';
 
 export type View =
 	| { kind: 'dashboard' }
@@ -37,6 +38,8 @@ class ProjectState {
 	status = $state<StatusJson | null>(null);
 	statusError = $state<string | null>(null);
 	loading = $state(false);
+	/** Unstaged files tracked for review/accept flow (@spec REV-001). */
+	unstagedFiles = $state<Set<string>>(new Set());
 	/** Bumped whenever files change on disk so open editors can reload. */
 	revision = $state(0);
 
@@ -67,12 +70,12 @@ class ProjectState {
 		this.status = null;
 	}
 
-	/** Re-scan files, rebuild the wiki-link index and refresh `status --json`. */
+	/** Re-scan files, rebuild the wiki-link index, check git status, and refresh `status --json`. */
 	async refresh() {
 		if (!this.root) return;
 		this.loading = true;
 		try {
-			await Promise.all([this.reindex(), this.refreshStatus()]);
+			await Promise.all([this.reindex(), this.refreshStatus(), this.refreshGitStatus()]);
 			this.revision++;
 		} finally {
 			this.loading = false;
@@ -124,6 +127,65 @@ class ProjectState {
 
 	async write(path: string, content: string) {
 		await writeText(this.root!, path, content);
+		await this.refreshGitStatus();
+	}
+
+	/**
+	 * Git review & accept status tracking.
+	 * @spec REV-001, REV-002
+	 */
+	async refreshGitStatus() {
+		if (!this.root) return;
+		this.unstagedFiles = await getUnstagedFiles(this.root);
+	}
+
+	hasUnstagedChanges(path: string): boolean {
+		const normalized = path.replace(/\\/g, '/');
+		return this.unstagedFiles.has(normalized);
+	}
+
+	hasItemUnstagedChanges(id: string): boolean {
+		const def = this.defs[id];
+		if (!def) return false;
+		return this.hasUnstagedChanges(def.path);
+	}
+
+	async acceptFile(path: string): Promise<boolean> {
+		if (!this.root) return false;
+		const ok = await acceptGitFile(this.root, path);
+		if (ok) {
+			const normalized = path.replace(/\\/g, '/');
+			const next = new Set(this.unstagedFiles);
+			next.delete(normalized);
+			this.unstagedFiles = next;
+			await this.refresh();
+		}
+		return ok;
+	}
+
+	async revertFile(path: string): Promise<boolean> {
+		if (!this.root) return false;
+		const ok = await revertGitFile(this.root, path);
+		if (ok) {
+			const normalized = path.replace(/\\/g, '/');
+			const next = new Set(this.unstagedFiles);
+			next.delete(normalized);
+			this.unstagedFiles = next;
+			await this.refresh();
+		}
+		return ok;
+	}
+
+	async acceptItem(id: string): Promise<boolean> {
+		const def = this.defs[id];
+		if (!def) return false;
+		return this.acceptFile(def.path);
+	}
+
+	async revertItem(id: string): Promise<boolean> {
+		const def = this.defs[id];
+		if (!def) return false;
+		return this.revertFile(def.path);
 	}
 
 	// ---------------------------------------------------------------- navigation

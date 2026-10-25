@@ -21,8 +21,8 @@ describe('EDT-001: Document Editor with Edit and Preview Modes', () => {
 		expect(editorSrc).toMatch(/👁/);
 		// Pencil icon for edit mode
 		expect(editorSrc).toMatch(/✏/);
-		// Mode state typed for preview and edit
-		expect(editorSrc).toMatch(/mode\s*=\s*\$state<'preview'\s*\|\s*'edit'>/);
+		// Mode state typed for preview and edit (and optional diff mode)
+		expect(editorSrc).toMatch(/mode\s*=\s*\$state<'preview'\s*\|\s*'edit'(\s*\|\s*'diff')?>/);
 	});
 
 	// @spec EDT-001

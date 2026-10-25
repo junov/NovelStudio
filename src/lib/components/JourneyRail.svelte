@@ -1,4 +1,8 @@
 <script lang="ts">
+	/**
+	 * Pipeline Journey Rail
+	 * @spec AGT-008
+	 */
 	import { project } from '$lib/stores/project.svelte';
 	import { PIPELINE, type PipelineStage } from '$lib/stages';
 	import { agent } from '$lib/agent/engine.svelte';

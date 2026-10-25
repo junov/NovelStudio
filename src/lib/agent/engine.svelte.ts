@@ -1,6 +1,6 @@
 /**
  * The core SpecNovelist agent execution loop.
- * @spec AGT-001, AGT-002
+ * @spec AGT-001, AGT-002, AGT-007
  */
 import {
 	readText,
@@ -14,6 +14,7 @@ import {
 } from '$lib/tauri';
 import { project } from '$lib/stores/project.svelte';
 import { settings, PROVIDERS, type ModelChoice } from '$lib/stores/settings.svelte';
+import { routeUserPrompt } from './router';
 import { AGENT_TOOLS } from './tools';
 import { callProvider } from './providers';
 import type {
@@ -174,8 +175,9 @@ class AgentEngine {
 			throw new Error('Agent is already running');
 		}
 
+		const effectiveSkill = skillName || routeUserPrompt(userInstruction);
 		this.status = 'running';
-		this.currentSkill = skillName;
+		this.currentSkill = effectiveSkill;
 		this.currentStep = 0;
 		this.#abortController = new AbortController();
 
@@ -197,13 +199,13 @@ class AgentEngine {
 
 		this.addFeed(
 			'message',
-			`Starting ${skillName}`,
+			`Starting ${effectiveSkill}`,
 			`Model: ${modelChoice.provider} / ${modelChoice.model}\nInstruction: ${userInstruction}`
 		);
 
 		try {
 			// 1. Build System Prompt
-			const systemPrompt = await this.#buildSystemPrompt(skillName, modelChoice.model);
+			const systemPrompt = await this.#buildSystemPrompt(effectiveSkill, modelChoice.model);
 
 			// 2. Initialize messages
 			this.#messages = [
@@ -327,7 +329,7 @@ ${skillMd}
 2. DO NOT hallucinate facts: use "fetch_url" or "read_toolkit_doc" to verify historical or craft details.
 3. Every cataloged entity must have a permanent uppercase ID (CHR-xxx, PLC-xxx, FCT-xxx, etc.) and be cross-referenced using wiki-links [[ID]].
 4. When writing files, write complete, valid markdown files conforming to SpecNovelist templates.
-5. When accepting baselines via the "specnovel" tool ("subcommand": "accept"), ALWAYS provide "--model" with "${modelName}".
+5. STRICT GUARDRAIL (@spec REV-004): DO NOT run "specnovel accept" or any Git commit command. All file creations and edits must remain unstaged in Git so the author can review, accept, or revert changes using the Accept/Revert buttons in the UI.
 `;
 	}
 
@@ -348,74 +350,20 @@ ${skillMd}
 					const content = String(tc.args.content);
 					const summary = tc.args.summary ? String(tc.args.summary) : undefined;
 
-					// Check existing content for diff preview
-					let originalContent = '';
-					try {
-						originalContent = await readText(project.root!, path);
-					} catch {
-						originalContent = '';
-					}
-
-					// Approval gate
-					if (!settings.value.autoApprove) {
-						this.status = 'awaiting_approval';
-						const approved = await new Promise<boolean>((resolve) => {
-							this.activeApproval = {
-								id: tc.id,
-								title: `Write file: ${path}`,
-								kind: 'write_file',
-								path,
-								originalContent,
-								newContent: content,
-								resolve: (res) => {
-									this.activeApproval = null;
-									this.status = 'running';
-									resolve(res);
-								}
-							};
-							this.addFeed('approval', `Awaiting approval to write ${path}`, summary);
-						});
-
-						if (!approved) {
-							this.addFeed('tool_end', `Rejected write to ${path}`, undefined, undefined, 'warning');
-							return {
-								callId: tc.id,
-								toolName: tc.name,
-								output: `User declined writing to file ${path}.`,
-								isError: true
-							};
-						}
-					}
-
+					// Unstaged file write (@spec AGT-001, REV-001)
 					await writeText(project.root!, path, content);
 					await project.refresh();
+					await project.refreshGitStatus();
 					this.addFeed('tool_end', `Wrote ${path}`, summary || `${content.length} chars written`, undefined, 'success');
 					return { callId: tc.id, toolName: tc.name, output: `Successfully wrote ${path}` };
 				}
 
 				case 'delete_file': {
 					const path = String(tc.args.path);
-					if (!settings.value.autoApprove) {
-						this.status = 'awaiting_approval';
-						const approved = await new Promise<boolean>((resolve) => {
-							this.activeApproval = {
-								id: tc.id,
-								title: `Delete file: ${path}`,
-								kind: 'delete_file',
-								path,
-								resolve: (res) => {
-									this.activeApproval = null;
-									this.status = 'running';
-									resolve(res);
-								}
-							};
-						});
-						if (!approved) {
-							return { callId: tc.id, toolName: tc.name, output: `User declined deleting ${path}.`, isError: true };
-						}
-					}
+					// Unstaged file deletion (@spec AGT-001, REV-001)
 					await deleteFile(project.root!, path);
 					await project.refresh();
+					await project.refreshGitStatus();
 					this.addFeed('tool_end', `Deleted ${path}`, undefined, undefined, 'success');
 					return { callId: tc.id, toolName: tc.name, output: `Deleted ${path}` };
 				}
@@ -441,31 +389,24 @@ ${skillMd}
 					const sub = String(tc.args.subcommand);
 					const rawArgs = Array.isArray(tc.args.args) ? (tc.args.args as string[]) : [];
 
-					// Inject model attribution automatically if accept command
-					const finalArgs = [sub, ...rawArgs];
-					if (sub === 'accept' && !finalArgs.includes('--model') && currentModelName) {
-						finalArgs.push('--model', currentModelName);
+					// Hard guardrail: block 'accept' and git commits (@spec REV-004)
+					if (sub === 'accept' || rawArgs.includes('accept')) {
+						this.addFeed(
+							'tool_end',
+							'specnovel accept blocked',
+							'Guardrail: Agents are strictly prohibited from committing changes or advancing baselines. All changes must remain unstaged in Git for user review.',
+							undefined,
+							'warning'
+						);
+						return {
+							callId: tc.id,
+							toolName: tc.name,
+							output: 'Error: Agents cannot commit changes or run "specnovel accept". All changes must remain unstaged for user review and explicit acceptance via the Accept button in the UI.',
+							isError: true
+						};
 					}
 
-					if (!settings.value.autoApprove && sub === 'accept') {
-						this.status = 'awaiting_approval';
-						const approved = await new Promise<boolean>((resolve) => {
-							this.activeApproval = {
-								id: tc.id,
-								title: `Record baseline sync (specnovel accept)`,
-								kind: 'command',
-								command: `specnovel ${finalArgs.join(' ')}`,
-								resolve: (res) => {
-									this.activeApproval = null;
-									this.status = 'running';
-									resolve(res);
-								}
-							};
-						});
-						if (!approved) {
-							return { callId: tc.id, toolName: tc.name, output: 'User canceled baseline accept.', isError: true };
-						}
-					}
+					const finalArgs = [sub, ...rawArgs];
 
 					const out = await runSpecnovel(project.root!, finalArgs);
 					const text = out.stdout + (out.stderr ? `\n[stderr]\n${out.stderr}` : '');

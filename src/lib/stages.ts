@@ -41,15 +41,6 @@ export const PIPELINE: PipelineStage[] = [
 		prompt: 'Run novel-research: work through the open research questions, highest priority first.'
 	},
 	{
-		id: 'bible',
-		label: 'Story Bible',
-		sync: 'bible',
-		skill: 'novel-author',
-		description: 'Flesh out characters, places, plot threads, themes and world rules.',
-		paths: ['kb/characters', 'kb/places', 'kb/organizations', 'kb/objects', 'kb/plot', 'kb/themes', 'kb/world', 'kb/timeline'],
-		prompt: 'Run novel-author: review the story bible with me and fill the most important gaps.'
-	},
-	{
 		id: 'outline',
 		label: 'Outline',
 		sync: 'outline',
@@ -114,5 +105,6 @@ export type SkillName = (typeof SKILLS)[number];
 
 /** Map a skill to the pipeline stage whose model setting it should use. */
 export function stageForSkill(skill: string): string {
+	if (skill === 'novel-author') return 'brief';
 	return PIPELINE.find((s) => s.skill === skill)?.id ?? 'default';
 }

@@ -7,9 +7,9 @@
 ## Key Features
 
 ### 1. Persistent Pipeline Journey Rail
-- Tracks your project across all **8 SpecNovelist stages**: Brief → Research → Story Bible → Outline → Graphics → Abridged → Manuscript → Publish.
-- Visualizes Git baselines (`Novel-Sync:` commit trailers), file drifts, and pending scene impacts.
-- Prominently surfaces the **Next Recommended Action** calculated by `specnovel.py status` with a one-click execution trigger.
+- Tracks your project across all **7 SpecNovelist stages**: Brief → Research → Outline → Graphics → Abridged → Manuscript → Publish.
+- Visualizes status pills, file drifts, and pending scene impacts with rich contextual hover cards.
+
 
 ### 2. New Project Wizard & Seed Synopsis
 - Quickly scaffold a new novel repository with SpecNovelist's standardized layout (`story/`, `kb/`, `outline/`, `abridged/`, `manuscript/`).

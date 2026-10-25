@@ -1,4 +1,4 @@
-// @spec MOD-001, MOD-002, MOD-003, MOD-004
+// @spec MOD-001, MOD-002, MOD-003, MOD-004, MOD-005
 import { describe, it, expect } from 'vitest';
 import {
 	filterGenerativeModels,
@@ -6,6 +6,7 @@ import {
 	getThinkingConfig,
 	type RawModelEntry
 } from '../src/lib/agent/providers';
+import { SettingsState } from '../src/lib/stores/settings.svelte';
 
 describe('MOD-001: OS Keychain Credential Storage', () => {
 	// @spec MOD-001
@@ -108,5 +109,46 @@ describe('MOD-004: Configurable Thinking Levels for Reasoning Models', () => {
 			geminiThinkingConfig: { thinkingBudget: 32768 }
 		});
 		expect(getThinkingConfig('gemini', 'off')).toEqual({});
+	});
+});
+
+describe('MOD-005: Cross-Window Settings Propagation and Store Persistence', () => {
+	// @spec MOD-005
+	it('applies incoming settings snapshot immediately and updates active model and thinking level', () => {
+		const state = new SettingsState();
+		expect(state.value.defaultModel.model).toBe('');
+
+		state.applyIncomingSettings({
+			defaultModel: {
+				provider: 'gemini',
+				model: 'gemini-3.8-flash',
+				thinkingLevel: 'high'
+			}
+		});
+
+		expect(state.value.defaultModel.model).toBe('gemini-3.8-flash');
+		expect(state.value.defaultModel.provider).toBe('gemini');
+		expect(state.value.defaultModel.thinkingLevel).toBe('high');
+	});
+
+	// @spec MOD-005
+	it('preserves cached models when applying partial settings updates', () => {
+		const state = new SettingsState();
+		state.value.modelCache = {
+			gemini: [{ id: 'gemini-4-argon', displayName: 'Gemini 4 Argon', supportsThinking: true }]
+		};
+
+		state.applyIncomingSettings({
+			defaultModel: {
+				provider: 'gemini',
+				model: 'gemini-4-argon',
+				thinkingLevel: 'medium'
+			}
+		});
+
+		expect(state.modelsForProvider('gemini')).toHaveLength(1);
+		expect(state.modelsForProvider('gemini')[0].id).toBe('gemini-4-argon');
+		expect(state.value.defaultModel.model).toBe('gemini-4-argon');
+		expect(state.value.defaultModel.thinkingLevel).toBe('medium');
 	});
 });

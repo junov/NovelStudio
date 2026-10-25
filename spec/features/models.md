@@ -59,3 +59,18 @@ Acceptance:
 - Given thinking level is set to "Off",
   when an agent prompt is dispatched,
   then no thinking or reasoning parameters are included in the request payload.
+
+### MOD-005: Cross-Window Settings Propagation and Store Persistence
+WHEN settings or model choices are saved in a settings window or modal,
+THE SYSTEM SHALL flush the settings store to persistent disk storage immediately, broadcast a settings update event across all open application windows, and update active in-memory settings state in the main window without requiring an application restart.
+
+Acceptance:
+- Given an author changes settings (such as the default model or thinking level) in the dedicated settings window or modal,
+  when saveKeys or settings.save is invoked,
+  then changes are flushed to disk storage and a cross-window change notification is broadcast.
+- Given the main application window or any other open window,
+  when a settings change notification is received,
+  then the window reactively updates its in-memory settings, model indicators, and active agent model selection.
+- Given the main window regains window focus,
+  when focused,
+  then it synchronizes in-memory settings with persistent storage to capture external updates.

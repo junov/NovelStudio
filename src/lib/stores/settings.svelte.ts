@@ -1,6 +1,6 @@
 /**
  * App-wide settings persisted with tauri-plugin-store (API keys live in the OS keychain instead).
- * @spec MOD-001, PROJ-002
+ * @spec MOD-001, MOD-005, PROJ-002
  */
 import { load, type Store } from '@tauri-apps/plugin-store';
 import { inTauri } from '$lib/tauri';
@@ -63,32 +63,111 @@ const DEFAULTS: Settings = {
 	proseFontSize: 18
 };
 
-class SettingsState {
+export class SettingsState {
 	value = $state<Settings>(structuredClone(DEFAULTS));
 	loaded = $state(false);
 	#store: Store | null = null;
+	#unlisten: (() => void) | null = null;
 
 	async init() {
 		if (this.loaded) return;
 		if (inTauri()) {
 			this.#store = await load('settings.json', { defaults: {}, autoSave: 200 });
 			const saved = (await this.#store.get<Partial<Settings>>('settings')) ?? {};
-			this.value = { ...structuredClone(DEFAULTS), ...saved };
+			this.applyIncomingSettings(saved);
+
+			try {
+				const { listen } = await import('@tauri-apps/api/event');
+				this.#unlisten = await listen<Settings>('novelstudio:settings-changed', (event) => {
+					if (event.payload) {
+						this.applyIncomingSettings(event.payload);
+					}
+				});
+			} catch (e) {
+				console.warn('Could not listen for settings events:', e);
+			}
 		} else {
-			const raw = localStorage.getItem('novelstudio.settings');
-			if (raw) this.value = { ...structuredClone(DEFAULTS), ...JSON.parse(raw) };
+			const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('novelstudio.settings') : null;
+			if (raw) {
+				try {
+					this.applyIncomingSettings(JSON.parse(raw));
+				} catch {}
+			}
+
+			if (typeof window !== 'undefined') {
+				window.addEventListener('storage', (e) => {
+					if (e.key === 'novelstudio.settings' && e.newValue) {
+						try {
+							this.applyIncomingSettings(JSON.parse(e.newValue));
+						} catch {}
+					}
+				});
+			}
 		}
+
+		if (typeof window !== 'undefined') {
+			window.addEventListener('focus', () => {
+				void this.reload();
+			});
+		}
+
 		this.loaded = true;
 		this.applyTheme();
 	}
 
+	applyIncomingSettings(patch: Partial<Settings>) {
+		this.value = {
+			...structuredClone(DEFAULTS),
+			...this.value,
+			...patch,
+			defaultModel: {
+				...DEFAULTS.defaultModel,
+				...(this.value?.defaultModel || {}),
+				...(patch.defaultModel || {})
+			}
+		};
+		this.applyTheme();
+	}
+
+	async reload() {
+		if (this.#store) {
+			try {
+				await this.#store.reload();
+				const saved = (await this.#store.get<Partial<Settings>>('settings')) ?? {};
+				this.applyIncomingSettings(saved);
+			} catch (e) {
+				console.warn('Could not reload store:', e);
+			}
+		} else if (typeof localStorage !== 'undefined') {
+			const raw = localStorage.getItem('novelstudio.settings');
+			if (raw) {
+				try {
+					this.applyIncomingSettings(JSON.parse(raw));
+				} catch {}
+			}
+		}
+	}
+
 	async save() {
 		const snapshot = $state.snapshot(this.value);
-		if (this.#store) await this.#store.set('settings', snapshot);
-		else if (typeof localStorage !== 'undefined') {
+		if (this.#store) {
+			await this.#store.set('settings', snapshot);
+			await this.#store.save();
+		} else if (typeof localStorage !== 'undefined') {
 			localStorage.setItem('novelstudio.settings', JSON.stringify(snapshot));
 		}
 		this.applyTheme();
+
+		if (inTauri()) {
+			try {
+				const { emit } = await import('@tauri-apps/api/event');
+				await emit('novelstudio:settings-changed', snapshot);
+			} catch (e) {
+				console.warn('Could not emit settings event:', e);
+			}
+		} else if (typeof window !== 'undefined') {
+			window.dispatchEvent(new CustomEvent('novelstudio:settings-changed', { detail: snapshot }));
+		}
 	}
 
 	update(patch: Partial<Settings>) {

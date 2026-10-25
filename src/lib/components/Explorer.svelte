@@ -68,6 +68,20 @@
 					{@const items = groupedDefs()[prefix] || []}
 					<details class="group-details" open={items.length > 0}>
 						<summary class="group-summary">
+							<span class="group-chevron" aria-hidden="true">
+								<svg
+									viewBox="0 0 16 16"
+									width="12"
+									height="12"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<polyline points="4 6 8 10 12 6" />
+								</svg>
+							</span>
 							<span class="group-icon">{info.icon}</span>
 							<span class="group-title">{info.plural}</span>
 							<span class="group-count">{items.length}</span>
@@ -210,9 +224,35 @@
 		font-weight: 600;
 		color: var(--ink-soft);
 		cursor: pointer;
+		list-style: none;
+		user-select: none;
+	}
+	.group-summary::-webkit-details-marker {
+		display: none;
 	}
 	.group-summary:hover {
 		background: var(--bg-sunken);
+		color: var(--ink);
+	}
+	.group-chevron {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 14px;
+		height: 14px;
+		margin-right: 4px;
+		color: var(--ink-faint);
+		transition: transform 0.15s ease, color 0.15s ease;
+		flex-shrink: 0;
+	}
+	.group-summary:hover .group-chevron {
+		color: var(--ink);
+	}
+	.group-details:not([open]) .group-chevron {
+		transform: rotate(-90deg);
+	}
+	.group-details[open] .group-chevron {
+		transform: rotate(0deg);
 	}
 	.group-icon {
 		margin-right: 6px;

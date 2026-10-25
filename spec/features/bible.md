@@ -8,7 +8,7 @@ status: active
 
 ### BBL-001: Story Bible Entity Categorization
 WHEN project Markdown files are scanned,
-THE SYSTEM SHALL categorize files into entity kinds based on directory prefix and filename pattern (Characters, Places, Lore, Items, Factions).
+THE SYSTEM SHALL categorize files into entity kinds based on directory prefix and filename pattern (Characters, Places, Lore, Items, Factions), and render them in the Story Bible explorer as collapsible sections with visible expand/collapse indicators.
 
 Acceptance:
 - Given a file path "kb/characters/CHR-001-alice.md",
@@ -17,6 +17,9 @@ Acceptance:
 - Given a file path "kb/places/PLC-005-citadel.md",
   when parsed,
   then kind is identified as "place" and entity ID as "PLC-005".
+- Given the Story Bible explorer rendered in the sidebar,
+  when entity category sections are displayed,
+  then each section header renders a visible disclosure chevron indicator reflecting whether the section is currently expanded or collapsed.
 
 ### BBL-002: Bidirectional Wiki-link Extraction
 WHEN Markdown prose or scene files contain wiki-link patterns like `[[TARGET]]` or `[[TARGET|Display]]`,

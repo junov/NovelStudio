@@ -16,6 +16,15 @@ describe('BBL-001: Story Bible Entity Categorization', () => {
 		expect(prefixInfo('OBJ-003').label).toBe('Object');
 		expect(prefixInfo('SCN-001').label).toBe('Scene');
 	});
+
+	// @spec BBL-001
+	it('renders disclosure chevron indicators on collapsible story bible group summaries', () => {
+		const explorerSrc = readFileSync(resolve(__dirname, '../src/lib/components/Explorer.svelte'), 'utf-8');
+		expect(explorerSrc).toContain('class="group-chevron"');
+		expect(explorerSrc).toContain('group-details');
+		expect(explorerSrc).toContain('group-details:not([open]) .group-chevron');
+		expect(explorerSrc).toContain('transform: rotate(-90deg)');
+	});
 });
 
 describe('BBL-002: Bidirectional Wiki-link Extraction', () => {

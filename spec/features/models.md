@@ -74,3 +74,18 @@ Acceptance:
 - Given the main window regains window focus,
   when focused,
   then it synchronizes in-memory settings with persistent storage to capture external updates.
+
+### MOD-006: Gemini Tool Execution Protocol and Struct Marshaling
+WHEN an LLM agent executes tool calls against the Google Gemini API,
+THE SYSTEM SHALL marshal tool response payloads into valid protobuf Struct key-value objects, wrapping array and primitive outputs under an object key so that functionResponse payloads satisfy Gemini API schema requirements.
+
+Acceptance:
+- Given a tool result that returns a JSON array (such as ask_user answers or list_project_files listings),
+  when formatted for Gemini contents payload,
+  then functionResponse.response is structured as a JSON object wrapping the array under a property key (e.g. output) rather than a bare array list.
+- Given a tool result that returns an unparsed string or primitive,
+  when formatted for Gemini,
+  then functionResponse.response wraps the primitive value in a JSON object.
+- Given a tool result that returns a JSON object dictionary,
+  when formatted for Gemini,
+  then functionResponse.response preserves the object mapping directly.

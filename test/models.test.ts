@@ -1,9 +1,10 @@
-// @spec MOD-001, MOD-002, MOD-003, MOD-004, MOD-005
+// @spec MOD-001, MOD-002, MOD-003, MOD-004, MOD-005, MOD-006
 import { describe, it, expect } from 'vitest';
 import {
 	filterGenerativeModels,
 	formatModelLabel,
 	getThinkingConfig,
+	formatGeminiToolResponse,
 	type RawModelEntry
 } from '../src/lib/agent/providers';
 import { SettingsState } from '../src/lib/stores/settings.svelte';
@@ -150,5 +151,40 @@ describe('MOD-005: Cross-Window Settings Propagation and Store Persistence', () 
 		expect(state.modelsForProvider('gemini')[0].id).toBe('gemini-4-argon');
 		expect(state.value.defaultModel.model).toBe('gemini-4-argon');
 		expect(state.value.defaultModel.thinkingLevel).toBe('medium');
+	});
+});
+
+describe('MOD-006: Gemini Tool Execution Protocol and Struct Marshaling', () => {
+	// @spec MOD-006
+	it('wraps array results in an object under output for protobuf Struct compatibility', () => {
+		const rawArray = JSON.stringify([
+			{ questionId: 'genre', selected: ['Cyberpunk'], skipped: false }
+		]);
+		const res = formatGeminiToolResponse('ask_user', rawArray);
+		expect(res.name).toBe('ask_user');
+		expect(typeof res.response).toBe('object');
+		expect(Array.isArray(res.response)).toBe(false);
+		expect(res.response).toEqual({
+			output: [{ questionId: 'genre', selected: ['Cyberpunk'], skipped: false }]
+		});
+	});
+
+	// @spec MOD-006
+	it('wraps primitive or plain string results in an object', () => {
+		const res = formatGeminiToolResponse('write_file', 'Successfully wrote story/synopsis.md');
+		expect(res.name).toBe('write_file');
+		expect(typeof res.response).toBe('object');
+		expect(Array.isArray(res.response)).toBe(false);
+		expect(res.response).toEqual({
+			output: 'Successfully wrote story/synopsis.md'
+		});
+	});
+
+	// @spec MOD-006
+	it('preserves valid JSON object mappings directly', () => {
+		const rawObject = JSON.stringify({ code: 0, stdout: 'All checks passed' });
+		const res = formatGeminiToolResponse('specnovel', rawObject);
+		expect(res.name).toBe('specnovel');
+		expect(res.response).toEqual({ code: 0, stdout: 'All checks passed' });
 	});
 });

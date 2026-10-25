@@ -1,6 +1,6 @@
 /**
  * Unified multi-provider LLM client for Anthropic, OpenAI, and Gemini.
- * @spec MOD-002, MOD-003
+ * @spec MOD-002, MOD-003, MOD-004, MOD-006
  */
 import { inTauri } from '$lib/tauri';
 import type { ChatMessage, LLMResponse, ToolCall, ToolDef } from './types';
@@ -310,6 +310,32 @@ async function callOpenAI(
 	};
 }
 
+/**
+ * Marshal tool results into valid protobuf Struct key-value objects for Gemini functionResponse.
+ * @spec MOD-006
+ */
+export function formatGeminiToolResponse(
+	name: string | undefined,
+	content: string | undefined
+): { name: string; response: Record<string, unknown> } {
+	let responseObj: Record<string, unknown>;
+	try {
+		const parsed = JSON.parse(content || '{}');
+		if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+			responseObj = parsed as Record<string, unknown>;
+		} else {
+			responseObj = { output: parsed };
+		}
+	} catch {
+		responseObj = { output: content || '' };
+	}
+
+	return {
+		name: name || 'tool',
+		response: responseObj
+	};
+}
+
 // ------------------------------------------------------------------ Gemini
 async function callGemini(
 	apiKey: string,
@@ -348,20 +374,11 @@ async function callGemini(
 			}
 			contents.push({ role: 'model', parts });
 		} else if (m.role === 'tool') {
-			let responseObj: unknown;
-			try {
-				responseObj = JSON.parse(m.content || '{}');
-			} catch {
-				responseObj = { output: m.content || '' };
-			}
 			contents.push({
 				role: 'user',
 				parts: [
 					{
-						functionResponse: {
-							name: m.name || 'tool',
-							response: responseObj
-						}
+						functionResponse: formatGeminiToolResponse(m.name, m.content)
 					}
 				]
 			});

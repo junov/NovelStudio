@@ -1,6 +1,6 @@
 /**
  * The core SpecNovelist agent execution loop.
- * @spec AGT-001, AGT-002, AGT-007
+ * @spec AGT-001, AGT-002, AGT-007, AGT-009
  */
 import {
 	readText,
@@ -330,6 +330,7 @@ ${skillMd}
 3. Every cataloged entity must have a permanent uppercase ID (CHR-xxx, PLC-xxx, FCT-xxx, etc.) and be cross-referenced using wiki-links [[ID]].
 4. When writing files, write complete, valid markdown files conforming to SpecNovelist templates.
 5. STRICT GUARDRAIL (@spec REV-004): DO NOT run "specnovel accept" or any Git commit command. All file creations and edits must remain unstaged in Git so the author can review, accept, or revert changes using the Accept/Revert buttons in the UI.
+6. STRICT PROGRESSION GUARDRAIL (@spec AGT-009): When executing any skill, focus exclusively on the requested task. DO NOT automatically trigger or chain execution into subsequent pipeline stages. DO NOT prompt, ask, or suggest to the author to advance or move on to the next pipeline stage. Pipeline progression is strictly and manually controlled by the author in the UI.
 `;
 	}
 

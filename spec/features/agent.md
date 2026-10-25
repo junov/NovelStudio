@@ -173,3 +173,20 @@ Acceptance:
 - Given automated progression or next-step actions in the Journey Rail,
   when determining the next pipeline step,
   then the system transitions across the 7 linear delivery stages without evaluating or executing a Story Bible pipeline step.
+
+### AGT-009: User-Controlled Journey Progression and Stage Isolation
+WHEN an author launches a stage action from the Journey Rail or engages with the agent,
+THE SYSTEM SHALL isolate execution strictly to the requested stage without automatically advancing to subsequent stages, without prompting or asking the author to move to the next stage upon completion, and without rendering automated next-step progression bars.
+
+Acceptance:
+- Given an author triggers a skill execution via the Journey Rail,
+  when the skill finishes its tasks,
+  then agent execution concludes and transitions to idle without automatically invoking subsequent pipeline skills.
+- Given an agent executing any pipeline skill,
+  when completing its work or communicating with the author,
+  then the agent does not prompt or query the author asking to proceed or advance to the next pipeline stage.
+- Given the Journey Rail rendered across the top of the workspace layout,
+  when viewed,
+  then no redundant "Next Step" action bar is displayed and stage advancement remains exclusively manual.
+
+Notes: Linked to #8.

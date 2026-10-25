@@ -1,4 +1,4 @@
-// @spec AGT-001, AGT-002, AGT-003, AGT-004, AGT-005, AGT-006, AGT-007, AGT-008
+// @spec AGT-001, AGT-002, AGT-003, AGT-004, AGT-005, AGT-006, AGT-007, AGT-008, AGT-009
 import { describe, it, expect } from 'vitest';
 import { AGENT_TOOLS } from '../src/lib/agent/tools';
 import { initAnswers } from '../src/lib/components/InterviewCard.svelte';
@@ -477,5 +477,37 @@ describe('AGT-008: Journey Rail Pipeline Stages and Story Bible Decoupling', () 
 		const explorerSource = readFileSync(resolve(__dirname, '../src/lib/components/Explorer.svelte'), 'utf-8');
 		expect(explorerSource).toContain("currentTab === 'bible'");
 		expect(explorerSource).toContain('Story Bible');
+	});
+});
+
+describe('AGT-009: User-Controlled Journey Progression and Stage Isolation (Issue #8)', () => {
+	// @spec AGT-009 (Issue #8)
+	it('JourneyRail component removes redundant next-action-bar and auto-advance handler', () => {
+		const railSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
+		expect(railSource).not.toContain('next-action-bar');
+		expect(railSource).not.toContain('handleNextStepClick');
+		expect(railSource).not.toContain('Execute Step');
+	});
+
+	// @spec AGT-009
+	it('enforces strict stage isolation directive in agent engine operational directives', () => {
+		const engineSource = readFileSync(resolve(__dirname, '../src/lib/agent/engine.svelte.ts'), 'utf-8');
+		expect(engineSource).toContain('STRICT PROGRESSION GUARDRAIL');
+		expect(engineSource).toContain('DO NOT automatically trigger or chain execution into subsequent pipeline stages');
+		expect(engineSource).toContain('DO NOT prompt, ask, or suggest to the author to advance or move on to the next pipeline stage');
+	});
+
+	// @spec AGT-009
+	it('enforces manual progression and stage isolation in specnovelist guidelines and skills', () => {
+		const agentsSource = readFileSync(resolve(__dirname, '../third_party/specnovelist/AGENTS.md'), 'utf-8');
+		expect(agentsSource).toContain('Manual Pipeline Progression & Stage Isolation');
+		expect(agentsSource).toContain('Agents execute only the specific skill requested by the author');
+
+		const initSource = readFileSync(
+			resolve(__dirname, '../third_party/specnovelist/.agents/skills/novel-init/SKILL.md'),
+			'utf-8'
+		);
+		expect(initSource).not.toContain('Recommend the next step');
+		expect(initSource).toContain('Do not prompt, ask, or suggest to the author to advance to subsequent pipeline stages');
 	});
 });

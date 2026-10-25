@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * Pipeline Journey Rail
-	 * @spec AGT-008
+	 * @spec AGT-008, AGT-009 (Issue #8)
 	 */
 	import { project } from '$lib/stores/project.svelte';
 	import { PIPELINE, type PipelineStage } from '$lib/stages';
@@ -37,20 +37,6 @@
 
 	function runStageSkill(stage: PipelineStage) {
 		agent.run(stage.skill, stage.prompt, stage.id);
-	}
-
-	function handleNextStepClick() {
-		if (!project.status?.next) return;
-		const nextText = project.status.next.toLowerCase();
-		const matchingStage = PIPELINE.find(
-			(s) => nextText.includes(s.id) || nextText.includes(s.skill)
-		);
-		if (matchingStage) {
-			runStageSkill(matchingStage);
-		} else {
-			// Default to brief/novel-init
-			runStageSkill(PIPELINE[0]);
-		}
 	}
 </script>
 
@@ -96,18 +82,6 @@
 			{/if}
 		{/each}
 	</div>
-
-	{#if project.status?.next}
-		<div class="next-action-bar">
-			<div class="next-info">
-				<span class="next-tag">Next Step</span>
-				<span class="next-desc">{project.status.next}</span>
-			</div>
-			<button class="btn small primary" onclick={handleNextStepClick} disabled={agent.status === 'running'}>
-				Execute Step
-			</button>
-		</div>
-	{/if}
 </div>
 
 <style>
@@ -210,39 +184,5 @@
 		height: 2px;
 		background: var(--line);
 		min-width: 8px;
-	}
-
-	.next-action-bar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-top: 8px;
-		padding: 6px 12px;
-		background: var(--bg-sunken);
-		border-radius: var(--radius);
-		gap: 12px;
-	}
-	.next-info {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		overflow: hidden;
-	}
-	.next-tag {
-		font-size: 10px;
-		text-transform: uppercase;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		padding: 2px 6px;
-		background: var(--accent-soft);
-		color: var(--accent);
-		border-radius: 4px;
-	}
-	.next-desc {
-		font-size: 12.5px;
-		color: var(--ink-soft);
-		text-overflow: ellipsis;
-		overflow: hidden;
-		white-space: nowrap;
 	}
 </style>

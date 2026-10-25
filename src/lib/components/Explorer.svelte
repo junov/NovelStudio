@@ -17,6 +17,39 @@
 	let sidebarWidth = $state(DEFAULT_WIDTH);
 	let isCollapsed = $state(false);
 	let isDragging = $state(false);
+	let collapsedSections = $state<Record<string, boolean>>({});
+
+	function getBibleStorageKey(): string {
+		return project.root
+			? `novelstudio.bible_collapsed:${project.root}`
+			: 'novelstudio.bible_collapsed';
+	}
+
+	$effect(() => {
+		const key = getBibleStorageKey();
+		const saved = localStorage.getItem(key) || localStorage.getItem('novelstudio.bible_collapsed');
+		if (saved) {
+			try {
+				collapsedSections = JSON.parse(saved);
+			} catch (e) {
+				console.error(e);
+			}
+		}
+	});
+
+	function isSectionOpen(prefix: string, itemCount: number): boolean {
+		if (prefix in collapsedSections) {
+			return !collapsedSections[prefix];
+		}
+		return itemCount > 0;
+	}
+
+	function handleSectionToggle(prefix: string, isOpen: boolean) {
+		collapsedSections[prefix] = !isOpen;
+		const key = getBibleStorageKey();
+		localStorage.setItem(key, JSON.stringify(collapsedSections));
+		localStorage.setItem('novelstudio.bible_collapsed', JSON.stringify(collapsedSections));
+	}
 
 	onMount(() => {
 		const savedWidth = localStorage.getItem('novelstudio.explorer_width');
@@ -186,7 +219,11 @@
 			<div class="entity-groups">
 				{#each Object.entries(PREFIXES) as [prefix, info]}
 					{@const items = groupedDefs()[prefix] || []}
-					<details class="group-details" open={items.length > 0}>
+					<details
+						class="group-details"
+						open={isSectionOpen(prefix, items.length)}
+						ontoggle={(e) => handleSectionToggle(prefix, e.currentTarget.open)}
+					>
 						<summary class="group-summary">
 							<span class="group-chevron" aria-hidden="true">
 								<svg

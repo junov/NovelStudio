@@ -20,6 +20,9 @@ Acceptance:
 - Given the Story Bible explorer rendered in the sidebar,
   when entity category sections are displayed,
   then each section header renders a visible disclosure chevron indicator reflecting whether the section is currently expanded or collapsed.
+- Given an author expands or collapses an entity category section in the Story Bible explorer,
+  when toggled,
+  then the collapsed or expanded state of that section is persisted in local storage and restored on subsequent application sessions or views.
 
 ### BBL-002: Bidirectional Wiki-link Extraction
 WHEN Markdown prose or scene files contain wiki-link patterns like `[[TARGET]]` or `[[TARGET|Display]]`,

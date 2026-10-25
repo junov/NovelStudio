@@ -25,6 +25,15 @@ describe('BBL-001: Story Bible Entity Categorization', () => {
 		expect(explorerSrc).toContain('group-details:not([open]) .group-chevron');
 		expect(explorerSrc).toContain('transform: rotate(-90deg)');
 	});
+
+	// @spec BBL-001
+	it('persists and restores collapsed state of story bible sections', () => {
+		const explorerSrc = readFileSync(resolve(__dirname, '../src/lib/components/Explorer.svelte'), 'utf-8');
+		expect(explorerSrc).toContain('novelstudio.bible_collapsed');
+		expect(explorerSrc).toContain('isSectionOpen');
+		expect(explorerSrc).toContain('handleSectionToggle');
+		expect(explorerSrc).toContain('ontoggle');
+	});
 });
 
 describe('BBL-002: Bidirectional Wiki-link Extraction', () => {

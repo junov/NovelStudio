@@ -1,12 +1,14 @@
 <script lang="ts">
 	/**
 	 * Agent activity feed and interactive task panel.
-	 * @spec AGT-002, AGT-003, AGT-004
+	 * @spec AGT-002, AGT-003, AGT-004, AGT-006 (Issue #2)
 	 */
 	import { onMount } from 'svelte';
 	import { agent } from '$lib/agent/engine.svelte';
+	import { groupFeedItems } from '$lib/agent/feed';
 	import InterviewCard from './InterviewCard.svelte';
 	import DiffReview from './DiffReview.svelte';
+	import WorkCard from './WorkCard.svelte';
 
 	const DEFAULT_WIDTH = 360;
 	const MIN_WIDTH = 280;
@@ -16,6 +18,8 @@
 	let panelWidth = $state(DEFAULT_WIDTH);
 	let isDragging = $state(false);
 	let feedContainer = $state<HTMLDivElement | null>(null);
+
+	let groupedFeed = $derived(groupFeedItems(agent.feed, agent.status === 'running'));
 
 	$effect(() => {
 		// Auto-scroll to bottom on feed updates, active question, or active approval
@@ -116,24 +120,33 @@
 	</div>
 
 	<div class="panel-feed" bind:this={feedContainer}>
-		{#if agent.feed.length === 0 && !agent.activeQuestion && !agent.activeApproval}
+		{#if agent.feed.length === 0 && !agent.activeQuestion && !agent.activeApproval && agent.status !== 'running'}
 			<div class="empty-feed">
 				<span class="empty-icon">❦</span>
 				<p>Agent is idle. Choose a step from the Journey Rail or type an instruction below to begin.</p>
 			</div>
 		{/if}
 
-		{#each agent.feed as item}
-			<div class="feed-entry {item.type} {item.status || ''}">
-				<div class="entry-meta">
-					<span class="entry-badge">{item.type}</span>
-					<span class="entry-title">{item.title}</span>
-					<span class="entry-time">{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+		{#each groupedFeed as group}
+			{#if group.kind === 'work'}
+				<WorkCard
+					items={group.items}
+					isBusy={group.isBusy}
+					currentSkill={agent.currentSkill}
+				/>
+			{:else}
+				{@const item = group.item}
+				<div class="feed-entry {item.type} {item.status || ''}">
+					<div class="entry-meta">
+						<span class="entry-badge">{item.type}</span>
+						<span class="entry-title">{item.title}</span>
+						<span class="entry-time">{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+					</div>
+					{#if item.content}
+						<pre class="entry-content"><code>{item.content}</code></pre>
+					{/if}
 				</div>
-				{#if item.content}
-					<pre class="entry-content"><code>{item.content}</code></pre>
-				{/if}
-			</div>
+			{/if}
 		{/each}
 
 		{#if agent.activeQuestion}

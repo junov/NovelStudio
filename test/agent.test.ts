@@ -1,12 +1,13 @@
-// @spec AGT-001, AGT-002, AGT-003, AGT-004, AGT-005
+// @spec AGT-001, AGT-002, AGT-003, AGT-004, AGT-005, AGT-006
 import { describe, it, expect } from 'vitest';
 import { AGENT_TOOLS } from '../src/lib/agent/tools';
 import { initAnswers } from '../src/lib/components/InterviewCard.svelte';
 import { parseAskUserQuestions } from '../src/lib/agent/engine.svelte';
+import { groupFeedItems, isWorkItemType } from '../src/lib/agent/feed';
 import { renderMarkdown } from '../src/lib/markdown';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import type { AskUserRequest } from '../src/lib/agent/types';
+import type { AskUserRequest, FeedItem } from '../src/lib/agent/types';
 
 describe('AGT-001: Tool Execution Safety and Approval Gate', () => {
 	// @spec AGT-001
@@ -55,7 +56,7 @@ describe('AGT-002: Inline Author Interview in Agent Feed', () => {
 		expect(engineSource).not.toContain('Presenting');
 
 		// Ensure InterviewCard is rendered after the feed loop (inline with latest activity)
-		const eachFeedIndex = panelSource.indexOf('{#each agent.feed as item}');
+		const eachFeedIndex = panelSource.indexOf('{#each groupedFeed as group}');
 		const interviewCardIndex = panelSource.indexOf('<InterviewCard');
 		expect(eachFeedIndex).toBeGreaterThan(-1);
 		expect(interviewCardIndex).toBeGreaterThan(eachFeedIndex);
@@ -270,5 +271,125 @@ describe('AGT-004: Drag-Resizable Agent Panel Width', () => {
 		expect(panelSource).toContain('MIN_WIDTH = 280');
 		expect(panelSource).toContain('MAX_WIDTH = 800');
 		expect(panelSource).toContain('novelstudio.agent_panel_width');
+	});
+});
+
+describe('AGT-006: Grouped Activity Feed Work Cards with In-Progress Indicator', () => {
+	// @spec AGT-006 (Issue #2)
+	it('clusters consecutive tool_start, tool_end, and thought entries into a work card', () => {
+		const sampleFeed: FeedItem[] = [
+			{ id: '1', timestamp: 1000, type: 'thought', title: 'Planning next chapter outline' },
+			{ id: '2', timestamp: 1010, type: 'tool_start', title: 'Tool: read_file', content: 'path: "outline/ch1.md"' },
+			{ id: '3', timestamp: 1020, type: 'tool_end', title: 'Read outline/ch1.md', content: '120 chars' }
+		];
+
+		const groups = groupFeedItems(sampleFeed, false);
+		expect(groups).toHaveLength(1);
+		expect(groups[0].kind).toBe('work');
+		if (groups[0].kind === 'work') {
+			expect(groups[0].items).toHaveLength(3);
+			expect(groups[0].isBusy).toBe(false);
+		}
+	});
+
+	// @spec AGT-006 (Issue #2)
+	it('breaks work clusters on milestone items like question and approval', () => {
+		const sampleFeed: FeedItem[] = [
+			{ id: '1', timestamp: 1000, type: 'thought', title: 'Thinking' },
+			{ id: '2', timestamp: 1010, type: 'tool_start', title: 'Tool: read_file' },
+			{ id: '3', timestamp: 1020, type: 'question', title: 'Author interview round 1' },
+			{ id: '4', timestamp: 1030, type: 'thought', title: 'Resumed after answer' },
+			{ id: '5', timestamp: 1040, type: 'tool_start', title: 'Tool: write_file' }
+		];
+
+		const groups = groupFeedItems(sampleFeed, false);
+		expect(groups).toHaveLength(3);
+		expect(groups[0].kind).toBe('work');
+		if (groups[0].kind === 'work') {
+			expect(groups[0].items).toHaveLength(2);
+		}
+		expect(groups[1].kind).toBe('item');
+		if (groups[1].kind === 'item') {
+			expect(groups[1].item.type).toBe('question');
+		}
+		expect(groups[2].kind).toBe('work');
+		if (groups[2].kind === 'work') {
+			expect(groups[2].items).toHaveLength(2);
+		}
+	});
+
+	// @spec AGT-006 (Issue #2)
+	it('always renders an active work card at the bottom when agent is busy, even if empty', () => {
+		// When feed is empty and agent is running
+		const emptyRunning = groupFeedItems([], true);
+		expect(emptyRunning).toHaveLength(1);
+		expect(emptyRunning[0].kind).toBe('work');
+		if (emptyRunning[0].kind === 'work') {
+			expect(emptyRunning[0].items).toHaveLength(0);
+			expect(emptyRunning[0].isBusy).toBe(true);
+		}
+
+		// When feed has items and agent is running
+		const feedWithItems: FeedItem[] = [
+			{ id: '1', timestamp: 1000, type: 'question', title: 'Answered question' }
+		];
+		const runningAfterQuestion = groupFeedItems(feedWithItems, true);
+		expect(runningAfterQuestion).toHaveLength(2);
+		expect(runningAfterQuestion[0].kind).toBe('item');
+		expect(runningAfterQuestion[1].kind).toBe('work');
+		if (runningAfterQuestion[1].kind === 'work') {
+			expect(runningAfterQuestion[1].items).toHaveLength(0);
+			expect(runningAfterQuestion[1].isBusy).toBe(true);
+		}
+	});
+
+	// @spec AGT-006 (Issue #2)
+	it('transitions active work card to settled state when busy ends', () => {
+		const sampleFeed: FeedItem[] = [
+			{ id: '1', timestamp: 1000, type: 'tool_start', title: 'Tool: specnovel' }
+		];
+
+		// Busy: isBusy is true
+		const busyGroup = groupFeedItems(sampleFeed, true)[0];
+		if (busyGroup.kind === 'work') {
+			expect(busyGroup.isBusy).toBe(true);
+		}
+
+		// Settled: isBusy is false
+		const settledGroup = groupFeedItems(sampleFeed, false)[0];
+		if (settledGroup.kind === 'work') {
+			expect(settledGroup.isBusy).toBe(false);
+		}
+	});
+
+	// @spec AGT-006 (Issue #2)
+	it('implements collapsed-by-default WorkCard with in-progress animation in component source', () => {
+		const workCardSource = readFileSync(resolve(__dirname, '../src/lib/components/WorkCard.svelte'), 'utf-8');
+		const panelSource = readFileSync(resolve(__dirname, '../src/lib/components/AgentPanel.svelte'), 'utf-8');
+
+		// Uses "work item" / "work items" terminology
+		expect(workCardSource).toContain('work item');
+		expect(workCardSource).toContain('work items completed');
+		expect(workCardSource).not.toContain('background action');
+
+		// Collapsed by default
+		expect(workCardSource).toContain('let isExpanded = $state(false);');
+
+		// In-progress animation spinner
+		expect(workCardSource).toContain('class="work-spinner"');
+		expect(workCardSource).toContain('@keyframes work-spin');
+		expect(workCardSource).toContain('class:busy={isBusy}');
+
+		// Settled indicator
+		expect(workCardSource).toContain('class="work-icon settled"');
+
+		// Expand/collapse toggle
+		expect(workCardSource).toContain('work-toggle-btn');
+		expect(workCardSource).toContain('isExpanded ?');
+
+		// AgentPanel integration
+		expect(panelSource).toContain('WorkCard');
+		expect(panelSource).toContain('groupFeedItems');
+		expect(panelSource).toContain('groupedFeed');
 	});
 });

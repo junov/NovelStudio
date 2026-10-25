@@ -103,3 +103,29 @@ Acceptance:
   then answers are returned as an array of objects matching the UserAnswer schema containing questionId, selected option labels (if any), custom text (if any and custom was active), and skipped status.
 
 Notes: Linked to #1.
+
+### AGT-006: Grouped Activity Feed Work Cards with In-Progress Indicator
+WHEN consecutive background execution entries (tool_start, tool_end, thought) occur in the agent activity feed,
+THE SYSTEM SHALL group them into an expandable work card that is collapsed by default, render an active work card at the bottom of the feed whenever the agent is busy (even when empty), and display an in-progress visual animation on the active work card until the work step concludes.
+
+Acceptance:
+- Given consecutive feed entries of type tool_start, tool_end, or thought,
+  when rendered in the agent feed,
+  then they are clustered into a single parent Work Card displaying a summary header with the number of work items and the latest item.
+- Given a clustered Work Card in the agent feed,
+  when rendered,
+  then it is collapsed by default to keep the feed clean, with an author toggle to expand and inspect the underlying entries.
+- Given the agent status is busy (running),
+  when viewed,
+  then an active Work Card is displayed at the bottom of the feed, even if no tool or thought events have been recorded yet.
+- Given an active Work Card representing work in progress,
+  when the agent is running,
+  then the card displays an in-progress visual animation and active status indicator.
+- Given the agent finishes running or pauses for author input or approval,
+  when the busy state ends,
+  then the active Work Card transitions to a settled state, stopping the in-progress animation.
+- Given distinct milestone feed items (such as question, approval, message, error, or sync_baseline),
+  when rendered,
+  then they break the consecutive work grouping and render as standalone feed cards at their chronological positions.
+
+Notes: Linked to #2.

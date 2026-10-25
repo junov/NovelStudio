@@ -1,12 +1,14 @@
-// @spec MOD-001, MOD-002, MOD-003, MOD-004, MOD-005, MOD-006
+// @spec MOD-001, MOD-002, MOD-003, MOD-004, MOD-005, MOD-006, MOD-007
 import { describe, it, expect } from 'vitest';
 import {
 	filterGenerativeModels,
 	formatModelLabel,
 	getThinkingConfig,
 	formatGeminiToolResponse,
+	formatGeminiContents,
 	type RawModelEntry
 } from '../src/lib/agent/providers';
+import type { ChatMessage } from '../src/lib/agent/types';
 import { SettingsState } from '../src/lib/stores/settings.svelte';
 
 describe('MOD-001: OS Keychain Credential Storage', () => {
@@ -186,5 +188,64 @@ describe('MOD-006: Gemini Tool Execution Protocol and Struct Marshaling', () => 
 		const res = formatGeminiToolResponse('specnovel', rawObject);
 		expect(res.name).toBe('specnovel');
 		expect(res.response).toEqual({ code: 0, stdout: 'All checks passed' });
+	});
+});
+
+describe('MOD-007: Gemini Thought Signature Preservation across Tool Turns', () => {
+	// @spec MOD-007
+	it('preserves verbatim geminiParts including thoughtSignature in contents payload', () => {
+		const rawCandidateParts = [
+			{ text: 'Thinking about the synopsis...' },
+			{
+				functionCall: { name: 'read_file', args: { path: 'story/synopsis.md' } },
+				thoughtSignature: 'encrypted_signature_token_abc123'
+			}
+		];
+
+		const messages: ChatMessage[] = [
+			{ role: 'user', content: 'Init novel' },
+			{
+				role: 'assistant',
+				content: 'Thinking about the synopsis...',
+				toolCalls: [{ id: 'c1', name: 'read_file', args: { path: 'story/synopsis.md' }, thoughtSignature: 'encrypted_signature_token_abc123' }],
+				geminiParts: rawCandidateParts
+			},
+			{
+				role: 'tool',
+				name: 'read_file',
+				content: '# Synopsis\nA gripping tale.'
+			}
+		];
+
+		const contents = formatGeminiContents(messages);
+		expect(contents).toHaveLength(3);
+		expect(contents[0]).toEqual({ role: 'user', parts: [{ text: 'Init novel' }] });
+		expect(contents[1]).toEqual({ role: 'model', parts: rawCandidateParts });
+		expect((contents[1].parts[1] as Record<string, unknown>).thoughtSignature).toBe('encrypted_signature_token_abc123');
+		expect(contents[2].role).toBe('user');
+		expect((contents[2].parts[0] as Record<string, unknown>).functionResponse).toBeDefined();
+	});
+
+	// @spec MOD-007
+	it('falls back to toolCall.thoughtSignature when raw geminiParts are omitted', () => {
+		const messages: ChatMessage[] = [
+			{ role: 'user', content: 'Run check' },
+			{
+				role: 'assistant',
+				toolCalls: [{
+					id: 'c2',
+					name: 'specnovel',
+					args: { subcommand: 'check' },
+					thoughtSignature: 'fallback_sig_xyz789'
+				}]
+			}
+		];
+
+		const contents = formatGeminiContents(messages);
+		expect(contents[1].role).toBe('model');
+		expect(contents[1].parts[0]).toEqual({
+			functionCall: { name: 'specnovel', args: { subcommand: 'check' } },
+			thoughtSignature: 'fallback_sig_xyz789'
+		});
 	});
 });

@@ -89,3 +89,15 @@ Acceptance:
 - Given a tool result that returns a JSON object dictionary,
   when formatted for Gemini,
   then functionResponse.response preserves the object mapping directly.
+
+### MOD-007: Gemini Thought Signature Preservation across Tool Turns
+WHEN a reasoning-capable Google Gemini model returns function calls containing thought signatures,
+THE SYSTEM SHALL capture and retain the complete model content parts verbatim and echo the thoughtSignature back in conversation history during subsequent tool result turns.
+
+Acceptance:
+- Given a response from a Gemini model containing one or more functionCall parts with thoughtSignature or thought_signature metadata,
+  when received by the LLM client,
+  then the raw parts and thought signatures are captured and retained in the conversation message history.
+- Given subsequent prompt requests containing tool execution results for previously invoked function calls,
+  when building the Gemini contents payload,
+  then the assistant turn preserves the verbatim model parts including thoughtSignature so that reasoning context is round-tripped without validation errors.

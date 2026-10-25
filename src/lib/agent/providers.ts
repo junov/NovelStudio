@@ -1,6 +1,6 @@
 /**
  * Unified multi-provider LLM client for Anthropic, OpenAI, and Gemini.
- * @spec MOD-002, MOD-003, MOD-004, MOD-006
+ * @spec MOD-002, MOD-003, MOD-004, MOD-006, MOD-007
  */
 import { inTauri } from '$lib/tauri';
 import type { ChatMessage, LLMResponse, ToolCall, ToolDef } from './types';
@@ -336,6 +336,56 @@ export function formatGeminiToolResponse(
 	};
 }
 
+/**
+ * Format conversation messages into Gemini contents payloads, preserving thought signatures on model turns.
+ * @spec MOD-006, MOD-007
+ */
+export function formatGeminiContents(
+	messages: ChatMessage[]
+): Array<{ role: string; parts: Array<Record<string, unknown>> }> {
+	const contents: Array<{ role: string; parts: Array<Record<string, unknown>> }> = [];
+
+	for (const m of messages) {
+		if (m.role === 'system') continue;
+		if (m.role === 'user') {
+			contents.push({ role: 'user', parts: [{ text: m.content || '' }] });
+		} else if (m.role === 'assistant') {
+			if (m.geminiParts && m.geminiParts.length > 0) {
+				contents.push({ role: 'model', parts: m.geminiParts });
+			} else {
+				const parts: Array<Record<string, unknown>> = [];
+				if (m.content) parts.push({ text: m.content });
+				if (m.toolCalls) {
+					for (const tc of m.toolCalls) {
+						const partObj: Record<string, unknown> = {
+							functionCall: {
+								name: tc.name,
+								args: tc.args
+							}
+						};
+						if (tc.thoughtSignature) {
+							partObj.thoughtSignature = tc.thoughtSignature;
+						}
+						parts.push(partObj);
+					}
+				}
+				contents.push({ role: 'model', parts });
+			}
+		} else if (m.role === 'tool') {
+			contents.push({
+				role: 'user',
+				parts: [
+					{
+						functionResponse: formatGeminiToolResponse(m.name, m.content)
+					}
+				]
+			});
+		}
+	}
+
+	return contents;
+}
+
 // ------------------------------------------------------------------ Gemini
 async function callGemini(
 	apiKey: string,
@@ -353,37 +403,7 @@ async function callGemini(
 		parameters: t.parameters
 	}));
 
-	const contents: Array<{ role: string; parts: Array<Record<string, unknown>> }> = [];
-
-	for (const m of messages) {
-		if (m.role === 'system') continue;
-		if (m.role === 'user') {
-			contents.push({ role: 'user', parts: [{ text: m.content || '' }] });
-		} else if (m.role === 'assistant') {
-			const parts: Array<Record<string, unknown>> = [];
-			if (m.content) parts.push({ text: m.content });
-			if (m.toolCalls) {
-				for (const tc of m.toolCalls) {
-					parts.push({
-						functionCall: {
-							name: tc.name,
-							args: tc.args
-						}
-					});
-				}
-			}
-			contents.push({ role: 'model', parts });
-		} else if (m.role === 'tool') {
-			contents.push({
-				role: 'user',
-				parts: [
-					{
-						functionResponse: formatGeminiToolResponse(m.name, m.content)
-					}
-				]
-			});
-		}
-	}
+	const contents = formatGeminiContents(messages);
 
 	const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`;
 
@@ -442,10 +462,12 @@ async function callGemini(
 			text += part.text;
 		}
 		if (part.functionCall) {
+			const sig = (part as Record<string, unknown>).thoughtSignature || (part as Record<string, unknown>).thought_signature;
 			toolCalls.push({
 				id: `gemini_call_${Math.random().toString(36).slice(2, 9)}`,
 				name: part.functionCall.name,
-				args: part.functionCall.args || {}
+				args: part.functionCall.args || {},
+				thoughtSignature: typeof sig === 'string' ? sig : undefined
 			});
 		}
 	}
@@ -453,6 +475,7 @@ async function callGemini(
 	return {
 		text: text || undefined,
 		toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+		geminiParts: candidate.length > 0 ? candidate : undefined,
 		promptTokens: data.usageMetadata?.promptTokenCount,
 		completionTokens: data.usageMetadata?.candidatesTokenCount,
 		model

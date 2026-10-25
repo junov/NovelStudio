@@ -16,6 +16,7 @@ export interface ToolCall {
 	id: string;
 	name: string;
 	args: Record<string, unknown>;
+	thoughtSignature?: string;
 }
 
 export interface ToolResult {
@@ -33,11 +34,13 @@ export interface ChatMessage {
 	name?: string;
 	toolCallId?: string;
 	toolCalls?: ToolCall[];
+	geminiParts?: Array<Record<string, unknown>>;
 }
 
 export interface LLMResponse {
 	text?: string;
 	toolCalls?: ToolCall[];
+	geminiParts?: Array<Record<string, unknown>>;
 	promptTokens?: number;
 	completionTokens?: number;
 	model: string;

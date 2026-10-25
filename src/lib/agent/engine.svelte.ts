@@ -176,7 +176,8 @@ class AgentEngine {
 				if (!response.toolCalls || response.toolCalls.length === 0) {
 					this.#messages.push({
 						role: 'assistant',
-						content: response.text
+						content: response.text,
+						geminiParts: response.geminiParts
 					});
 					this.status = 'completed';
 					this.addFeed('message', `${skillName} completed`, undefined, undefined, 'success');
@@ -188,7 +189,8 @@ class AgentEngine {
 				this.#messages.push({
 					role: 'assistant',
 					content: response.text,
-					toolCalls: response.toolCalls
+					toolCalls: response.toolCalls,
+					geminiParts: response.geminiParts
 				});
 
 				// Execute tool calls

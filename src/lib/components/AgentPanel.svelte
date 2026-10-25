@@ -1,11 +1,13 @@
 <script lang="ts">
 	/**
 	 * Agent activity feed and interactive task panel.
-	 * @spec AGT-002, AGT-003, AGT-004, AGT-006 (Issue #2)
+	 * @spec AGT-002, AGT-003, AGT-004, AGT-006, BBL-003 (Issue #4)
 	 */
 	import { onMount } from 'svelte';
 	import { agent } from '$lib/agent/engine.svelte';
 	import { groupFeedItems } from '$lib/agent/feed';
+	import { wikiLinks } from '$lib/actions';
+	import { renderWikiChips } from '$lib/markdown';
 	import InterviewCard from './InterviewCard.svelte';
 	import DiffReview from './DiffReview.svelte';
 	import WorkCard from './WorkCard.svelte';
@@ -119,7 +121,7 @@
 		</div>
 	</div>
 
-	<div class="panel-feed" bind:this={feedContainer}>
+	<div class="panel-feed" bind:this={feedContainer} use:wikiLinks>
 		{#if agent.feed.length === 0 && !agent.activeQuestion && !agent.activeApproval && agent.status !== 'running'}
 			<div class="empty-feed">
 				<span class="empty-icon">❦</span>
@@ -139,11 +141,11 @@
 				<div class="feed-entry {item.type} {item.status || ''}">
 					<div class="entry-meta">
 						<span class="entry-badge">{item.type}</span>
-						<span class="entry-title">{item.title}</span>
+						<span class="entry-title">{@html renderWikiChips(item.title)}</span>
 						<span class="entry-time">{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
 					</div>
 					{#if item.content}
-						<pre class="entry-content"><code>{item.content}</code></pre>
+						<pre class="entry-content"><code>{@html renderWikiChips(item.content)}</code></pre>
 					{/if}
 				</div>
 			{/if}

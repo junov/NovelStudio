@@ -134,7 +134,11 @@ class ProjectState {
 		this.navigate({ kind: 'file', path, line });
 	}
 
-	/** Follow a wiki-link: open the defining file at the heading line. */
+	/**
+	 * Follow a wiki-link: open the defining file at the heading line.
+	 * Centralized entity navigation entry point.
+	 * @spec BBL-003
+	 */
 	openId(id: string): boolean {
 		const d = this.defs[id];
 		if (!d) return false;

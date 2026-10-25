@@ -29,3 +29,26 @@ Acceptance:
 - Given an entity "CHR-002",
   when queried for backlinks,
   then all referencing files and line numbers are listed.
+
+### BBL-003: Centralized Wiki-Link Navigation and Target Item Scrolling
+WHEN an author clicks an interactive wiki-link in rendered Markdown, in the Story Bible explorer, or in the agent activity feed,
+THE SYSTEM SHALL navigate the workspace document view to the defining document and automatically scroll to the exact position of the targeted item.
+
+Acceptance:
+- Given an author clicks a wiki-link chip (`[[TARGET]]`) in any rendered Markdown document,
+  when clicked,
+  then the system executes the centralized navigation handler (`project.openId`), opening the target entity's defining file.
+- Given an author clicks an entity item in the Story Bible or outline explorer,
+  when clicked,
+  then the same centralized navigation handler is invoked to open the defining document.
+- Given a wiki-link appearing in the agent activity feed,
+  when rendered,
+  then it is displayed as a clickable entity link that invokes the centralized navigation handler upon click.
+- Given the document view opens or updates for a target entity or line number,
+  when loaded,
+  then the document viewport automatically scrolls to the heading, element, or line corresponding to that entity.
+- Given a wiki-link referencing an entity within the currently active document,
+  when clicked,
+  then the view scrolls directly to the position of that item within the open document without failing or ignoring the click.
+
+Notes: Linked to #4.

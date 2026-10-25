@@ -1,5 +1,6 @@
 /**
  * Svelte actions shared across views.
+ * @spec BBL-003
  */
 import { project } from '$lib/stores/project.svelte';
 

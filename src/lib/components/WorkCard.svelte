@@ -2,9 +2,11 @@
 	/**
 	 * Grouped Work Card for consecutive tool and thought execution entries.
 	 * Collapsed by default with in-progress animation when busy.
-	 * @spec AGT-006 (Issue #2)
+	 * @spec AGT-006, BBL-003 (Issue #4)
 	 */
 	import type { FeedItem } from '$lib/agent/types';
+	import { wikiLinks } from '$lib/actions';
+	import { renderWikiChips } from '$lib/markdown';
 
 	interface Props {
 		items: FeedItem[];
@@ -41,7 +43,7 @@
 	});
 </script>
 
-<div class="work-card" class:busy={isBusy} class:expanded={isExpanded}>
+<div class="work-card" class:busy={isBusy} class:expanded={isExpanded} use:wikiLinks>
 	<div
 		class="work-header"
 		onclick={() => (isExpanded = !isExpanded)}
@@ -61,7 +63,7 @@
 				<span class="work-icon settled" title="Completed">✓</span>
 			{/if}
 			<span class="work-title" title={summaryTitle}>
-				{summaryTitle}
+				{@html renderWikiChips(summaryTitle)}
 			</span>
 		</div>
 
@@ -96,7 +98,7 @@
 					<div class="work-item {item.type} {item.status || ''}">
 						<div class="item-meta">
 							<span class="item-badge">{item.type}</span>
-							<span class="item-title">{item.title}</span>
+							<span class="item-title">{@html renderWikiChips(item.title)}</span>
 							<span class="item-time">
 								{new Date(item.timestamp).toLocaleTimeString([], {
 									hour: '2-digit',
@@ -106,7 +108,7 @@
 							</span>
 						</div>
 						{#if item.content}
-							<pre class="item-content"><code>{item.content}</code></pre>
+							<pre class="item-content"><code>{@html renderWikiChips(item.content)}</code></pre>
 						{/if}
 					</div>
 				{/each}

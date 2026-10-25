@@ -1,4 +1,8 @@
 <script lang="ts">
+	/**
+	 * Document viewer and prose editor with wiki-link navigation and target scrolling.
+	 * @spec BBL-003 (Issue #4)
+	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { project } from '$lib/stores/project.svelte';
 	import { renderMarkdown } from '$lib/markdown';
@@ -18,7 +22,7 @@
 
 	let { path, targetLine, targetId }: Props = $props();
 
-	let mode = $state<'rich' | 'source'>('rich');
+	let mode = $state<'preview' | 'rich' | 'source'>('preview');
 	let content = $state('');
 	let isDirty = $state(false);
 	let isSaving = $state(false);
@@ -27,6 +31,7 @@
 		return words ? words.length : 0;
 	});
 
+	let previewContainer: HTMLDivElement | null = $state(null);
 	let tiptapContainer: HTMLDivElement | null = $state(null);
 	let cmContainer: HTMLDivElement | null = $state(null);
 	let tiptapEditor: Editor | null = null;
@@ -47,11 +52,58 @@
 		return list;
 	});
 
+	function scrollToTarget(tId?: string, tLine?: number) {
+		if (!tId && !tLine) return;
+
+		let el: HTMLElement | null = null;
+		if (tId) {
+			el = document.getElementById(tId);
+			if (!el) {
+				el = document.querySelector(`.editor-body [data-id="${tId}"], .editor-body [data-wiki="${tId}"]`);
+			}
+			if (!el) {
+				const headings = Array.from(
+					document.querySelectorAll(
+						'.editor-body h1, .editor-body h2, .editor-body h3, .editor-body h4, .editor-body h5, .editor-body h6, .editor-body [data-line]'
+					)
+				);
+				el = (headings.find((h) => h.textContent?.includes(tId)) as HTMLElement) || null;
+			}
+		}
+		if (!el && tLine) {
+			el = document.querySelector(`.editor-body [data-line="${tLine}"]`) as HTMLElement;
+		}
+
+		if (el) {
+			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			el.classList.add('highlight-target');
+			setTimeout(() => el?.classList.remove('highlight-target'), 2000);
+			return;
+		}
+
+		if (cmView && tLine) {
+			try {
+				const lineObj = cmView.state.doc.line(Math.min(Math.max(1, tLine), cmView.state.doc.lines));
+				cmView.dispatch({
+					selection: { anchor: lineObj.from },
+					effects: EditorView.scrollIntoView(lineObj.from, { y: 'center' })
+				});
+			} catch (e) {
+				console.error('Failed to scroll CodeMirror to line:', e);
+			}
+		}
+	}
+
 	async function loadFile() {
 		try {
 			content = await project.read(path);
 			isDirty = false;
 			initEditors();
+			if (targetId || targetLine) {
+				setTimeout(() => {
+					scrollToTarget(targetId, targetLine);
+				}, 100);
+			}
 		} catch (e) {
 			console.error(e);
 		}
@@ -121,9 +173,26 @@
 	});
 
 	$effect(() => {
-		// If mode changes, re-init editors
+		// If mode changes, re-init editors and re-scroll
 		if (mode) {
-			setTimeout(initEditors, 10);
+			setTimeout(() => {
+				initEditors();
+				if (targetId || targetLine) {
+					scrollToTarget(targetId, targetLine);
+				}
+			}, 30);
+		}
+	});
+
+	$effect(() => {
+		// When targetId or targetLine updates (even within same file), scroll to target
+		const _id = targetId;
+		const _line = targetLine;
+		const _p = path;
+		if (_id || _line) {
+			setTimeout(() => {
+				scrollToTarget(_id, _line);
+			}, 80);
 		}
 	});
 
@@ -159,6 +228,13 @@
 			<div class="mode-toggle">
 				<button
 					class="toggle-btn"
+					class:active={mode === 'preview'}
+					onclick={() => (mode = 'preview')}
+				>
+					Preview
+				</button>
+				<button
+					class="toggle-btn"
 					class:active={mode === 'rich'}
 					onclick={() => (mode = 'rich')}
 				>
@@ -184,7 +260,11 @@
 	</div>
 
 	<div class="editor-body">
-		{#if mode === 'rich'}
+		{#if mode === 'preview'}
+			<div class="prose markdown-preview" use:wikiLinks bind:this={previewContainer}>
+				{@html renderMarkdown(content, { titleOf: project.titleOf })}
+			</div>
+		{:else if mode === 'rich'}
 			<div class="prose tiptap-wrapper" use:wikiLinks bind:this={tiptapContainer}></div>
 		{:else}
 			<div class="codemirror-wrapper" bind:this={cmContainer}></div>
@@ -288,6 +368,22 @@
 		flex: 1;
 		overflow-y: auto;
 		padding: 32px 40px;
+	}
+
+	.markdown-preview {
+		min-height: 100%;
+		outline: none;
+	}
+	.markdown-preview :global(h1),
+	.markdown-preview :global(h2),
+	.markdown-preview :global(h3),
+	.markdown-preview :global(h4) {
+		scroll-margin-top: 40px;
+	}
+	:global(.highlight-target) {
+		background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
+		border-radius: 4px;
+		transition: background 0.8s ease;
 	}
 
 	.tiptap-wrapper {

@@ -12,7 +12,7 @@ NovelStudio is a professional desktop environment for specification-driven novel
 
 ### In Scope
 - **Project Scaffolding & Journey Rail**: Interactive visual pipeline guiding authors through 8 distinct stages (Brief, Research, Story Bible, Outline, Drafting, Critique, Revision, Compilation).
-- **Dual-Mode Writing Editor**: Instant switching between immersive WYSIWYG prose editing (TipTap) and structural Markdown editing (CodeMirror 6) with live bidirectional wiki-link resolution.
+- **Dual-Mode Writing Editor**: Switching between structural Markdown editing (CodeMirror 6 "edit" mode) and rendered Markdown ("preview" mode) with live bidirectional wiki-link resolution.
 - **Living Story Bible Explorer**: Categorized catalog of characters, places, items, factions, lore, and outline scenes with status badges and entity cards.
 - **Autonomous Agent Loop & Tools**: Embedded pair-programmer loop calling LLM APIs directly with SpecNovelist tools (`read_file`, `write_file`, `specnovel`, `ask_user`, `read_toolkit_doc`).
 - **Secure Multi-Provider AI Integration**: Direct API connections to Anthropic Claude, Google Gemini, and OpenAI with encrypted credentials stored in OS Keychain (Windows Credential Manager).

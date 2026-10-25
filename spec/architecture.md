@@ -39,7 +39,7 @@ flowchart TD
 - **Frontend Framework**: Svelte 5 with modern Runes syntax (`$state`, `$derived`, `$effect`, `$props`).
 - **Build Tooling & Routing**: SvelteKit with `@sveltejs/adapter-static` (SPA with `index.html` fallback) and Vite.
 - **Styling**: Vanilla CSS with literary design tokens (`--bg`, `--ink`, `--paper`, Garamond & Inter typography). Zero viewport scrollbars.
-- **Prose Editing**: TipTap WYSIWYG editor with Markdown serializer and CodeMirror 6 source mode.
+- **Prose Editing**: CodeMirror 6 Markdown editor (Edit mode) and rendered Markdown preview (Preview mode) with interactive wiki-links. Zero WYSIWYG mode.
 - **Testing**: Vitest (`npm test`) and Cargo (`cargo test`).
 - **AI Integration**: Direct HTTP clients with streaming and tool calling for Anthropic, Google Gemini, and OpenAI.
 - **Dynamic Model Discovery**: Zero hard-coded model identifiers or static whitelists in the codebase. All available models originate directly from the provider API backends (filtered by capability and sorted chronologically), guaranteeing immediate forward compatibility with new model releases.

@@ -6,6 +6,7 @@ import {
 	scanMarkdown,
 	specnovelJson,
 	readText,
+	readBytes,
 	writeText,
 	type FileEntry
 } from '$lib/tauri';
@@ -115,6 +116,10 @@ class ProjectState {
 
 	read(path: string) {
 		return readText(this.root!, path);
+	}
+
+	readBytes(path: string) {
+		return readBytes(this.root!, path);
 	}
 
 	async write(path: string, content: string) {

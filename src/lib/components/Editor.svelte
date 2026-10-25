@@ -1,15 +1,13 @@
 <script lang="ts">
 	/**
-	 * Document viewer and prose editor with wiki-link navigation and target scrolling.
-	 * @spec BBL-003 (Issue #4)
+	 * Document viewer and Markdown editor with graphics preview and target scrolling.
+	 * @spec EDT-001, EDT-002, BBL-003
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { project } from '$lib/stores/project.svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import { wikiLinks } from '$lib/actions';
-	import { Editor } from '@tiptap/core';
-	import StarterKit from '@tiptap/starter-kit';
-	import { Markdown } from '@tiptap/markdown';
+	import { isGraphic, isRasterImage, isBinary, isEditable, getMimeType } from '$lib/formats';
 	import { EditorView, basicSetup } from 'codemirror';
 	import { EditorState } from '@codemirror/state';
 	import { markdown } from '@codemirror/lang-markdown';
@@ -22,8 +20,9 @@
 
 	let { path, targetLine, targetId }: Props = $props();
 
-	let mode = $state<'preview' | 'rich' | 'source'>('preview');
+	let mode = $state<'preview' | 'edit'>('preview');
 	let content = $state('');
+	let graphicUrl = $state<string | null>(null);
 	let isDirty = $state(false);
 	let isSaving = $state(false);
 	let wordCount = $derived(() => {
@@ -32,9 +31,7 @@
 	});
 
 	let previewContainer: HTMLDivElement | null = $state(null);
-	let tiptapContainer: HTMLDivElement | null = $state(null);
 	let cmContainer: HTMLDivElement | null = $state(null);
-	let tiptapEditor: Editor | null = null;
 	let cmView: EditorView | null = null;
 
 	// Backlinks referencing this file or ID
@@ -51,6 +48,20 @@
 		}
 		return list;
 	});
+
+	function cleanupGraphic() {
+		if (graphicUrl && graphicUrl.startsWith('blob:')) {
+			URL.revokeObjectURL(graphicUrl);
+			graphicUrl = null;
+		}
+	}
+
+	function setMode(newMode: 'preview' | 'edit') {
+		if (newMode === 'edit' && !isEditable(path)) {
+			return;
+		}
+		mode = newMode;
+	}
 
 	function scrollToTarget(tId?: string, tLine?: number) {
 		if (!tId && !tLine) return;
@@ -95,7 +106,37 @@
 	}
 
 	async function loadFile() {
+		cleanupGraphic();
 		try {
+			if (!isEditable(path)) {
+				mode = 'preview';
+			}
+
+			if (isGraphic(path)) {
+				const mime = getMimeType(path);
+				if (isRasterImage(path)) {
+					const bytes = await project.readBytes(path);
+					const blob = new Blob([new Uint8Array(bytes)], { type: mime });
+					graphicUrl = URL.createObjectURL(blob);
+					content = '';
+				} else {
+					// SVG text graphic
+					const svgText = await project.read(path);
+					content = svgText;
+					graphicUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svgText)}`;
+				}
+				isDirty = false;
+				initEditors();
+				return;
+			}
+
+			if (isBinary(path)) {
+				content = '';
+				isDirty = false;
+				initEditors();
+				return;
+			}
+
 			content = await project.read(path);
 			isDirty = false;
 			initEditors();
@@ -110,7 +151,7 @@
 	}
 
 	async function saveFile() {
-		if (!isDirty) return;
+		if (!isDirty || !isEditable(path)) return;
 		isSaving = true;
 		try {
 			await project.write(path, content);
@@ -124,27 +165,12 @@
 	}
 
 	function initEditors() {
-		// Clean up existing
-		if (tiptapEditor) {
-			tiptapEditor.destroy();
-			tiptapEditor = null;
-		}
 		if (cmView) {
 			cmView.destroy();
 			cmView = null;
 		}
 
-		if (mode === 'rich' && tiptapContainer) {
-			tiptapEditor = new Editor({
-				element: tiptapContainer,
-				extensions: [StarterKit, Markdown],
-				content,
-				onUpdate: ({ editor }) => {
-					content = editor.storage.markdown.getMarkdown();
-					isDirty = true;
-				}
-			});
-		} else if (mode === 'source' && cmContainer) {
+		if (mode === 'edit' && isEditable(path) && cmContainer) {
 			const startState = EditorState.create({
 				doc: content,
 				extensions: [
@@ -197,7 +223,7 @@
 	});
 
 	onDestroy(() => {
-		if (tiptapEditor) tiptapEditor.destroy();
+		cleanupGraphic();
 		if (cmView) cmView.destroy();
 	});
 
@@ -223,49 +249,64 @@
 		</div>
 
 		<div class="header-actions">
-			<span class="word-counter">{wordCount()} words</span>
+			{#if !isBinary(path)}
+				<span class="word-counter">{wordCount()} words</span>
+			{/if}
 
 			<div class="mode-toggle">
 				<button
 					class="toggle-btn"
 					class:active={mode === 'preview'}
-					onclick={() => (mode = 'preview')}
+					onclick={() => setMode('preview')}
+					title="Preview mode"
+					aria-label="Preview mode"
 				>
-					Preview
+					<span class="mode-icon">👁</span> Preview
 				</button>
 				<button
 					class="toggle-btn"
-					class:active={mode === 'rich'}
-					onclick={() => (mode = 'rich')}
+					class:active={mode === 'edit'}
+					disabled={!isEditable(path)}
+					onclick={() => setMode('edit')}
+					title={isEditable(path) ? 'Edit mode' : 'Edit mode is not available for raster images and binary files'}
+					aria-label="Edit mode"
 				>
-					WYSIWYG
-				</button>
-				<button
-					class="toggle-btn"
-					class:active={mode === 'source'}
-					onclick={() => (mode = 'source')}
-				>
-					Source
+					<span class="mode-icon">✏️</span> Edit
 				</button>
 			</div>
 
-			<button
-				class="btn small primary"
-				disabled={!isDirty || isSaving}
-				onclick={saveFile}
-			>
-				{isSaving ? 'Saving...' : 'Save'}
-			</button>
+			{#if isEditable(path)}
+				<button
+					class="btn small primary"
+					disabled={!isDirty || isSaving}
+					onclick={saveFile}
+				>
+					{isSaving ? 'Saving...' : 'Save'}
+				</button>
+			{/if}
 		</div>
 	</div>
 
 	<div class="editor-body">
 		{#if mode === 'preview'}
-			<div class="prose markdown-preview" use:wikiLinks bind:this={previewContainer}>
-				{@html renderMarkdown(content, { titleOf: project.titleOf })}
-			</div>
-		{:else if mode === 'rich'}
-			<div class="prose tiptap-wrapper" use:wikiLinks bind:this={tiptapContainer}></div>
+			{#if isGraphic(path) && graphicUrl}
+				<div class="graphic-preview-container">
+					<img src={graphicUrl} class="preview-graphic" alt={path} />
+				</div>
+			{:else if isBinary(path)}
+				<div class="binary-preview-container">
+					<span class="binary-icon">📦</span>
+					<div class="binary-info">
+						<p class="binary-title">Binary File</p>
+						<p class="binary-path">{path}</p>
+						<p class="binary-desc">Preview is not available for this binary format.</p>
+					</div>
+				</div>
+			{:else}
+				<div class="prose markdown-preview" use:wikiLinks bind:this={previewContainer}>
+					{@html renderMarkdown(content, { titleOf: project.titleOf })}
+				</div>
+			{/if}
 		{:else}
 			<div class="codemirror-wrapper" bind:this={cmContainer}></div>
 		{/if}
@@ -347,15 +388,24 @@
 		background: var(--bg-sunken);
 		padding: 2px;
 		border-radius: var(--radius);
+		gap: 2px;
 	}
 	.toggle-btn {
+		display: flex;
+		align-items: center;
+		gap: 5px;
 		background: none;
 		border: none;
 		font-size: 11.5px;
 		font-weight: 500;
-		padding: 3px 8px;
+		padding: 3px 10px;
 		border-radius: 4px;
 		color: var(--ink-soft);
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+	.toggle-btn:hover:not(:disabled) {
+		color: var(--ink);
 	}
 	.toggle-btn.active {
 		background: var(--paper);
@@ -363,11 +413,72 @@
 		font-weight: 600;
 		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 	}
+	.toggle-btn:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+	.mode-icon {
+		font-size: 12px;
+		line-height: 1;
+	}
 
 	.editor-body {
 		flex: 1;
 		overflow-y: auto;
 		padding: 32px 40px;
+	}
+
+	.graphic-preview-container {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		min-height: 100%;
+		padding: 20px;
+		box-sizing: border-box;
+	}
+	.preview-graphic {
+		max-width: 100%;
+		max-height: 85vh;
+		width: auto;
+		height: auto;
+		object-fit: contain;
+		display: block;
+		border-radius: var(--radius);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+		background: var(--bg);
+	}
+
+	.binary-preview-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		min-height: 60vh;
+		gap: 12px;
+		color: var(--ink-faint);
+	}
+	.binary-icon {
+		font-size: 48px;
+	}
+	.binary-info {
+		text-align: center;
+	}
+	.binary-title {
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--ink);
+		margin: 0 0 4px 0;
+	}
+	.binary-path {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-soft);
+		margin: 0 0 8px 0;
+	}
+	.binary-desc {
+		font-size: 13px;
+		color: var(--ink-faint);
+		margin: 0;
 	}
 
 	.markdown-preview {
@@ -384,11 +495,6 @@
 		background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
 		border-radius: 4px;
 		transition: background 0.8s ease;
-	}
-
-	.tiptap-wrapper {
-		min-height: 100%;
-		outline: none;
 	}
 
 	.codemirror-wrapper {

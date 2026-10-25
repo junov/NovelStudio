@@ -1,8 +1,8 @@
 <script module lang="ts">
 	import type { AskUserQuestion, AskUserRequest, UserAnswer } from '$lib/agent/types';
 
-	export function initAnswers(req: AskUserRequest): Record<string, { selected: string[]; text: string; skipped: boolean }> {
-		const map: Record<string, { selected: string[]; text: string; skipped: boolean }> = {};
+	export function initAnswers(req: AskUserRequest): Record<string, { selected: string[]; text: string; skipped: boolean; customActive: boolean }> {
+		const map: Record<string, { selected: string[]; text: string; skipped: boolean; customActive: boolean }> = {};
 		for (const q of req?.questions || []) {
 			const initialSelected: string[] = [];
 			if (q.options && q.recommendedIndex !== undefined && q.options[q.recommendedIndex]) {
@@ -12,10 +12,12 @@
 			} else if (q.defaultValue) {
 				initialSelected.push(q.defaultValue);
 			}
+			const hasPredefined = Boolean(q.options && q.options.length > 0);
 			map[q.id] = {
 				selected: initialSelected,
 				text: '',
-				skipped: false
+				skipped: false,
+				customActive: !hasPredefined
 			};
 		}
 		return map;
@@ -25,7 +27,7 @@
 <script lang="ts">
 	/**
 	 * Inline author interview question card component.
-	 * @spec AGT-002, AGT-005
+	 * @spec AGT-002, AGT-005 (Issue #1)
 	 */
 	import { renderMarkdown } from '$lib/markdown';
 	import { wikiLinks } from '$lib/actions';
@@ -37,12 +39,12 @@
 	let { request }: Props = $props();
 
 	// Initialize and ensure reactive synchronization with request
-	let answers = $state<Record<string, { selected: string[]; text: string; skipped: boolean }>>({});
+	let answers = $state<Record<string, { selected: string[]; text: string; skipped: boolean; customActive: boolean }>>({});
 	let currentRequestId = $state<string | undefined>(undefined);
 
 	function ensureAnswer(qid: string) {
 		if (!answers[qid]) {
-			answers[qid] = { selected: [], text: '', skipped: false };
+			answers[qid] = { selected: [], text: '', skipped: false, customActive: false };
 		}
 		return answers[qid];
 	}
@@ -65,6 +67,20 @@
 			}
 		} else {
 			ans.selected = [optLabel];
+			ans.customActive = false; // Deselect custom option in single-select mode
+		}
+		ans.skipped = false;
+	}
+
+	function selectCustomOption(q: AskUserQuestion, toggle = false) {
+		const ans = ensureAnswer(q.id);
+		if (q.isMultiSelect && toggle) {
+			ans.customActive = !ans.customActive;
+		} else {
+			ans.customActive = true;
+			if (!q.isMultiSelect) {
+				ans.selected = []; // Deselect predefined options in single-select mode
+			}
 		}
 		ans.skipped = false;
 	}
@@ -75,16 +91,18 @@
 		if (ans.skipped) {
 			ans.selected = [];
 			ans.text = '';
+			ans.customActive = false;
 		}
 	}
 
 	function submitAll() {
 		const result: UserAnswer[] = (request?.questions || []).map((q) => {
-			const a = answers[q.id] || { selected: [], text: '', skipped: false };
+			const a = answers[q.id] || { selected: [], text: '', skipped: false, customActive: false };
+			const customText = a.customActive && a.text?.trim() ? a.text.trim() : undefined;
 			return {
 				questionId: q.id,
 				selected: a.selected.length > 0 ? a.selected : undefined,
-				text: a.text?.trim() || undefined,
+				text: customText,
 				skipped: a.skipped || undefined
 			};
 		});
@@ -124,8 +142,8 @@
 				{/if}
 
 				{#if !ans.skipped}
-					{#if q.options && q.options.length > 0}
-						<div class="options-grid">
+					<div class="options-grid">
+						{#if q.options && q.options.length > 0}
 							{#each q.options as opt}
 								{@const optLabel = typeof opt === 'string' ? opt : opt.label}
 								{@const optDesc = typeof opt === 'object' ? opt.description : undefined}
@@ -136,7 +154,7 @@
 									class:selected={isSelected}
 									onclick={() => toggleOption(q, optLabel)}
 								>
-									<span class="opt-check">{isSelected ? '●' : '○'}</span>
+									<span class="opt-check">{isSelected ? (q.isMultiSelect ? '☑' : '●') : (q.isMultiSelect ? '☐' : '○')}</span>
 									<span class="opt-body">
 										<span class="opt-label">{optLabel}</span>
 										{#if optDesc}
@@ -145,21 +163,37 @@
 									</span>
 								</button>
 							{/each}
-						</div>
-					{/if}
+						{/if}
 
-					{#if q.allowFreeform !== false}
-						<div class="write-in-row">
-							<input
-								type="text"
-								placeholder="Or specify custom input / nuances..."
-								bind:value={answers[q.id].text}
-								oninput={() => {
-									if (answers[q.id]) answers[q.id].skipped = false;
+						{#if q.allowFreeform !== false}
+							{@const isCustomSelected = Boolean(ans.customActive)}
+							<div
+								class="option-pill custom-option-pill"
+								class:selected={isCustomSelected}
+								onclick={() => selectCustomOption(q, true)}
+								role="button"
+								tabindex="0"
+								onkeydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') selectCustomOption(q, true);
 								}}
-							/>
-						</div>
-					{/if}
+							>
+								<span class="opt-check">{isCustomSelected ? (q.isMultiSelect ? '☑' : '●') : (q.isMultiSelect ? '☐' : '○')}</span>
+								<div class="custom-body">
+									<span class="opt-label">Custom / Other</span>
+									<input
+										type="text"
+										class="custom-input"
+										class:muted={!isCustomSelected}
+										placeholder="Specify custom input or nuances..."
+										bind:value={answers[q.id].text}
+										onclick={(e) => e.stopPropagation()}
+										onfocus={() => selectCustomOption(q, false)}
+										oninput={() => selectCustomOption(q, false)}
+									/>
+								</div>
+							</div>
+						{/if}
+					</div>
 				{/if}
 			</div>
 		{/each}
@@ -336,10 +370,35 @@
 		line-height: 1.4;
 	}
 
-	.write-in-row input {
+	.custom-option-pill {
+		cursor: pointer;
+	}
+	.custom-body {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		flex: 1;
+	}
+	.custom-input {
 		width: 100%;
 		font-size: 12px;
 		padding: 6px 10px;
+		background: var(--bg);
+		color: var(--ink);
+		border: 1px solid var(--line);
+		border-radius: 4px;
+		transition: all 0.15s ease;
+		cursor: text;
+	}
+	.custom-input:focus {
+		border-color: var(--accent);
+		outline: none;
+	}
+	.custom-input.muted {
+		color: var(--ink-faint);
+		background: var(--bg-sunken);
+		border-color: var(--line);
+		opacity: 0.6;
 	}
 
 	.card-footer {

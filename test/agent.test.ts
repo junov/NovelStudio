@@ -118,12 +118,14 @@ describe('AGT-005: Author Interview Card Schema and Form Controls', () => {
 		expect(answers['q1']).toEqual({
 			selected: ['Option B (Recommended)'],
 			text: '',
-			skipped: false
+			skipped: false,
+			customActive: false
 		});
 		expect(answers['q2']).toEqual({
 			selected: ['Preset Value'],
 			text: '',
-			skipped: false
+			skipped: false,
+			customActive: true
 		});
 	});
 
@@ -159,8 +161,33 @@ describe('AGT-005: Author Interview Card Schema and Form Controls', () => {
 		expect(cardSource).toContain('submitAll');
 		expect(cardSource).toContain('questionId: q.id');
 		expect(cardSource).toContain('selected: a.selected.length > 0 ? a.selected : undefined');
-		expect(cardSource).toContain('text: a.text?.trim()');
+		expect(cardSource).toContain('text: customText');
 		expect(cardSource).toContain('skipped: a.skipped');
+	});
+
+	// @spec AGT-005 (Issue #1)
+	it('associates freeform input with selection indicator, auto-selection on focus, and grayed out inactive state', () => {
+		const cardSource = readFileSync(resolve(__dirname, '../src/lib/components/InterviewCard.svelte'), 'utf-8');
+
+		// Custom option pill rendered with selection indicator
+		expect(cardSource).toContain('class="option-pill custom-option-pill"');
+		expect(cardSource).toContain('class:selected={isCustomSelected}');
+		expect(cardSource).toContain('Custom / Other');
+
+		// Input focus and input handlers trigger custom selection
+		expect(cardSource).toContain('onfocus={() => selectCustomOption(q, false)}');
+		expect(cardSource).toContain('oninput={() => selectCustomOption(q, false)}');
+
+		// Grayed out inactive text styling when non-custom option is active
+		expect(cardSource).toContain('class:muted={!isCustomSelected}');
+		expect(cardSource).toContain('.custom-input.muted');
+		expect(cardSource).toContain('color: var(--ink-faint)');
+
+		// Deselecting custom when a non-custom option is selected in single-select
+		expect(cardSource).toContain('ans.customActive = false;');
+
+		// Omitting custom text on submission when custom option was not active
+		expect(cardSource).toContain('const customText = a.customActive && a.text?.trim() ? a.text.trim() : undefined');
 	});
 
 	// @spec AGT-005

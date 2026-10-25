@@ -68,7 +68,7 @@ Acceptance:
 
 ### AGT-005: Author Interview Card Schema and Form Controls
 WHEN an author interacts with an active InterviewCard,
-THE SYSTEM SHALL render all fields defined by the ask_user tool schema (round title, batched questions, craft guidance with formatted markdown and links, selectable options with labels and descriptions, recommended pre-selection, multi-select toggles, freeform write-in inputs, and skip controls) and package author answers conforming to the user answer schema.
+THE SYSTEM SHALL render all fields defined by the ask_user tool schema (round title, batched questions, craft guidance with formatted markdown and links, selectable options with labels and descriptions, recommended pre-selection, multi-select toggles, freeform write-in inputs with dedicated selection indicators, and skip controls) and package author answers conforming to the user answer schema.
 
 Acceptance:
 - Given an ask_user tool call with an optional title and an array of 1 to 4 questions,
@@ -88,10 +88,18 @@ Acceptance:
   then single-select (radio) behavior is enforced; when isMultiSelect is true, multiple options can be toggled independently (checkbox behavior).
 - Given a question with allowFreeform set to true or omitted,
   when viewed,
-  then a write-in text input is rendered allowing custom author nuances and specifications; typing in the field un-skips the question.
+  then the freeform custom write-in field is rendered as a selectable option with an associated selection indicator (radio indicator in single-select, or checkbox in multi-select).
+- Given a freeform custom write-in field,
+  when the author focuses the input field or clicks its custom option pill,
+  then the custom option is automatically selected, any previous single-select predefined option is deselected, and the question is un-skipped.
+- Given a non-custom option is the active selection in single-select mode,
+  when viewed,
+  then any text appearing in the custom text input field is visually grayed out and inactive; when the interview is submitted with a non-custom option selected, custom text is omitted from the submission.
 - Given a question with allowSkip set to true or omitted,
   when viewed,
   then a skip toggle button is rendered allowing the author to defer or skip the question without blocking submission; questions with allowSkip set to false do not display a skip button.
 - Given an author submits the interview,
   when confirmed,
-  then answers are returned as an array of objects matching the UserAnswer schema containing questionId, selected option labels (if any), custom text (if any), and skipped status.
+  then answers are returned as an array of objects matching the UserAnswer schema containing questionId, selected option labels (if any), custom text (if any and custom was active), and skipped status.
+
+Notes: Linked to #1.

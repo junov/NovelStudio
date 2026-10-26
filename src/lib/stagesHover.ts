@@ -179,7 +179,7 @@ function getStageDriftDetails(stage: PipelineStage, status: StatusJson | null) {
 
 /**
  * Returns dynamic contextual explanation and enumerated items for a stage status pill.
- * @spec JRN-001
+ * @spec JRN-001, JRN-006
  */
 export function getStagePillInfo(
 	stage: PipelineStage,
@@ -196,7 +196,7 @@ export function getStagePillInfo(
 				title: 'Upstream Changes Detected',
 				badge,
 				status: pillStatus,
-				description: `${allUpstream.length} upstream item(s) have changed since ${stage.label} was last accepted.`,
+				description: `${allUpstream.length} upstream item(s) have changed since ${stage.label} was last accepted. Click pill to synchronize.`,
 				items: allUpstream
 			};
 		}
@@ -206,7 +206,7 @@ export function getStagePillInfo(
 				title: `${stage.label} Changes Detected`,
 				badge,
 				status: pillStatus,
-				description: `${localDrift.length} item(s) have changed in ${stage.label} since last sync.`,
+				description: `${localDrift.length} item(s) have changed in ${stage.label} since last sync. Click pill to synchronize.`,
 				items: localDrift
 			};
 		}

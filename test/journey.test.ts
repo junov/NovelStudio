@@ -484,4 +484,24 @@ describe('JRN-005: Initial Stage Pending Lifecycle', () => {
 	});
 });
 
+describe('JRN-006: Interactive Drift Pill Synchronization Action', () => {
+	const railSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
+
+	// @spec JRN-006
+	it('renders drift pills as interactive buttons that trigger stage synchronization', () => {
+		expect(railSource).toContain("st.badge.includes('drift')");
+		expect(railSource).toContain('drift-btn');
+		expect(railSource).toContain('syncStage(stage)');
+		expect(railSource).toContain("disabled={agent.status === 'running'}");
+	});
+
+	// @spec JRN-006
+	it('provides styling for interactive drift pill buttons with distinct hover and disabled states', () => {
+		expect(railSource).toContain('button.pill.drift-btn');
+		expect(railSource).toContain('button.pill.drift-btn:hover:not(:disabled)');
+		expect(railSource).toContain('button.pill.drift-btn:disabled');
+	});
+});
+
+
 

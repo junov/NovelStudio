@@ -91,6 +91,25 @@ Acceptance:
   when accepted,
   then the stage transitions to the "synced" state.
 
+### JRN-006: Interactive Drift Pill Synchronization Action
+WHEN a stage on the Journey Rail exhibits local or upstream drift,
+THE SYSTEM SHALL present the drift status pill as an interactive button that dispatches stage synchronization (`novel-sync`) when clicked, disabling the button while the agent is busy.
+
+Acceptance:
+- Given a stage on the Journey Rail with local or upstream drift,
+  when displayed,
+  then its drift pill is rendered as an interactive button with distinct hover and active states.
+- Given an author clicks the drift button,
+  when clicked,
+  then the system sets the stage as the current active stage and dispatches stage synchronization (`novel-sync`) with the stage's synchronization prompt.
+- Given the agent is actively executing a task (`agent.status === 'running'`),
+  when evaluated,
+  then the drift button is disabled to prevent concurrent agent runs.
+- Given an author hovers over the drift button,
+  when hovered,
+  then the contextual hover card is displayed describing the drift items and indicating that clicking will synchronize the stage.
+
+
 
 
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * Pipeline Journey Rail
-	 * @spec AGT-008, AGT-009, JRN-001, JRN-002, JRN-003 (Issue #7, #8)
+	 * @spec AGT-008, AGT-009, JRN-001, JRN-002, JRN-003, JRN-006 (Issue #7, #8)
 	 */
 	import { project } from '$lib/stores/project.svelte';
 	import { PIPELINE, resolveStageExecution, type PipelineStage } from '$lib/stages';
@@ -130,6 +130,17 @@
 		const resolved = resolveStageExecution(stage, project.status);
 		agent.run(resolved.skill, resolved.prompt, stage.id);
 	}
+
+	/**
+	 * Synchronize a drifted stage by triggering `novel-sync` via the agent.
+	 * @spec JRN-006
+	 */
+	function syncStage(stage: PipelineStage) {
+		if (agent.status === 'running') return;
+		project.setCurrentStage(stage.id);
+		const resolved = resolveStageExecution(stage, project.status);
+		agent.run(resolved.skill, resolved.prompt, stage.id);
+	}
 </script>
 
 <div class="journey-rail" bind:this={railContainer}>
@@ -162,19 +173,38 @@
 
 				<div class="node-meta">
 					{#if st.badge}
-						<span
-							class="pill {st.status}"
-							onclick={() => {
-								project.setCurrentStage(stage.id);
-							}}
-							onmouseenter={(e) => {
-								e.stopPropagation();
-								showHover('pill', stage, i, st, e.currentTarget);
-							}}
-							onmouseleave={hideHover}
-						>
-							{st.badge}
-						</span>
+						{#if st.badge.includes('drift')}
+							<button
+								class="pill {st.status} drift-btn"
+								disabled={agent.status === 'running'}
+								title="Click to synchronize stage with upstream changes"
+								onclick={(e) => {
+									e.stopPropagation();
+									syncStage(stage);
+								}}
+								onmouseenter={(e) => {
+									e.stopPropagation();
+									showHover('pill', stage, i, st, e.currentTarget);
+								}}
+								onmouseleave={hideHover}
+							>
+								{st.badge}
+							</button>
+						{:else}
+							<span
+								class="pill {st.status}"
+								onclick={() => {
+									project.setCurrentStage(stage.id);
+								}}
+								onmouseenter={(e) => {
+									e.stopPropagation();
+									showHover('pill', stage, i, st, e.currentTarget);
+								}}
+								onmouseleave={hideHover}
+							>
+								{st.badge}
+							</span>
+						{/if}
 					{/if}
 					{#if st.canAccept}
 						<button
@@ -333,6 +363,25 @@
 	.pill.needs-sync {
 		background: color-mix(in srgb, var(--warn) 15%, transparent);
 		color: var(--warn);
+	}
+	button.pill.drift-btn {
+		background: color-mix(in srgb, var(--warn) 15%, transparent);
+		color: var(--warn);
+		border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		font-weight: 600;
+		transition: all 0.15s ease;
+	}
+	button.pill.drift-btn:hover:not(:disabled) {
+		background: var(--warn);
+		color: #fff;
+		border-color: var(--warn);
+	}
+	button.pill.drift-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 	.pill.accept-btn {
 		background: color-mix(in srgb, var(--ok) 18%, transparent);

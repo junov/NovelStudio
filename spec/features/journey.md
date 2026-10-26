@@ -51,9 +51,9 @@ Acceptance:
 - Given a stage on the Journey Rail with uncommitted diffs in the working tree,
   when displayed,
   then the stage node provides an interactive "Accept" pill action adjacent to its status pill.
-- Given a stage on the Journey Rail with no uncommitted diffs in the working tree (even if upstream drift or pending items are flagged),
+- Given a stage on the Journey Rail with no uncommitted diffs in the working tree (including stages that only exhibit upstream drift or pending items without working-tree changes, and stages whose directories are unmodified boilerplate),
   when displayed,
-  then the stage node does not display the "Accept" pill action.
+  then the stage node strictly does not display the "Accept" pill action.
 - Given an author clicks the "Accept" pill on a stage node,
   when clicked,
   then the system invokes `specnovel accept --stage <stage>`, committing the stage files and recording the `Novel-Sync: <stage>` trailer, automatically passing `--force` if integrity checks report non-fatal craft warnings.

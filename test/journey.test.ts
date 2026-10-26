@@ -362,6 +362,20 @@ describe('JRN-003: Journey Rail Stage Acceptance Action', () => {
 	});
 
 	// @spec JRN-003
+	it('strictly ignores directory entries and .gitkeep from triggering stage acceptance', () => {
+		const setupStage = PIPELINE.find((s) => s.id === 'setup')!;
+		const worldStage = PIPELINE.find((s) => s.id === 'world')!;
+		const directoryOnlyUnstaged = new Set([
+			'setup/',
+			'world/',
+			'world/characters/.gitkeep',
+			'manuscript/.gitkeep'
+		]);
+		expect(getStageUnstagedFiles(setupStage, directoryOnlyUnstaged)).toEqual([]);
+		expect(getStageUnstagedFiles(worldStage, directoryOnlyUnstaged)).toEqual([]);
+	});
+
+	// @spec JRN-003
 	it('detects generated content for unbaselined stages ready to accept', () => {
 		const initialStage = PIPELINE.find((s) => s.id === 'initial')!;
 		const freshStatus = createMockStatus({

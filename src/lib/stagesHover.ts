@@ -104,17 +104,16 @@ export function getStageStepInfo(
 
 /**
  * Filters unstaged file paths belonging to a stage.
+ * Strictly checks actual modified or untracked files within the stage's paths,
+ * ignoring directories, .gitkeep files, or collapsed folder summaries.
  * @spec JRN-003
  */
 export function getStageUnstagedFiles(stage: PipelineStage, unstagedFiles: Set<string>): string[] {
 	const stagePrefixes = stage.paths.map((p) => (p.includes('.') ? p : p.replace(/\/?$/, '/')));
-	return Array.from(unstagedFiles).filter((f) =>
-		stagePrefixes.some((p) =>
-			p.endsWith('/')
-				? f.startsWith(p) || (f.endsWith('/') && p.startsWith(f))
-				: f === p || (f.endsWith('/') && p.startsWith(f))
-		)
-	);
+	return Array.from(unstagedFiles).filter((f) => {
+		if (!f || f.endsWith('/') || f.endsWith('.gitkeep')) return false;
+		return stagePrefixes.some((p) => (p.endsWith('/') ? f.startsWith(p) : f === p));
+	});
 }
 
 /**

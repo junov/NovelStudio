@@ -25,7 +25,7 @@ export function parsePorcelainStatus(output: string): Set<string> {
 			}
 			const path = pathPart.includes(' -> ') ? pathPart.split(' -> ')[1].trim() : pathPart;
 			const normalized = path.replace(/\\/g, '/');
-			if (normalized) {
+			if (normalized && !normalized.endsWith('/') && !normalized.endsWith('.gitkeep')) {
 				files.add(normalized);
 			}
 		}
@@ -38,7 +38,7 @@ export function parsePorcelainStatus(output: string): Set<string> {
  */
 export async function getUnstagedFiles(projectRoot: string): Promise<Set<string>> {
 	try {
-		const res = await runGit(projectRoot, ['status', '--porcelain']);
+		const res = await runGit(projectRoot, ['status', '--porcelain', '-uall']);
 		if (res.code === 0) {
 			return parsePorcelainStatus(res.stdout);
 		}

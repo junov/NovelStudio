@@ -13,7 +13,7 @@ describe('REV-001: Unstaged Change Tracking and Navigator Visual Cues', () => {
 
 	// @spec REV-001
 	it('parses porcelain status into set of unstaged file paths', () => {
-		const porcelain = ` M story/brief.md\n?? kb/characters/CHR-001.md\n D outline/scenes/SCN-002.md\nAM story/synopsis.md\n`;
+		const porcelain = ` M story/brief.md\n?? kb/characters/CHR-001.md\n D outline/scenes/SCN-002.md\nAM story/synopsis.md\n?? setup/\n?? world/.gitkeep\n`;
 		const unstaged = parsePorcelainStatus(porcelain);
 
 		expect(unstaged.has('story/brief.md')).toBe(true);
@@ -21,6 +21,8 @@ describe('REV-001: Unstaged Change Tracking and Navigator Visual Cues', () => {
 		expect(unstaged.has('outline/scenes/SCN-002.md')).toBe(true);
 		expect(unstaged.has('story/synopsis.md')).toBe(true);
 		expect(unstaged.has('clean/file.md')).toBe(false);
+		expect(unstaged.has('setup/')).toBe(false);
+		expect(unstaged.has('world/.gitkeep')).toBe(false);
 	});
 
 	// @spec REV-001

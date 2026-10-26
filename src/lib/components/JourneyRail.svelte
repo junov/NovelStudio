@@ -265,13 +265,6 @@
 		border-color: var(--line-strong);
 	}
 
-	.stage-node.synced {
-		border-left: 3px solid var(--ok);
-	}
-	.stage-node.needs-sync {
-		border-left: 3px solid var(--warn);
-	}
-
 	.stage-node.current {
 		border-color: var(--line-strong);
 		box-shadow: inset 0 0 0 2px var(--accent);

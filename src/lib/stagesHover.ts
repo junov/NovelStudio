@@ -116,6 +116,29 @@ export function getStageUnstagedFiles(stage: PipelineStage, unstagedFiles: Set<s
 	});
 }
 
+export interface StageAcceptInfo {
+	title: string;
+	description: string;
+	files: string[];
+}
+
+/**
+ * Derives contextual hover information for the stage "Accept" button.
+ * Lists the files with uncommitted changes that belong to the stage.
+ * @spec JRN-003
+ */
+export function getStageAcceptInfo(stage: PipelineStage, unstagedFiles?: Set<string>): StageAcceptInfo {
+	const files = unstagedFiles ? getStageUnstagedFiles(stage, unstagedFiles) : [];
+	return {
+		title: `Accept Changes: ${stage.label}`,
+		description:
+			files.length === 1
+				? '1 file with uncommitted changes ready to be committed and accepted into the stage baseline.'
+				: `${files.length} files with uncommitted changes ready to be committed and accepted into the stage baseline.`,
+		files
+	};
+}
+
 /**
  * Checks whether an unbaselined stage has generated content ready for initial baseline acceptance.
  * @spec JRN-003

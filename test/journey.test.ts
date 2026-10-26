@@ -6,7 +6,8 @@ import {
 	getStagePillInfo,
 	getStageActionInfo,
 	getStageUnstagedFiles,
-	hasStageGeneratedContent
+	hasStageGeneratedContent,
+	getStageAcceptInfo
 } from '../src/lib/stagesHover';
 import type { StatusJson } from '../src/lib/types';
 import { project } from '../src/lib/stores/project.svelte';
@@ -418,6 +419,27 @@ describe('JRN-003: Journey Rail Stage Acceptance Action', () => {
 		expect(projectSrc).toContain('this.unstagedFiles = new Set');
 		expect(railSource).toContain('if (!res.success)');
 		expect(railSource).toContain('alert(');
+	});
+
+	// @spec JRN-003
+	it('provides hovercard info and interactions for the accept pill listing uncommitted files', () => {
+		const setupStage = PIPELINE.find((s) => s.id === 'setup')!;
+		const unstaged = new Set(['setup/brief.md', 'setup/themes.md', 'world/characters/CHR-001.md']);
+		const acceptInfo = getStageAcceptInfo(setupStage, unstaged);
+
+		expect(acceptInfo.title).toBe('Accept Changes: Setup');
+		expect(acceptInfo.description).toContain('2 files with uncommitted changes');
+		expect(acceptInfo.files).toEqual(['setup/brief.md', 'setup/themes.md']);
+
+		// Verify JourneyRail wires hovercard onto accept-btn
+		expect(railSource).toContain("showHover('accept', stage, i, st, e.currentTarget)");
+		expect(railSource).toContain('unstagedFiles={project.unstagedFiles}');
+
+		// Verify JourneyHoverCard renders accept card
+		const hoverCardSrc = readFileSync(resolve(__dirname, '../src/lib/components/JourneyHoverCard.svelte'), 'utf-8');
+		expect(hoverCardSrc).toContain("type === 'accept'");
+		expect(hoverCardSrc).toContain('acceptInfo.title');
+		expect(hoverCardSrc).toContain('acceptInfo.files');
 	});
 });
 

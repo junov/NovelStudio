@@ -45,12 +45,15 @@ Notes: Linked to #7.
 
 ### JRN-003: Journey Rail Stage Acceptance Action
 WHEN a pipeline stage on the Journey Rail has uncommitted diffs or unaccepted changes,
-THE SYSTEM SHALL provide an interactive "Accept" pill action on the stage node that runs `specnovel accept --stage <stage>` to commit and baseline the stage changes in Git, displaying the action only on stages with uncommitted working-tree diffs.
+THE SYSTEM SHALL provide an interactive "Accept" pill action on the stage node that runs `specnovel accept --stage <stage>` to commit and baseline the stage changes in Git, displaying a contextual hovercard listing the uncommitted files belonging to the stage upon hover, while displaying the action only on stages with uncommitted working-tree diffs.
 
 Acceptance:
 - Given a stage on the Journey Rail with uncommitted diffs in the working tree,
   when displayed,
   then the stage node provides an interactive "Accept" pill action adjacent to its status pill.
+- Given an author hovers over the "Accept" pill on a stage node,
+  when hovered,
+  then a contextual hovercard is displayed listing the files with uncommitted changes that belong to that stage.
 - Given a stage on the Journey Rail with no uncommitted diffs in the working tree (including stages that only exhibit upstream drift or pending items without working-tree changes, and stages whose directories are unmodified boilerplate),
   when displayed,
   then the stage node strictly does not display the "Accept" pill action.

@@ -16,7 +16,7 @@
 	let railContainer = $state<HTMLDivElement | null>(null);
 
 	let activeHover = $state<{
-		type: 'step' | 'pill' | 'play';
+		type: 'step' | 'pill' | 'play' | 'accept';
 		stage: PipelineStage;
 		stageIndex: number;
 		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string; canAccept?: boolean };
@@ -25,7 +25,7 @@
 	} | null>(null);
 
 	function showHover(
-		type: 'step' | 'pill' | 'play',
+		type: 'step' | 'pill' | 'play' | 'accept',
 		stage: PipelineStage,
 		stageIndex: number,
 		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string; canAccept?: boolean },
@@ -214,6 +214,11 @@
 								project.setCurrentStage(stage.id);
 								acceptStage(stage);
 							}}
+							onmouseenter={(e) => {
+								e.stopPropagation();
+								showHover('accept', stage, i, st, e.currentTarget);
+							}}
+							onmouseleave={hideHover}
 						>
 							{acceptingStage === stage.sync ? 'accepting...' : '✓ accept'}
 						</button>
@@ -254,6 +259,7 @@
 			status={project.status}
 			targetRect={activeHover.targetRect}
 			railRect={activeHover.railRect}
+			unstagedFiles={project.unstagedFiles}
 		/>
 	{/if}
 </div>

@@ -1,31 +1,34 @@
 <script lang="ts">
 	/**
 	 * Rich contextual hover card for Journey Rail steps, pills, and play buttons.
-	 * @spec JRN-001, JRN-002
+	 * @spec JRN-001, JRN-002, JRN-003
 	 */
 	import type { PipelineStage } from '$lib/stages';
 	import type { StatusJson } from '$lib/types';
 	import {
 		getStageStepInfo,
 		getStagePillInfo,
-		getStageActionInfo
+		getStageActionInfo,
+		getStageAcceptInfo
 	} from '$lib/stagesHover';
 
 	interface Props {
-		type: 'step' | 'pill' | 'play';
+		type: 'step' | 'pill' | 'play' | 'accept';
 		stage: PipelineStage;
 		stageIndex: number;
 		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string };
 		status: StatusJson | null;
 		targetRect: DOMRect;
 		railRect: DOMRect;
+		unstagedFiles?: Set<string>;
 	}
 
-	let { type, stage, stageIndex, stageState, status, targetRect, railRect }: Props = $props();
+	let { type, stage, stageIndex, stageState, status, targetRect, railRect, unstagedFiles }: Props = $props();
 
 	let stepInfo = $derived(getStageStepInfo(stage, stageIndex, status));
 	let pillInfo = $derived(getStagePillInfo(stage, status, stageState.badge, stageState.status));
 	let actionInfo = $derived(getStageActionInfo(stage, status));
+	let acceptInfo = $derived(getStageAcceptInfo(stage, unstagedFiles));
 
 	// Position relative to parent rail container
 	let positionStyle = $derived.by(() => {
@@ -124,6 +127,27 @@
 				<p class="disabled-reason">{actionInfo.disabledReason || 'Nothing to do at this stage.'}</p>
 			</div>
 		{/if}
+	{:else if type === 'accept'}
+		<div class="card-header">
+			<span class="pill-tag accept">✓ Accept</span>
+			<span class="stage-tag">{stage.label}</span>
+		</div>
+		<h4 class="card-title">{acceptInfo.title}</h4>
+		<p class="card-desc">{acceptInfo.description}</p>
+
+		{#if acceptInfo.files.length > 0}
+			<div class="card-items-block">
+				<span class="footer-label">Uncommitted Changes ({acceptInfo.files.length}):</span>
+				<ul class="items-list">
+					{#each acceptInfo.files.slice(0, 6) as file}
+						<li><code class="item-code">{file}</code></li>
+					{/each}
+					{#if acceptInfo.files.length > 6}
+						<li class="more-items">+ {acceptInfo.files.length - 6} more</li>
+					{/if}
+				</ul>
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -198,6 +222,11 @@
 	.pill-tag.pending {
 		background: var(--bg-sunken);
 		color: var(--ink-soft);
+	}
+	.pill-tag.accept {
+		background: color-mix(in srgb, var(--ok) 20%, transparent);
+		color: var(--ok);
+		border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
 	}
 
 	.action-tag {

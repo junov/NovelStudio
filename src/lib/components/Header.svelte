@@ -44,12 +44,23 @@
 			</div>
 			<!-- @spec PROJ-003 -->
 			<button
-				class="new-project-btn"
+				class="icon-btn new-project-btn"
 				onclick={onNewProject}
 				title="Create New Novel Project"
 				aria-label="Create New Novel Project"
 			>
-				+
+				<svg
+					viewBox="0 0 16 16"
+					width="14"
+					height="14"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.75"
+					stroke-linecap="round"
+				>
+					<line x1="8" y1="3" x2="8" y2="13" />
+					<line x1="3" y1="8" x2="13" y2="8" />
+				</svg>
 			</button>
 		{/if}
 	</div>
@@ -191,25 +202,21 @@
 	}
 
 	.new-project-btn {
-		width: 24px;
-		height: 24px;
+		width: 28px;
+		height: 28px;
 		border-radius: var(--radius);
-		border: 1px solid var(--line);
-		background: var(--bg-sunken);
+		border: none;
+		background: transparent;
 		color: var(--ink-soft);
-		font-size: 15px;
-		font-weight: 600;
-		line-height: 1;
-		display: grid;
+		display: inline-grid;
 		place-items: center;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: background 0.12s ease, color 0.12s ease;
 		padding: 0;
 	}
 	.new-project-btn:hover {
-		background: var(--accent);
-		color: var(--accent-ink);
-		border-color: var(--accent);
+		background: var(--bg-sunken);
+		color: var(--ink);
 	}
 
 	.palette-trigger {

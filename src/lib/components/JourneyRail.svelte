@@ -300,19 +300,46 @@
 		border-color: var(--line-strong);
 	}
 
+	/* @spec JRN-004 */
 	.stage-node.current {
-		border-color: var(--line-strong);
+		border-color: #b45309;
 		transform: translateY(1px);
-		background: var(--paper);
+		background: radial-gradient(
+			ellipse at center,
+			#ffffff 0%,
+			#fffaee 25%,
+			#fcd68a 60%,
+			#d97706 85%,
+			#8f3e00 100%
+		);
 	}
 	.stage-node.current .node-step {
-		background: var(--accent);
-		color: var(--accent-ink);
+		background: #8a3b12;
+		color: #ffffff;
 		font-weight: 700;
 	}
 	.stage-node.current .node-label {
-		color: var(--ink);
+		color: #24180a;
 		font-weight: 700;
+	}
+	.stage-node.current .pill.synced {
+		color: #2e6239;
+		background: rgba(46, 98, 57, 0.14);
+		font-weight: 600;
+	}
+	.stage-node.current button.pill.drift-btn,
+	.stage-node.current .pill.needs-sync {
+		color: #7c2d12;
+		border-color: rgba(124, 45, 18, 0.45);
+		background: rgba(124, 45, 18, 0.12);
+	}
+	.stage-node.current .run-skill-btn {
+		background: rgba(138, 59, 18, 0.15);
+		color: #8a3b12;
+	}
+	.stage-node.current .run-skill-btn:hover:not(.disabled) {
+		background: #8a3b12;
+		color: #ffffff;
 	}
 
 	.node-badge-row {

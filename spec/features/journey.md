@@ -66,12 +66,12 @@ Acceptance:
 
 ### JRN-004: Current Stage Tracking and Highlighting
 WHEN an author interacts with the workspace,
-THE SYSTEM SHALL maintain a single active current stage across the pipeline, visually highlight the current stage node in the Journey Rail, and update the current stage whenever the author clicks a stage node or any of its child widgets.
+THE SYSTEM SHALL maintain a single active current stage across the pipeline, visually highlight the current stage node in the Journey Rail with an amber backlit radial gradient background (whitish in the center and deep amber in the corners), and update the current stage whenever the author clicks a stage node or any of its child widgets.
 
 Acceptance:
 - Given the Journey Rail,
   when rendered,
-  then exactly one stage is designated as the current stage and is visually highlighted without displaying an inset border on the node container.
+  then exactly one stage is designated as the current stage and is visually highlighted with an amber backlit radial gradient background that is whitish in the center and deep amber in the corners, without displaying an inset border on the node container.
 - Given an author clicks a stage node or any child widget within that stage node (step label, status pill, play button, or accept button),
   when clicked,
   then that stage becomes the active current stage and receives the visual highlight.

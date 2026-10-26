@@ -12,7 +12,7 @@ export const AGENT_TOOLS: ToolDef[] = [
 			properties: {
 				path: {
 					type: 'string',
-					description: 'Relative path from project root (e.g. "story/synopsis.md", "kb/characters/CHR-001.md").'
+					description: 'Relative path from project root (e.g. "initial/synopsis.md", "world/characters/CHR-001.md").'
 				}
 			},
 			required: ['path']
@@ -26,7 +26,7 @@ export const AGENT_TOOLS: ToolDef[] = [
 			properties: {
 				path: {
 					type: 'string',
-					description: 'Relative path from project root (e.g. "story/brief.md").'
+					description: 'Relative path from project root (e.g. "setup/brief.md").'
 				},
 				content: {
 					type: 'string',
@@ -62,14 +62,14 @@ export const AGENT_TOOLS: ToolDef[] = [
 			properties: {
 				folder: {
 					type: 'string',
-					description: 'Optional subfolder prefix to filter by (e.g. "kb/", "manuscript/").'
+					description: 'Optional subfolder prefix to filter by (e.g. "world/", "narrative/", "manuscript/").'
 				}
 			}
 		}
 	},
 	{
 		name: 'read_toolkit_doc',
-		description: 'Read an official SpecNovelist reference guide, checklist, or skill manual from the bundled toolkit (e.g. ".agents/skills/novel-init/references/interview-guide.md", "AGENTS.md", "README.md").',
+		description: 'Read an official SpecNovelist reference guide, checklist, or skill manual from the bundled toolkit (e.g. ".agents/skills/novel-generate/references/interview-guide.md", "AGENTS.md", "README.md").',
 		parameters: {
 			type: 'object',
 			properties: {

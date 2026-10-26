@@ -20,7 +20,7 @@ flowchart TD
     end
 
     subgraph External["Local File System & Submodules"]
-        Novel["Author Novel Directory\n(story/, kb/, outline/)"]
+        Novel["Author Novel Directory\n(initial/, setup/, research/, world/, narrative/, structure/, directives/)"]
         Toolkit["SpecNovelist Toolkit\n(third_party/specnovelist)"]
     end
 

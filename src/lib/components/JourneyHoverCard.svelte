@@ -23,7 +23,7 @@
 
 	let { type, stage, stageIndex, stageState, status, targetRect, railRect }: Props = $props();
 
-	let stepInfo = $derived(getStageStepInfo(stage, stageIndex));
+	let stepInfo = $derived(getStageStepInfo(stage, stageIndex, status));
 	let pillInfo = $derived(getStagePillInfo(stage, status, stageState.badge, stageState.status));
 	let actionInfo = $derived(getStageActionInfo(stage, status));
 

@@ -15,12 +15,16 @@ export interface DriftItem {
 export interface StatusJson {
 	title: string;
 	baselines: Record<string, CommitInfo | string | null>;
+	generatedStages?: Record<string, boolean>;
 	catalog: Record<string, number>;
-	scenes: { outline: number; abridged: number; manuscript: number };
+	beats?: number;
+	scenes: { structure?: number; outline: number; abridged: number; manuscript: number };
 	words: { abridged: number; manuscript: number };
 	pending: { abridged: number; manuscript: number };
 	pending_items?: Record<string, string[]>;
+	illustrations?: { active: number; pending: number; inactive: number; pending_items?: string[] };
 	graphics: { active: number; pending: number; inactive: number; pending_items?: string[] };
+	directives?: number;
 	placeholders: { total: number; untracked: number };
 	drift: Record<string, Array<DriftItem | string>>;
 	upstream_drift?: Record<string, Array<DriftItem | string>>;

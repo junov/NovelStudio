@@ -8,15 +8,18 @@ status: active
 
 ### BBL-001: Story Bible Entity Categorization
 WHEN project Markdown files are scanned,
-THE SYSTEM SHALL categorize files into entity kinds based on directory prefix and filename pattern (Characters, Places, Lore, Items, Factions), and render them in the Story Bible explorer as collapsible sections with visible expand/collapse indicators.
+THE SYSTEM SHALL categorize files into SpecNovelist entity kinds based on ID prefix and directory layout (Characters, Places, Organizations, Objects, World Rules, Timeline Events, Glossary Terms, Facts, Sources, Research Questions, Story Arcs, Narrative Beats, Illustrations, Volumes, Acts, Parts, Chapters, Scenes, Themes, Style Rules, and Directives), and render them in the Story Bible explorer as collapsible sections with visible expand/collapse indicators.
 
 Acceptance:
-- Given a file path "kb/characters/CHR-001-alice.md",
+- Given a file path "world/characters/CHR-001-alice.md",
   when parsed,
-  then kind is identified as "character" and entity ID as "CHR-001".
-- Given a file path "kb/places/PLC-005-citadel.md",
+  then kind is identified as "Character" and entity ID as "CHR-001".
+- Given a file path "world/places/PLC-005-citadel.md",
   when parsed,
-  then kind is identified as "place" and entity ID as "PLC-005".
+  then kind is identified as "Place" and entity ID as "PLC-005".
+- Given definitions for narrative beats ("BET-001"), illustrations ("ILL-001"), story arcs ("ARC-001"), and directives ("DIR-001"),
+  when parsed,
+  then they are categorized under their respective PrefixInfo definitions and folders ("narrative", "directives").
 - Given the Story Bible explorer rendered in the sidebar,
   when entity category sections are displayed,
   then each section header renders a visible disclosure chevron indicator reflecting whether the section is currently expanded or collapsed.

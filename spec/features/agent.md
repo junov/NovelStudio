@@ -137,42 +137,45 @@ Notes: Linked to #2.
 
 ### AGT-007: Interactive Skill Routing for Author Feed Messages
 WHEN an author submits a message or instruction in the agent feed prompt bar,
-THE SYSTEM SHALL evaluate the author's input to select the most appropriate SpecNovelist skill (defaulting to novel-author for creative, story-bible, or worldbuilding requests, or routing to novel-research, novel-outline, novel-sync, novel-abridge, novel-write, novel-verify, or novel-publish based on intent), display the routed skill in the agent status header, and execute the agent loop under that skill's system context.
+THE SYSTEM SHALL evaluate the author's input to select the most appropriate SpecNovelist skill (defaulting to novel-feedback for creative authoring, worldbuilding edits, outline/beat adjustments, or editorial directives, or routing to novel-generate, novel-sync, novel-verify, or novel-analyze based on intent), display the routed skill in the agent status header, and execute the agent loop under that skill's system context.
 
 Acceptance:
-- Given an author submits an instruction targeting Story Bible entities, character details, places, or worldbuilding,
+- Given an author submits an instruction targeting Story Bible entities, character details, places, worldbuilding, narrative beats, scenes, or editorial directives (DIR),
   when the agent routing step evaluates the prompt,
-  then the skill is routed to novel-author.
-- Given an author submits an instruction targeting real-world facts or research questions (e.g. historical dates, science facts, source verification),
+  then the skill is routed to novel-feedback.
+- Given an author submits an instruction explicitly requesting initial generation, scaffolding, discovery interviewing, or first-time drafting of a pipeline stage (initial, setup, research, world, narrative, structure, abridged, manuscript, or publishable),
   when the agent routing step evaluates the prompt,
-  then the skill is routed to novel-research.
-- Given an author submits an instruction targeting scene structure, chapter sequence, or story DAG ordering,
+  then the skill is routed to novel-generate.
+- Given an author submits an instruction requesting incremental synchronization of a stage with upstream changes or rendering of pending assets,
   when the agent routing step evaluates the prompt,
-  then the skill is routed to novel-outline.
-- Given an author submits an instruction targeting narrative drafting or prose rendering,
+  then the skill is routed to novel-sync.
+- Given an author submits an instruction requesting quality verification, continuity checks, DAG validation, or placeholder auditing,
   when the agent routing step evaluates the prompt,
-  then the skill is routed to novel-abridge or novel-write based on target fidelity.
-- Given an ambiguous, open-ended, or general creative authoring message with no explicit pipeline stage target,
+  then the skill is routed to novel-verify.
+- Given an author submits an instruction requesting quantitative pacing waveforms, cadence entropy metrics, or developmental analysis reports,
+  when the agent routing step evaluates the prompt,
+  then the skill is routed to novel-analyze.
+- Given an ambiguous, open-ended, or general creative authoring message with no explicit pipeline generation or sync command,
   when evaluated,
-  then the system defaults to routing the request to novel-author.
+  then the system defaults to routing the request to novel-feedback.
 - Given a routed skill is determined,
   when the agent starts running,
   then agent.currentSkill is updated to the routed skill, displayed in the panel header, and the corresponding skill documentation is included in the execution context.
 
 ### AGT-008: Journey Rail Pipeline Stages and Story Bible Decoupling
 WHEN an author views or interacts with stages on the Journey Rail,
-THE SYSTEM SHALL present the linear artifact delivery stages (Brief, Research, Outline, Graphics, Abridged, Manuscript, Publish) and omit the Story Bible as a pipeline stage, maintaining Story Bible management as a continuous, non-sequential knowledge base accessible via the Story Bible explorer and interactive agent feed.
+THE SYSTEM SHALL present the 9 sequential SpecNovelist pipeline stages (Initial, Setup, Research, World, Narrative, Structure, Abridged, Manuscript, Publishable) while maintaining the categorized Story Bible explorer as a continuous, non-sequential catalog accessible across all stages via the Explorer panel and interactive agent feed.
 
 Acceptance:
 - Given the Journey Rail rendered across the top of the workspace layout,
   when viewed,
-  then the Journey Rail displays exactly 7 sequential stages (Brief, Research, Outline, Graphics, Abridged, Manuscript, Publish) and excludes Story Bible.
+  then the Journey Rail displays the 9 sequential stages (Initial, Setup, Research, World, Narrative, Structure, Abridged, Manuscript, Publishable).
 - Given the author works in any project stage,
-  when managing characters, locations, or lore,
+  when managing characters, locations, world rules, narrative beats, scenes, or directives,
   then the Story Bible remains continuously accessible via the Explorer panel and through agent chat.
-- Given automated progression or next-step actions in the Journey Rail,
-  when determining the next pipeline step,
-  then the system transitions across the 7 linear delivery stages without evaluating or executing a Story Bible pipeline step.
+- Given stage actions in the Journey Rail,
+  when determining stage execution,
+  then the system dispatches novel-generate for initial stage generation (when no stage baseline exists yet) and novel-sync for incremental stage synchronization (once a baseline exists).
 
 ### AGT-009: User-Controlled Journey Progression and Stage Isolation
 WHEN an author launches a stage action from the Journey Rail or engages with the agent,

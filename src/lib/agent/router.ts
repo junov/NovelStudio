@@ -5,17 +5,22 @@
 import { SKILLS, type SkillName } from '$lib/stages';
 
 /**
- * Evaluates an author's prompt to select the most appropriate SpecNovelist skill.
- * Defaults to 'novel-author' for general creative, worldbuilding, or ambiguous requests.
+ * Evaluates an author's prompt to select the most appropriate SpecNovelist skill
+ * across the 5 canonical skills:
+ * - `novel-feedback`: Freeform author feedback, world/character/beat/scene edits, and directives (DIR)
+ * - `novel-generate`: Initial generation / scaffolding / first-time drafting of a stage
+ * - `novel-sync`: Incremental synchronization of a stage from upstream changes
+ * - `novel-verify`: Consistency, continuity, DAG, and placeholder verification
+ * - `novel-analyze`: Quantitative narrative pacing waveform and developmental telemetry reports
  * @spec AGT-007
  */
 export function routeUserPrompt(prompt: string): SkillName {
 	const trimmed = prompt.trim();
 	if (!trimmed) {
-		return 'novel-author';
+		return 'novel-feedback';
 	}
 
-	// 1. Direct explicit skill command, e.g. "/skill novel-research" or "/run novel-outline"
+	// 1. Direct explicit skill command, e.g. "/skill novel-sync" or "/run novel-generate"
 	const explicitMatch = trimmed.match(/^\/(?:skill|run)\s+([a-z0-9_-]+)/i);
 	if (explicitMatch) {
 		const requested = explicitMatch[1].toLowerCase() as SkillName;
@@ -24,68 +29,42 @@ export function routeUserPrompt(prompt: string): SkillName {
 		}
 	}
 
-	// 2. Explicit ID prefixes
-	if (/\b(?:RQ|FCT|SRC)-\d+\b/i.test(trimmed)) {
-		return 'novel-research';
-	}
-	if (/\b(?:PRT|CHP|SCN)-\d+\b/i.test(trimmed)) {
-		return 'novel-outline';
-	}
-	if (/\b(?:CHR|PLC|ORG|OBJ|PLT|THM|WLD|TML|GFX|GLS)-\d+\b/i.test(trimmed)) {
-		return 'novel-author';
-	}
-
-	// 3. Research & Real-World Facts
+	// 2. Quantitative Telemetry & Analysis Reports -> novel-analyze
 	if (
-		/\b(?:research|fact[- ]check|citation|cite|sources?|historical|scientific|real[- ]world|verify (?:date|fact)|is it true that|look up)\b/i.test(
+		/\b(?:pacing waveform|radar chart|cadence entropy|dialogue ratio|screen[- ]time|telemetry|developmental report|analyze (?:the )?(?:story|pacing|novel|manuscript)|audit --report)\b/i.test(
 			trimmed
 		)
 	) {
-		return 'novel-research';
+		return 'novel-analyze';
 	}
 
-	// 4. Publishing & Compilation
-	if (/\b(?:publish|compile|export (?:to )?(?:epub|pdf|docx)|build book|generate epub)\b/i.test(trimmed)) {
-		return 'novel-publish';
-	}
-
-	// 5. Verification & Pacing Analysis
-	if (/\b(?:verify consistency|check consistency|chekhov|pacing waveform|radar chart|analyze story)\b/i.test(trimmed)) {
+	// 3. Quality, Continuity & Consistency Verification -> novel-verify
+	if (
+		/\b(?:verify (?:consistency|continuity|story|dag|novel)|check (?:consistency|continuity|placeholders)|audit placeholders|chekhov|continuity check)\b/i.test(
+			trimmed
+		)
+	) {
 		return 'novel-verify';
 	}
 
-	// 6. Outline & Scene Sequencing / DAG
+	// 4. Incremental Synchronization -> novel-sync
 	if (
-		/\b(?:outline|story dag|scene sequence|chapter sequence|scene order|reorder scenes?|add (?:a )?chapter|add (?:a )?scene|scene prerequisites|act structure|plot structure)\b/i.test(
-			trimmed
-		)
-	) {
-		return 'novel-outline';
-	}
-
-	// 7. Abridged Drafting
-	if (/\b(?:abridge|abridged|condensed draft|pacing draft|quick draft)\b/i.test(trimmed)) {
-		return 'novel-abridge';
-	}
-
-	// 8. Manuscript / Prose Writing
-	if (
-		/\b(?:write (?:the )?prose|draft (?:the )?prose|render (?:the )?prose|write (?:the )?scene|write (?:the )?chapter|manuscript|prose rendering|draft narrative|write dialogue)\b/i.test(
-			trimmed
-		)
-	) {
-		return 'novel-write';
-	}
-
-	// 9. Syncing & Graphic Rendering
-	if (
-		/\b(?:sync(?:hronize)?|render (?:active )?graphics|render assets|regenerate scenes|impacted scenes)\b/i.test(
+		/\b(?:sync(?:hronize)?|regenerate (?:impacted )?scenes|update impacted|upstream changes|render (?:active |pending )?(?:graphics|illustrations|assets))\b/i.test(
 			trimmed
 		)
 	) {
 		return 'novel-sync';
 	}
 
-	// 10. Default fallback: novel-author for all creative story bible, lore, and conversational authoring
-	return 'novel-author';
+	// 5. Initial Stage Generation / Scaffolding / Full Stage Drafting -> novel-generate
+	if (
+		/\b(?:generate (?:the )?(?:initial|setup|research|world|narrative|structure|abridged|manuscript|publishable)|discovery interview|initialize (?:the )?(?:project|brief|setup)|formulate research questions|draft (?:the )?(?:prose|abridged|manuscript|chapters?)|write (?:the )?(?:prose|scene|chapter|manuscript)|render (?:the )?(?:prose|manuscript)|compile (?:the )?book|export (?:to )?(?:epub|pdf|docx)|build book|generate epub)\b/i.test(
+			trimmed
+		)
+	) {
+		return 'novel-generate';
+	}
+
+	// 6. Default: novel-feedback for all author feedback, worldbuilding/character/beat/scene edits, and directives (DIR)
+	return 'novel-feedback';
 }

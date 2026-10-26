@@ -48,26 +48,26 @@
 			await project.open(projectPath);
 			settings.addRecent(projectPath, title || 'Untitled Novel');
 
-			// 4. Save synopsis.md
+			// 4. Save initial/synopsis.md
 			const synopsisHeader = `# Synopsis: ${title || 'Untitled Novel'}\n\n${synopsis.trim()}\n`;
-			await project.write('story/synopsis.md', synopsisHeader);
+			await project.write('initial/synopsis.md', synopsisHeader);
 
-			// 5. Update config.md if title/author given
+			// 5. Update initial/config.md if title/author given
 			if (title || author) {
-				let cfg = await project.read('story/config.md');
+				let cfg = await project.read('initial/config.md');
 				if (title) cfg = cfg.replace(/- \*\*Title:\*\* .*/, `- **Title:** ${title}`);
 				if (author) cfg = cfg.replace(/- \*\*Name:\*\* .*/, `- **Name:** ${author}`);
-				await project.write('story/config.md', cfg);
+				await project.write('initial/config.md', cfg);
 			}
 
 			await project.refresh();
 			onClose();
 
-			// 6. Launch novel-init interview!
+			// 6. Launch novel-generate for the setup stage discovery interview!
 			agent.run(
-				'novel-init',
-				`Run novel-init for this new project. The seed synopsis is saved in story/synopsis.md. Begin by reflecting your understanding and conducting the Stage 1 discovery interview with the author via the ask_user tool.`,
-				'brief'
+				'novel-generate',
+				`Run novel-generate for the setup stage of this new project. The seed synopsis is saved in initial/synopsis.md and project configuration in initial/config.md. Begin by reflecting your understanding and conducting the discovery interview with the author via the ask_user tool to populate setup/brief.md, setup/themes.md, and setup/style.md.`,
+				'setup'
 			);
 		} catch (e) {
 			errorMessage = e instanceof Error ? e.message : String(e);

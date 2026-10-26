@@ -8,13 +8,23 @@ import { resolve } from 'path';
 
 describe('BBL-001: Story Bible Entity Categorization', () => {
 	// @spec BBL-001
-	it('identifies entity kinds and IDs correctly', () => {
+	it('identifies entity kinds, IDs, and 9-stage folders correctly', () => {
 		expect(prefixOf('CHR-001')).toBe('CHR');
 		expect(prefixInfo('CHR-001').label).toBe('Character');
+		expect(prefixInfo('CHR-001').folder).toBe('world/characters');
 		expect(prefixInfo('PLC-005').label).toBe('Place');
+		expect(prefixInfo('PLC-005').folder).toBe('world/places');
 		expect(prefixInfo('ORG-012').label).toBe('Organization');
 		expect(prefixInfo('OBJ-003').label).toBe('Object');
+		expect(prefixInfo('BET-001').label).toBe('Narrative beat');
+		expect(prefixInfo('BET-001').file).toBe('narrative/beats.md');
+		expect(prefixInfo('ILL-001').label).toBe('Illustration');
+		expect(prefixInfo('ILL-001').file).toBe('narrative/illustrations.md');
+		expect(prefixInfo('ARC-001').label).toBe('Story arc');
+		expect(prefixInfo('DIR-001').label).toBe('Directive');
+		expect(prefixInfo('DIR-001').folder).toBe('directives');
 		expect(prefixInfo('SCN-001').label).toBe('Scene');
+		expect(prefixInfo('SCN-001').file).toBe('structure/outline.md');
 	});
 
 	// @spec BBL-001

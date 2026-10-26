@@ -1,23 +1,30 @@
 <script lang="ts">
 	import { project } from '$lib/stores/project.svelte';
 	import { agent } from '$lib/agent/engine.svelte';
-	import { PIPELINE } from '$lib/stages';
+	import { PIPELINE, resolveStageExecution } from '$lib/stages';
 
 	let synopsisText = $state('');
 
 	$effect(() => {
 		if (project.root) {
-			project.read('story/synopsis.md').then((t) => {
-				synopsisText = t.replace(/^#\s+[^\n]+\n+/, ''); // strip title
-			}).catch(() => {
-				synopsisText = '';
-			});
+			project
+				.read('initial/synopsis.md')
+				.catch(() => project.read('story/synopsis.md'))
+				.then((t) => {
+					synopsisText = t.replace(/^#\s+[^\n]+\n+/, ''); // strip title
+				})
+				.catch(() => {
+					synopsisText = '';
+				});
 		}
 	});
 
 	function runStage(stageId: string) {
 		const stage = PIPELINE.find((s) => s.id === stageId);
-		if (stage) agent.run(stage.skill, stage.prompt, stage.id);
+		if (stage) {
+			const resolved = resolveStageExecution(stage, project.status);
+			agent.run(resolved.skill, resolved.prompt, stage.id);
+		}
 	}
 </script>
 
@@ -32,15 +39,19 @@
 	<!-- Core Metrics Grid -->
 	<div class="metrics-grid">
 		<div class="metric-card card">
-			<span class="metric-num">{project.status?.scenes.outline || 0}</span>
-			<span class="metric-label">Scenes Outlined</span>
-			<button class="card-btn" onclick={() => project.openFile('outline/outline.md')}>View Outline →</button>
+			<span class="metric-num">
+				{project.status?.scenes.structure ?? project.status?.scenes.outline ?? 0}
+			</span>
+			<span class="metric-label">Scenes Structured</span>
+			<button class="card-btn" onclick={() => project.openFile('structure/outline.md')}>
+				View Structure →
+			</button>
 		</div>
 
 		<div class="metric-card card">
 			<span class="metric-num">{(project.status?.words.abridged || 0).toLocaleString()}</span>
 			<span class="metric-label">Abridged Draft Words</span>
-			<button class="card-btn" onclick={() => runStage('abridged')}>Abridged Sync →</button>
+			<button class="card-btn" onclick={() => runStage('abridged')}>Abridged Stage →</button>
 		</div>
 
 		<div class="metric-card card">
@@ -54,7 +65,9 @@
 				{Object.values(project.status?.catalog || {}).reduce((a, b) => a + b, 0)}
 			</span>
 			<span class="metric-label">Story Bible Entities</span>
-			<button class="card-btn" onclick={() => project.openFile('kb/INDEX.md')}>Catalog Index →</button>
+			<button class="card-btn" onclick={() => project.openFile('world/INDEX.md')}>
+				World Index →
+			</button>
 		</div>
 	</div>
 
@@ -62,25 +75,25 @@
 	<div class="workflow-card card">
 		<h3 class="workflow-title">Pipeline Quick Actions</h3>
 		<div class="actions-grid">
-			<div class="action-box" onclick={() => runStage('brief')}>
+			<div class="action-box" onclick={() => runStage('setup')}>
 				<span class="action-icon">✦</span>
-				<h4>Discovery Interview</h4>
-				<p>Refine genre, scope, cast, theme, and writing style guide.</p>
+				<h4>Discovery & Setup</h4>
+				<p>Refine brief, thematic pillars (THM), and prose style guide (STY).</p>
 			</div>
-			<div class="action-box" onclick={() => runStage('research')}>
+			<div class="action-box" onclick={() => runStage('world')}>
 				<span class="action-icon">📚</span>
-				<h4>Authoritative Research</h4>
-				<p>Resolve open research questions with cited facts.</p>
+				<h4>World & Research</h4>
+				<p>Resolve research questions into cited facts and build the world bible.</p>
 			</div>
-			<div class="action-box" onclick={() => runStage('outline')}>
-				<span class="action-icon">🎬</span>
-				<h4>Outline & Story DAG</h4>
-				<p>Structure parts, chapters, scenes, and causal prerequisites.</p>
+			<div class="action-box" onclick={() => runStage('narrative')}>
+				<span class="action-icon">⚡</span>
+				<h4>Narrative Beat DAG</h4>
+				<p>Design story arcs (ARC), causal narrative beats (BET), and illustrations (ILL).</p>
 			</div>
 			<div class="action-box" onclick={() => runStage('manuscript')}>
 				<span class="action-icon">🖋</span>
 				<h4>Render Prose</h4>
-				<p>Generate literary prose guided by style.md and story bible.</p>
+				<p>Generate literary prose guided by setup/style.md and world lore.</p>
 			</div>
 		</div>
 	</div>

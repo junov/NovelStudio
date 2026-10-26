@@ -62,7 +62,7 @@
 			<div class="log-header">
 				<span>Compilation Output</span>
 				{#if buildSuccess}
-					<span class="badge ok">Built in build/</span>
+					<span class="badge ok">Built in publishable/</span>
 				{:else}
 					<span class="badge err">Errors</span>
 				{/if}
@@ -77,7 +77,7 @@
 				<h1 class="book-title">{project.title}</h1>
 				<span class="book-ornament">❦</span>
 				<p class="book-status">
-					{project.status?.words.manuscript.toLocaleString() || 0} manuscript words · {project.status?.scenes.outline || 0} scenes
+					{project.status?.words.manuscript.toLocaleString() || 0} manuscript words · {project.status?.scenes.structure ?? project.status?.scenes.outline ?? 0} scenes
 				</p>
 			</div>
 		</div>
@@ -86,16 +86,16 @@
 			<h3>Publication Settings & Front/Back Matter</h3>
 			<ul class="specs-list">
 				<li>
-					<strong>Mandatory Acknowledgements:</strong> Verbatim AI model disclosure from <code>story/acknowledgements.md</code> is automatically injected.
+					<strong>Mandatory Acknowledgements:</strong> Verbatim AI model disclosure from <code>structure/back-matter/acknowledgements.md</code> is automatically injected.
 				</li>
 				<li>
-					<strong>Style-Guided Glossary:</strong> Terms from <code>kb/glossary/</code> injected per guidelines in <code>story/style.md</code>.
+					<strong>Style-Guided Glossary:</strong> Terms from <code>world/glossary/</code> injected per guidelines in <code>setup/style.md</code>.
 				</li>
 				<li>
 					<strong>DAG-Filtered Bibliography:</strong> Researched sources citing active scenes are compiled in reading order.
 				</li>
 				<li>
-					<strong>Typography & Gutter Margins:</strong> Formatted to interior trim specs declared in <code>story/style.md</code>.
+					<strong>Typography & Gutter Margins:</strong> Formatted to interior trim specs declared in <code>setup/style.md</code>.
 				</li>
 			</ul>
 		</div>

@@ -15,30 +15,35 @@ export interface PrefixInfo {
 	label: string;
 	plural: string;
 	folder: string;
+	/** Optional canonical single-file catalog path if entities of this prefix live in one file. */
+	file?: string;
 	/** CSS custom-property hue (0-360) for chips. */
 	hue: number;
 	icon: string;
 }
 
 export const PREFIXES: Record<string, PrefixInfo> = {
-	CHR: { label: 'Character', plural: 'Characters', folder: 'kb/characters', hue: 12, icon: '👤' },
-	PLC: { label: 'Place', plural: 'Places', folder: 'kb/places', hue: 140, icon: '📍' },
-	ORG: { label: 'Organization', plural: 'Organizations', folder: 'kb/organizations', hue: 200, icon: '🏛' },
-	OBJ: { label: 'Object', plural: 'Objects', folder: 'kb/objects', hue: 40, icon: '🗝' },
-	PLT: { label: 'Plot element', plural: 'Plot', folder: 'kb/plot', hue: 330, icon: '🧵' },
-	THM: { label: 'Theme', plural: 'Themes', folder: 'kb/themes', hue: 280, icon: '✨' },
-	WLD: { label: 'World rule', plural: 'World', folder: 'kb/world', hue: 175, icon: '🌐' },
-	TML: { label: 'Timeline event', plural: 'Timeline', folder: 'kb/timeline', hue: 230, icon: '⏳' },
-	GFX: { label: 'Graphic', plural: 'Graphics', folder: 'kb/graphics', hue: 300, icon: '🖼' },
-	GLS: { label: 'Glossary term', plural: 'Glossary', folder: 'kb/glossary', hue: 90, icon: '📖' },
-	FCT: { label: 'Fact', plural: 'Facts', folder: 'kb/facts', hue: 160, icon: '✔' },
-	SRC: { label: 'Source', plural: 'Sources', folder: 'kb/sources', hue: 25, icon: '📚' },
-	RQ: { label: 'Research question', plural: 'Research', folder: 'kb/research', hue: 55, icon: '❓' },
-	STY: { label: 'Style rule', plural: 'Style rules', folder: 'story', hue: 260, icon: '🖋' },
-	EDT: { label: 'Editorial directive', plural: 'Editorial', folder: 'story/editorial', hue: 0, icon: '✎' },
-	PRT: { label: 'Part', plural: 'Parts', folder: 'outline', hue: 210, icon: '📕' },
-	CHP: { label: 'Chapter', plural: 'Chapters', folder: 'outline', hue: 215, icon: '📄' },
-	SCN: { label: 'Scene', plural: 'Scenes', folder: 'outline', hue: 220, icon: '🎬' }
+	CHR: { label: 'Character', plural: 'Characters', folder: 'world/characters', hue: 12, icon: '👤' },
+	PLC: { label: 'Place', plural: 'Places', folder: 'world/places', hue: 140, icon: '📍' },
+	ORG: { label: 'Organization', plural: 'Organizations', folder: 'world/organizations', hue: 200, icon: '🏛' },
+	OBJ: { label: 'Object', plural: 'Objects', folder: 'world/objects', hue: 40, icon: '🗝' },
+	WLD: { label: 'World rule', plural: 'World Rules', folder: 'world/rules', hue: 175, icon: '🌐' },
+	TML: { label: 'Timeline event', plural: 'Timeline', folder: 'world/timeline', hue: 230, icon: '⏳' },
+	GLS: { label: 'Glossary term', plural: 'Glossary', folder: 'world/glossary', hue: 90, icon: '📖' },
+	FCT: { label: 'Fact', plural: 'Facts', folder: 'world/facts', hue: 160, icon: '✔' },
+	SRC: { label: 'Source', plural: 'Sources', folder: 'world/sources', hue: 25, icon: '📚' },
+	RQ: { label: 'Research question', plural: 'Research Questions', folder: 'research', file: 'research/questions.md', hue: 55, icon: '❓' },
+	THM: { label: 'Theme', plural: 'Themes', folder: 'setup', file: 'setup/themes.md', hue: 280, icon: '✨' },
+	STY: { label: 'Style rule', plural: 'Style Rules', folder: 'setup', file: 'setup/style.md', hue: 260, icon: '🖋' },
+	ARC: { label: 'Story arc', plural: 'Story Arcs', folder: 'narrative', file: 'narrative/arcs.md', hue: 330, icon: '🧵' },
+	BET: { label: 'Narrative beat', plural: 'Narrative Beats', folder: 'narrative', file: 'narrative/beats.md', hue: 345, icon: '⚡' },
+	ILL: { label: 'Illustration', plural: 'Illustrations', folder: 'narrative', file: 'narrative/illustrations.md', hue: 300, icon: '🖼' },
+	VOL: { label: 'Volume', plural: 'Volumes', folder: 'structure', file: 'structure/outline.md', hue: 205, icon: '📚' },
+	ACT: { label: 'Act', plural: 'Acts', folder: 'structure', file: 'structure/outline.md', hue: 208, icon: '🎭' },
+	PRT: { label: 'Part', plural: 'Parts', folder: 'structure', file: 'structure/outline.md', hue: 210, icon: '📕' },
+	CHP: { label: 'Chapter', plural: 'Chapters', folder: 'structure', file: 'structure/outline.md', hue: 215, icon: '📄' },
+	SCN: { label: 'Scene', plural: 'Scenes', folder: 'structure', file: 'structure/outline.md', hue: 220, icon: '🎬' },
+	DIR: { label: 'Directive', plural: 'Directives', folder: 'directives', hue: 0, icon: '✎' }
 };
 
 export const prefixOf = (id: string) => id.split('-')[0];
@@ -50,7 +55,20 @@ export type Layer = 'plan' | 'abridged' | 'manuscript' | 'other';
 export function layerOf(path: string): Layer {
 	if (path.startsWith('abridged/')) return 'abridged';
 	if (path.startsWith('manuscript/')) return 'manuscript';
-	if (path.startsWith('kb/') || path.startsWith('outline/') || path.startsWith('story/')) return 'plan';
+	if (
+		path.startsWith('initial/') ||
+		path.startsWith('setup/') ||
+		path.startsWith('research/') ||
+		path.startsWith('world/') ||
+		path.startsWith('narrative/') ||
+		path.startsWith('structure/') ||
+		path.startsWith('directives/') ||
+		path.startsWith('kb/') ||
+		path.startsWith('outline/') ||
+		path.startsWith('story/')
+	) {
+		return 'plan';
+	}
 	return 'other';
 }
 

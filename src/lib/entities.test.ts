@@ -35,12 +35,14 @@ She arrived at [[PLC-005]].
 	it('correctly maps entity prefixes', () => {
 		expect(prefixOf('CHR-014')).toBe('CHR');
 		expect(prefixInfo('CHR-014').label).toBe('Character');
-		expect(prefixInfo('PLC-002').folder).toBe('kb/places');
+		expect(prefixInfo('PLC-002').folder).toBe('world/places');
+		expect(prefixInfo('BET-003').label).toBe('Narrative beat');
+		expect(prefixInfo('DIR-001').folder).toBe('directives');
 		expect(prefixInfo('SCN-001').plural).toBe('Scenes');
 	});
 
 	it('prioritizes plan layer definitions over derived drafts', () => {
-		const planDef = { id: 'SCN-001', title: 'The Start', path: 'outline/outline.md', line: 10, level: 3, layer: 'plan' as const };
+		const planDef = { id: 'SCN-001', title: 'The Start', path: 'structure/outline.md', line: 10, level: 3, layer: 'plan' as const };
 		const draftDef = { id: 'SCN-001', title: 'The Start (Draft)', path: 'abridged/CHP-001.md', line: 1, level: 3, layer: 'abridged' as const };
 
 		expect(preferDefinition(planDef, draftDef)).toBe(planDef);
@@ -50,22 +52,25 @@ She arrived at [[PLC-005]].
 
 describe('Pipeline Stages', () => {
 	// @spec AGT-008
-	it('has 7 core pipeline stages in sequence without story bible', () => {
+	it('has 9 core pipeline stages in sequence without story bible', () => {
 		expect(PIPELINE.map((s) => s.id)).toEqual([
-			'brief',
+			'initial',
+			'setup',
 			'research',
-			'outline',
-			'graphics',
+			'world',
+			'narrative',
+			'structure',
 			'abridged',
 			'manuscript',
-			'publish'
+			'publishable'
 		]);
 	});
 
 	it('maps skills to stages', () => {
-		expect(stageForSkill('novel-init')).toBe('brief');
-		expect(stageForSkill('novel-research')).toBe('research');
-		expect(stageForSkill('novel-outline')).toBe('outline');
-		expect(stageForSkill('novel-write')).toBe('manuscript');
+		expect(stageForSkill('novel-generate')).toBe('initial');
+		expect(stageForSkill('novel-feedback')).toBe('setup');
+		expect(stageForSkill('novel-sync')).toBe('structure');
+		expect(stageForSkill('novel-verify')).toBe('manuscript');
+		expect(stageForSkill('novel-analyze')).toBe('publishable');
 	});
 });

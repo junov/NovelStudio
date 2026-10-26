@@ -127,10 +127,6 @@ describe('REV-003: Side-by-Side Editable Diff Mode in Document View', () => {
 
 describe('REV-004: Agent Git Commit Guardrail', () => {
 	const engineSrc = readFileSync(resolve(__dirname, '../src/lib/agent/engine.svelte.ts'), 'utf-8');
-	const authorSkillSrc = readFileSync(
-		resolve(__dirname, '../third_party/specnovelist/.agents/skills/novel-author/SKILL.md'),
-		'utf-8'
-	);
 
 	// @spec REV-004
 	it('hard-blocks agent execution of specnovel accept and git commit', () => {
@@ -143,12 +139,7 @@ describe('REV-004: Agent Git Commit Guardrail', () => {
 	it('instructs agent in system directives to leave changes unstaged for UI accept controls', () => {
 		expect(engineSrc).toContain('STRICT GUARDRAIL (@spec REV-004)');
 		expect(engineSrc).toContain('DO NOT run "specnovel accept"');
-	});
-
-	// @spec REV-004
-	it('updates novel-author skill instructions to disallow specnovel accept and git commit', () => {
-		expect(authorSkillSrc).toContain('Do NOT run `specnovel accept` or `git commit`');
-		expect(authorSkillSrc).toContain('Leave all new and modified entries unstaged in Git');
+		expect(engineSrc).toContain('All file creations and edits must remain unstaged in Git');
 	});
 
 	// @spec REV-004

@@ -1,6 +1,6 @@
 // @spec JRN-001, JRN-002
 import { describe, it, expect } from 'vitest';
-import { PIPELINE } from '../src/lib/stages';
+import { PIPELINE, resolveStageExecution } from '../src/lib/stages';
 import {
 	getStageStepInfo,
 	getStagePillInfo,
@@ -14,26 +14,56 @@ function createMockStatus(patch: Partial<StatusJson> = {}): StatusJson {
 	return {
 		title: 'Test Novel',
 		baselines: {
-			brief: { sha: 'abc1234', date: '2026-10-25T10:00:00Z', subject: 'init' },
+			initial: { sha: 'abc1234', date: '2026-10-25T10:00:00Z', subject: 'init' },
+			setup: { sha: 'abc1234' },
 			research: { sha: 'abc1234' },
-			outline: { sha: 'abc1234' },
-			graphics: { sha: 'abc1234' },
+			world: { sha: 'abc1234' },
+			narrative: { sha: 'abc1234' },
+			structure: { sha: 'abc1234' },
 			abridged: { sha: 'abc1234' },
-			manuscript: { sha: 'abc1234' }
+			manuscript: { sha: 'abc1234' },
+			publishable: { sha: 'abc1234' }
 		},
-		catalog: { RQ: 0, FCT: 10, CHR: 5 },
-		scenes: { outline: 12, abridged: 12, manuscript: 12 },
+		generatedStages: {
+			initial: true,
+			setup: true,
+			research: true,
+			world: true,
+			narrative: true,
+			structure: true,
+			abridged: true,
+			manuscript: true,
+			publishable: true
+		},
+		catalog: { RQ: 0, FCT: 10, CHR: 5, BET: 12, ILL: 3, DIR: 2 },
+		beats: 12,
+		scenes: { structure: 12, outline: 12, abridged: 12, manuscript: 12 },
 		words: { abridged: 5000, manuscript: 25000 },
 		pending: { abridged: 0, manuscript: 0 },
+		illustrations: { active: 3, pending: 0, inactive: 0 },
 		graphics: { active: 3, pending: 0, inactive: 0 },
+		directives: 2,
 		placeholders: { total: 0, untracked: 0 },
 		drift: {
-			brief: [],
+			initial: [],
+			setup: [],
 			research: [],
-			outline: [],
-			graphics: [],
+			world: [],
+			narrative: [],
+			structure: [],
 			abridged: [],
-			manuscript: []
+			manuscript: [],
+			publishable: []
+		},
+		upstream_drift: {
+			setup: [],
+			research: [],
+			world: [],
+			narrative: [],
+			structure: [],
+			abridged: [],
+			manuscript: [],
+			publishable: []
 		},
 		errors: [],
 		warnings: [],
@@ -46,23 +76,28 @@ function createMockStatus(patch: Partial<StatusJson> = {}): StatusJson {
 describe('JRN-001: Contextual Hover Cards for Journey Rail Elements (Issue #7)', () => {
 	// @spec JRN-001
 	it('provides comprehensive step information and methodology for each pipeline stage', () => {
-		const briefStage = PIPELINE.find((s) => s.id === 'brief')!;
-		const stepInfo = getStageStepInfo(briefStage, 0);
+		const initialStage = PIPELINE.find((s) => s.id === 'initial')!;
+		const stepInfo = getStageStepInfo(initialStage, 0);
 
-		expect(stepInfo.title).toBe('Brief');
-		expect(stepInfo.sequenceLabel).toBe('Stage 1 of 7');
-		expect(stepInfo.skill).toBe('novel-init');
-		expect(stepInfo.paths).toContain('story/synopsis.md');
+		expect(stepInfo.title).toBe('Initial');
+		expect(stepInfo.sequenceLabel).toBe('Stage 1 of 9');
+		expect(stepInfo.skill).toBe('novel-generate');
+		expect(stepInfo.paths).toContain('initial/synopsis.md');
 		expect(stepInfo.methodology).toContain('synopsis');
+
+		// Once generated, step skill reflects novel-sync
+		const status = createMockStatus();
+		const syncedStepInfo = getStageStepInfo(initialStage, 0, status);
+		expect(syncedStepInfo.skill).toBe('novel-sync');
 	});
 
 	// @spec JRN-001
 	it('formats pill hover info for synced status with last accepted date without git terminology', () => {
 		const status = createMockStatus();
-		const outlineStage = PIPELINE.find((s) => s.id === 'outline')!;
-		const pillInfo = getStagePillInfo(outlineStage, status, 'synced', 'synced');
+		const structureStage = PIPELINE.find((s) => s.id === 'structure')!;
+		const pillInfo = getStagePillInfo(structureStage, status, 'synced', 'synced');
 
-		expect(pillInfo.title).toBe('Outline Up to Date');
+		expect(pillInfo.title).toBe('Structure Up to Date');
 		expect(pillInfo.status).toBe('synced');
 		expect(pillInfo.description).not.toMatch(/git|commit|sha|baseline/i);
 	});
@@ -71,87 +106,83 @@ describe('JRN-001: Contextual Hover Cards for Journey Rail Elements (Issue #7)',
 	it('formats pill hover info for needs-sync status with enumerated drift items', () => {
 		const status = createMockStatus({
 			drift: {
-				outline: ['kb/characters/CHR-001.md', 'story/style.md']
+				structure: ['world/characters/CHR-001.md', 'setup/style.md']
 			}
 		});
-		const outlineStage = PIPELINE.find((s) => s.id === 'outline')!;
-		const pillInfo = getStagePillInfo(outlineStage, status, '2 drift', 'needs-sync');
+		const structureStage = PIPELINE.find((s) => s.id === 'structure')!;
+		const pillInfo = getStagePillInfo(structureStage, status, '2 drift', 'needs-sync');
 
 		expect(pillInfo.title).toContain('Upstream Changes Detected');
-		expect(pillInfo.items).toContain('kb/characters/CHR-001.md');
-		expect(pillInfo.items).toContain('story/style.md');
+		expect(pillInfo.items).toContain('world/characters/CHR-001.md');
+		expect(pillInfo.items).toContain('setup/style.md');
 		expect(pillInfo.description).not.toMatch(/git|commit|sha|baseline/i);
 	});
 
 	// @spec JRN-001
-	it('lists upstream items that have changed since last sync for outline drift pill', () => {
+	it('lists upstream items that have changed since last sync for structure drift pill', () => {
 		const status = createMockStatus({
 			upstream_drift: {
-				outline: [
-					{ change: 'M', file: 'kb/characters/CHR-001.md' } as any,
-					{ change: 'A', file: 'story/brief.md' } as any
+				structure: [
+					{ change: 'M', file: 'world/characters/CHR-001.md' } as any,
+					{ change: 'A', file: 'narrative/beats.md' } as any
 				]
 			},
 			drift: {
-				outline: [
-					{ change: 'M', file: 'kb/characters/CHR-001.md' } as any,
-					{ change: 'A', file: 'story/brief.md' } as any,
-					{ change: 'M', file: 'outline/outline.md' } as any
-				]
+				structure: [{ change: 'M', file: 'structure/outline.md' } as any]
 			}
 		});
-		const outlineStage = PIPELINE.find((s) => s.id === 'outline')!;
-		const pillInfo = getStagePillInfo(outlineStage, status, '3 drift', 'needs-sync');
+		const structureStage = PIPELINE.find((s) => s.id === 'structure')!;
+		const pillInfo = getStagePillInfo(structureStage, status, '3 drift', 'needs-sync');
 
 		expect(pillInfo.title).toBe('Upstream Changes Detected');
-		expect(pillInfo.items).toContain('kb/characters/CHR-001.md');
-		expect(pillInfo.items).toContain('story/brief.md');
-		expect(pillInfo.items).not.toContain('outline/outline.md');
+		expect(pillInfo.items).toContain('world/characters/CHR-001.md');
+		expect(pillInfo.items).toContain('narrative/beats.md');
+		expect(pillInfo.items).not.toContain('structure/outline.md');
 		expect(pillInfo.description).toContain('2 upstream item(s)');
 
-		const actionInfo = getStageActionInfo(outlineStage, status);
-		expect(actionInfo.items).toContain('kb/characters/CHR-001.md');
-		expect(actionInfo.items).toContain('story/brief.md');
+		const actionInfo = getStageActionInfo(structureStage, status);
+		expect(actionInfo.items).toContain('world/characters/CHR-001.md');
+		expect(actionInfo.items).toContain('narrative/beats.md');
 	});
 
 	// @spec JRN-001
-	it('distinguishes internal outline changes when no upstream items have drifted', () => {
+	it('distinguishes internal stage changes when no upstream items have drifted', () => {
 		const status = createMockStatus({
 			upstream_drift: {
-				outline: []
+				structure: []
 			},
 			drift: {
-				outline: ['outline/outline.md']
+				structure: ['structure/outline.md']
 			}
 		});
-		const outlineStage = PIPELINE.find((s) => s.id === 'outline')!;
-		const pillInfo = getStagePillInfo(outlineStage, status, '1 drift', 'needs-sync');
+		const structureStage = PIPELINE.find((s) => s.id === 'structure')!;
+		const pillInfo = getStagePillInfo(structureStage, status, '1 drift', 'needs-sync');
 
-		expect(pillInfo.title).toBe('Outline Changes Detected');
-		expect(pillInfo.items).toEqual(['outline/outline.md']);
-		expect(pillInfo.description).toContain('Outline since last sync');
+		expect(pillInfo.title).toBe('Structure Changes Detected');
+		expect(pillInfo.items).toEqual(['structure/outline.md']);
+		expect(pillInfo.description).toContain('Structure since last sync');
 	});
 
 	// @spec JRN-001
 	it('correctly handles object-shaped drift items from specnovel without git flags or [object Object]', () => {
 		const status = createMockStatus({
 			drift: {
-				brief: [
-					{ change: 'M', file: 'story/synopsis.md' } as any,
-					{ change: 'A', file: 'story/brief.md' } as any
+				initial: [
+					{ change: 'M', file: 'initial/synopsis.md' } as any,
+					{ change: 'A', file: 'initial/config.md' } as any
 				]
 			}
 		});
-		const briefStage = PIPELINE.find((s) => s.id === 'brief')!;
-		const pillInfo = getStagePillInfo(briefStage, status, '2 drift', 'needs-sync');
+		const initialStage = PIPELINE.find((s) => s.id === 'initial')!;
+		const pillInfo = getStagePillInfo(initialStage, status, '2 drift', 'needs-sync');
 
 		// Strips Git diff porcelain flags (e.g. "M ", "A ")
-		expect(pillInfo.items).toContain('story/synopsis.md');
-		expect(pillInfo.items).toContain('story/brief.md');
-		expect(pillInfo.items).not.toContain('M story/synopsis.md');
+		expect(pillInfo.items).toContain('initial/synopsis.md');
+		expect(pillInfo.items).toContain('initial/config.md');
+		expect(pillInfo.items).not.toContain('M initial/synopsis.md');
 		expect(pillInfo.items.every((it) => typeof it === 'string' && !it.includes('[object Object]'))).toBe(true);
 
-		const actionInfo = getStageActionInfo(briefStage, status);
+		const actionInfo = getStageActionInfo(initialStage, status);
 		expect(actionInfo.items.every((it) => typeof it === 'string' && !it.includes('[object Object]'))).toBe(true);
 	});
 
@@ -199,10 +230,10 @@ describe('JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling (I
 	it('disables play button and explains reason when stage is up to date', () => {
 		const status = createMockStatus(); // fully synced, 0 pending, 0 drift, 0 open RQs
 
-		const researchStage = PIPELINE.find((s) => s.id === 'research')!;
-		const researchAction = getStageActionInfo(researchStage, status);
-		expect(researchAction.isActionable).toBe(false);
-		expect(researchAction.disabledReason).toContain('0 open research questions');
+		const worldStage = PIPELINE.find((s) => s.id === 'world')!;
+		const worldAction = getStageActionInfo(worldStage, status);
+		expect(worldAction.isActionable).toBe(false);
+		expect(worldAction.disabledReason).toContain('0 open research questions');
 
 		const abridgedStage = PIPELINE.find((s) => s.id === 'abridged')!;
 		const abridgedAction = getStageActionInfo(abridgedStage, status);
@@ -217,12 +248,12 @@ describe('JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling (I
 
 	// @spec JRN-002
 	it('enables play button and describes target work when pending items exist', () => {
-		// Research stage with open RQs
-		const researchStatus = createMockStatus({ catalog: { RQ: 4, FCT: 2 } });
-		const researchStage = PIPELINE.find((s) => s.id === 'research')!;
-		const researchAction = getStageActionInfo(researchStage, researchStatus);
-		expect(researchAction.isActionable).toBe(true);
-		expect(researchAction.description).toContain('4 open research question(s)');
+		// World stage with open RQs
+		const worldStatus = createMockStatus({ catalog: { RQ: 4, FCT: 2 } });
+		const worldStage = PIPELINE.find((s) => s.id === 'world')!;
+		const worldAction = getStageActionInfo(worldStage, worldStatus);
+		expect(worldAction.isActionable).toBe(true);
+		expect(worldAction.description).toContain('4 open research question(s)');
 
 		// Manuscript stage with pending scenes
 		const manuscriptStatus = createMockStatus({ pending: { abridged: 0, manuscript: 5 } });
@@ -231,27 +262,48 @@ describe('JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling (I
 		expect(manuscriptAction.isActionable).toBe(true);
 		expect(manuscriptAction.description).toContain('5 scene(s)');
 
-		// Graphics stage with pending graphics
-		const gfxStatus = createMockStatus({ graphics: { active: 2, pending: 2, inactive: 0 } });
-		const gfxStage = PIPELINE.find((s) => s.id === 'graphics')!;
-		const gfxAction = getStageActionInfo(gfxStage, gfxStatus);
-		expect(gfxAction.isActionable).toBe(true);
-		expect(gfxAction.description).toContain('2 active graphic asset(s)');
+		// Publishable stage with pending illustrations
+		const pubStatus = createMockStatus({
+			illustrations: { active: 2, pending: 2, inactive: 0 },
+			graphics: { active: 2, pending: 2, inactive: 0 }
+		});
+		const pubStage = PIPELINE.find((s) => s.id === 'publishable')!;
+		const pubAction = getStageActionInfo(pubStage, pubStatus);
+		expect(pubAction.isActionable).toBe(true);
+		expect(pubAction.description).toContain('2 active graphic/illustration asset(s)');
 	});
 
 	// @spec JRN-002
-	it('disables publish stage when 0 manuscript scenes exist', () => {
-		const noProseStatus = createMockStatus({ scenes: { outline: 10, abridged: 10, manuscript: 0 } });
-		const publishStage = PIPELINE.find((s) => s.id === 'publish')!;
-		const publishAction = getStageActionInfo(publishStage, noProseStatus);
-		expect(publishAction.isActionable).toBe(false);
-		expect(publishAction.disabledReason).toContain('0 rendered scenes');
+	it('selects novel-generate before initial baseline and novel-sync after baseline', () => {
+		const setupStage = PIPELINE.find((s) => s.id === 'setup')!;
+		const ungeneratedStatus = createMockStatus({
+			baselines: { setup: null },
+			generatedStages: { setup: false }
+		});
+		expect(resolveStageExecution(setupStage, ungeneratedStatus).skill).toBe('novel-generate');
+
+		const generatedStatus = createMockStatus();
+		expect(resolveStageExecution(setupStage, generatedStatus).skill).toBe('novel-sync');
+	});
+
+	// @spec JRN-002
+	it('disables publishable stage when 0 manuscript scenes and 0 pending illustrations exist', () => {
+		const noProseStatus = createMockStatus({
+			scenes: { structure: 10, outline: 10, abridged: 10, manuscript: 0 },
+			illustrations: { active: 0, pending: 0, inactive: 0 },
+			graphics: { active: 0, pending: 0, inactive: 0 }
+		});
+		const pubStage = PIPELINE.find((s) => s.id === 'publishable')!;
+		const pubAction = getStageActionInfo(pubStage, noProseStatus);
+		expect(pubAction.isActionable).toBe(false);
+		expect(pubAction.disabledReason).toContain('0 rendered scenes');
 	});
 
 	// @spec JRN-001, JRN-002
 	it('uses craft action titles and does not expose raw skill names in play button hover cards', () => {
 		const status = createMockStatus({
 			pending: { abridged: 2, manuscript: 3 },
+			illustrations: { active: 1, pending: 1, inactive: 0 },
 			graphics: { active: 1, pending: 1, inactive: 0 },
 			catalog: { RQ: 1, FCT: 2, CHR: 2 }
 		});
@@ -259,8 +311,10 @@ describe('JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling (I
 		for (const stage of PIPELINE) {
 			const action = getStageActionInfo(stage, status);
 			expect(action.title).not.toMatch(/^Run novel-/);
-			expect(action.title).not.toContain(stage.skill);
-			expect(action.description).not.toContain(stage.skill);
+			expect(action.title).not.toContain('novel-generate');
+			expect(action.title).not.toContain('novel-sync');
+			expect(action.description).not.toContain('novel-generate');
+			expect(action.description).not.toContain('novel-sync');
 		}
 
 		const cardSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyHoverCard.svelte'), 'utf-8');

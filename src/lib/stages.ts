@@ -1,110 +1,225 @@
 /**
- * The SpecNovelist pipeline as presented in the Journey Rail.
+ * The 9-stage SpecNovelist pipeline as presented in the Journey Rail.
  * `sync` is the `Novel-Sync:` stage name used by `specnovel.py accept --stage`.
+ * @spec AGT-008, JRN-001, JRN-002
  */
+import type { StatusJson } from '$lib/types';
 
-export type SyncStage = 'brief' | 'research' | 'bible' | 'outline' | 'graphics' | 'abridged' | 'manuscript';
+export type SyncStage =
+	| 'initial'
+	| 'setup'
+	| 'research'
+	| 'world'
+	| 'narrative'
+	| 'structure'
+	| 'abridged'
+	| 'manuscript'
+	| 'publishable';
+
+export const SKILLS = [
+	'novel-generate',
+	'novel-sync',
+	'novel-feedback',
+	'novel-verify',
+	'novel-analyze'
+] as const;
+export type SkillName = (typeof SKILLS)[number];
 
 export interface PipelineStage {
-	id: string;
+	id: SyncStage;
 	label: string;
-	sync?: SyncStage;
-	/** Primary SpecNovelist skill that drives this stage. */
-	skill: string;
+	sync: SyncStage;
+	/** Primary SpecNovelist skill for initial stage generation. */
+	skill: SkillName;
+	/** SpecNovelist skill used once the stage has been generated at least once. */
+	syncSkill: SkillName;
 	/** Other skills offered as secondary actions. */
-	extraSkills?: string[];
+	extraSkills?: SkillName[];
 	description: string;
 	/** Files/folders that belong to this stage (for the explorer and "open" actions). */
 	paths: string[];
-	/** Default instruction sent to the agent when the stage's action is launched. */
+	/** Instruction sent to the agent when generating this stage for the first time. */
 	prompt: string;
+	/** Instruction sent to the agent when synchronizing this stage from upstream changes. */
+	syncPrompt: string;
 }
 
 export const PIPELINE: PipelineStage[] = [
 	{
-		id: 'brief',
-		label: 'Brief',
-		sync: 'brief',
-		skill: 'novel-init',
-		description: 'Seed synopsis + discovery interview → brief, config, style guide, seeded KB.',
-		paths: ['story/synopsis.md', 'story/brief.md', 'story/config.md', 'story/style.md'],
+		id: 'initial',
+		label: 'Initial',
+		sync: 'initial',
+		skill: 'novel-generate',
+		syncSkill: 'novel-sync',
+		description: 'Seed synopsis and foundational project configuration (title, author, locales).',
+		paths: ['initial/synopsis.md', 'initial/config.md'],
 		prompt:
-			'Run novel-init for this project. The synopsis is in story/synopsis.md. Use the ask_user tool for every interview round.'
+			'Run novel-generate for the initial stage. Review or refine initial/synopsis.md and initial/config.md with the author via ask_user.',
+		syncPrompt:
+			'Run novel-sync for the initial stage: synchronize initial/synopsis.md and initial/config.md.'
+	},
+	{
+		id: 'setup',
+		label: 'Setup',
+		sync: 'setup',
+		skill: 'novel-generate',
+		syncSkill: 'novel-sync',
+		description: 'Discovery interview → creative brief, thematic pillars (THM), and prose style guide (STY).',
+		paths: ['setup/brief.md', 'setup/themes.md', 'setup/style.md'],
+		prompt:
+			'Run novel-generate for the setup stage. Conduct the discovery interview via ask_user based on initial/synopsis.md and initial/config.md, and populate setup/brief.md, setup/themes.md, and setup/style.md.',
+		syncPrompt:
+			'Run novel-sync for the setup stage: incrementally update setup/brief.md, setup/themes.md, and setup/style.md from upstream changes.'
 	},
 	{
 		id: 'research',
 		label: 'Research',
 		sync: 'research',
-		skill: 'novel-research',
-		description: 'Answer research questions with authoritative, cited sources (SRC/FCT).',
-		paths: ['kb/research', 'kb/sources', 'kb/facts'],
-		prompt: 'Run novel-research: work through the open research questions, highest priority first.'
+		skill: 'novel-generate',
+		syncSkill: 'novel-sync',
+		description: 'Identify factual, historical, and technical research questions (RQ).',
+		paths: ['research/questions.md'],
+		prompt:
+			'Run novel-generate for the research stage: formulate structured research questions (RQ) in research/questions.md based on initial/ and setup/.',
+		syncPrompt:
+			'Run novel-sync for the research stage: update research/questions.md from upstream changes in initial/, setup/, and directives/.'
 	},
 	{
-		id: 'outline',
-		label: 'Outline',
-		sync: 'outline',
-		skill: 'novel-outline',
-		description: 'Build the reading-order skeleton (PRT → CHP → SCN) as a valid story DAG.',
-		paths: ['outline/outline.md'],
-		prompt: 'Run novel-outline: build or update the outline in outline/outline.md.'
+		id: 'world',
+		label: 'World',
+		sync: 'world',
+		skill: 'novel-generate',
+		syncSkill: 'novel-sync',
+		description: 'Resolve research into cited sources/facts (SRC/FCT) and build the world & character bible.',
+		paths: [
+			'world/INDEX.md',
+			'world/characters',
+			'world/places',
+			'world/facts',
+			'world/sources',
+			'world/rules',
+			'world/timeline',
+			'world/organizations',
+			'world/objects',
+			'world/glossary'
+		],
+		prompt:
+			'Run novel-generate for the world stage: investigate open research questions into world/sources/ and world/facts/, and generate the world bible entities in world/.',
+		syncPrompt:
+			'Run novel-sync for the world stage: synchronize world/ entities and resolve any open research questions or upstream changes.'
 	},
 	{
-		id: 'graphics',
-		label: 'Graphics',
-		sync: 'graphics',
-		skill: 'novel-sync',
-		description: 'Render active graphic assets referenced by the story DAG.',
-		paths: ['kb/graphics', 'graphics'],
-		prompt: 'Run novel-sync for the graphics stage: report which GFX assets need rendering.'
+		id: 'narrative',
+		label: 'Narrative',
+		sync: 'narrative',
+		skill: 'novel-generate',
+		syncSkill: 'novel-sync',
+		description: 'Design story arcs (ARC), the causal Beat DAG (BET), and illustration specs (ILL).',
+		paths: ['narrative/arcs.md', 'narrative/beats.md', 'narrative/illustrations.md'],
+		prompt:
+			'Run novel-generate for the narrative stage: design story arcs in narrative/arcs.md, build the causal Beat DAG in narrative/beats.md, and specify illustrations in narrative/illustrations.md.',
+		syncPrompt:
+			'Run novel-sync for the narrative stage: synchronize narrative/arcs.md, narrative/beats.md, and narrative/illustrations.md with upstream changes.'
+	},
+	{
+		id: 'structure',
+		label: 'Structure',
+		sync: 'structure',
+		skill: 'novel-generate',
+		syncSkill: 'novel-sync',
+		description: 'Sequence narrative beats and illustrations into chapters and scenes (SCN) in reading order.',
+		paths: [
+			'structure/outline.md',
+			'structure/front-matter',
+			'structure/back-matter/acknowledgements.md'
+		],
+		prompt:
+			'Run novel-generate for the structure stage: sequence all active narrative beats and illustrations into chapters and scenes in structure/outline.md, and prepare front/back matter.',
+		syncPrompt:
+			'Run novel-sync for the structure stage: update structure/outline.md and front/back matter to reflect upstream changes.'
 	},
 	{
 		id: 'abridged',
 		label: 'Abridged',
 		sync: 'abridged',
-		skill: 'novel-abridge',
-		extraSkills: ['novel-sync'],
-		description: 'All plot and key dialogue, lean description — review pacing fast.',
+		skill: 'novel-generate',
+		syncSkill: 'novel-sync',
+		description: 'Condensed chapter drafts (abridged/CHP-NNN.md) locking in plot and key dialogue.',
 		paths: ['abridged'],
-		prompt: 'Run novel-abridge: draft or update the abridged chapters for impacted scenes.'
+		prompt:
+			'Run novel-generate for the abridged stage: draft condensed chapter files in abridged/ for all outlined scenes.',
+		syncPrompt:
+			'Run novel-sync for the abridged stage: draft or update abridged chapters for impacted scenes.'
 	},
 	{
 		id: 'manuscript',
 		label: 'Manuscript',
 		sync: 'manuscript',
-		skill: 'novel-write',
-		extraSkills: ['novel-sync', 'novel-verify'],
-		description: 'Render immersive prose from the abridged draft, style guide and KB.',
+		skill: 'novel-generate',
+		syncSkill: 'novel-sync',
+		extraSkills: ['novel-verify'],
+		description: 'Render full immersive literary prose adhering to setup/style.md and world lore.',
 		paths: ['manuscript'],
-		prompt: 'Run novel-write: render the manuscript for impacted scenes.'
+		prompt:
+			'Run novel-generate for the manuscript stage: render full manuscript prose in manuscript/ for all scenes.',
+		syncPrompt:
+			'Run novel-sync for the manuscript stage: render or update manuscript prose for impacted scenes.'
 	},
 	{
-		id: 'publish',
-		label: 'Publish',
-		skill: 'novel-publish',
+		id: 'publishable',
+		label: 'Publishable',
+		sync: 'publishable',
+		skill: 'novel-generate',
+		syncSkill: 'novel-sync',
 		extraSkills: ['novel-verify', 'novel-analyze'],
-		description: 'Verify, analyze and compile EPUB / PDF / DOCX.',
-		paths: ['build'],
-		prompt: 'Run novel-publish: prepare the book for compilation.'
+		description: 'Render illustration assets (ILL) and compile EPUB, PDF, DOCX, and Markdown.',
+		paths: ['publishable/graphics', 'publishable'],
+		prompt:
+			'Run novel-generate for the publishable stage: render active illustration assets in publishable/graphics/ and compile the book deliverables.',
+		syncPrompt:
+			'Run novel-sync for the publishable stage: update impacted illustration assets and recompile book deliverables.'
 	}
 ];
 
-export const SKILLS = [
-	'novel-init',
-	'novel-research',
-	'novel-author',
-	'novel-outline',
-	'novel-abridge',
-	'novel-write',
-	'novel-sync',
-	'novel-verify',
-	'novel-analyze',
-	'novel-publish'
-] as const;
-export type SkillName = (typeof SKILLS)[number];
+/**
+ * Determines whether a stage has already been generated at least once, and selects
+ * `novel-generate` (initial generation) vs `novel-sync` (incremental synchronization).
+ * @spec AGT-008, JRN-002
+ */
+export function isStageGenerated(stage: PipelineStage, status: StatusJson | null): boolean {
+	if (!status) return false;
+	if (status.generatedStages && stage.id in status.generatedStages) {
+		return Boolean(status.generatedStages[stage.id]);
+	}
+	return Boolean(status.baselines?.[stage.sync]);
+}
+
+export function resolveStageExecution(
+	stage: PipelineStage,
+	status: StatusJson | null
+): { skill: SkillName; prompt: string; isGenerated: boolean } {
+	const isGenerated = isStageGenerated(stage, status);
+	return {
+		skill: isGenerated ? stage.syncSkill : stage.skill,
+		prompt: isGenerated ? stage.syncPrompt : stage.prompt,
+		isGenerated
+	};
+}
 
 /** Map a skill to the pipeline stage whose model setting it should use. */
 export function stageForSkill(skill: string): string {
-	if (skill === 'novel-author') return 'brief';
-	return PIPELINE.find((s) => s.skill === skill)?.id ?? 'default';
+	switch (skill) {
+		case 'novel-feedback':
+			return 'setup';
+		case 'novel-generate':
+			return 'initial';
+		case 'novel-sync':
+			return 'structure';
+		case 'novel-verify':
+			return 'manuscript';
+		case 'novel-analyze':
+			return 'publishable';
+		default:
+			return PIPELINE.find((s) => s.skill === skill)?.id ?? 'default';
+	}
 }

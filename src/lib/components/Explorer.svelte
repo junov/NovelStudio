@@ -127,11 +127,24 @@
 			const nextId = res.stdout.trim();
 			if (nextId) {
 				const info = PREFIXES[prefix];
-				const targetFile = info ? `${info.folder}/${nextId}.md` : `kb/${nextId}.md`;
-				const template = `# ${nextId}: Untitled\n\n- **Status:** open\n`;
-				await project.write(targetFile, template);
-				await project.refresh();
-				project.openFile(targetFile);
+				if (info?.file) {
+					let existing = '';
+					try {
+						existing = await project.read(info.file);
+					} catch {
+						existing = `# ${info.plural}\n`;
+					}
+					const appended = `${existing.trimEnd()}\n\n## ${nextId}: Untitled\n\n- **Summary:** TODO\n`;
+					await project.write(info.file, appended);
+					await project.refresh();
+					project.openId(nextId);
+				} else {
+					const targetFile = info ? `${info.folder}/${nextId}.md` : `world/${nextId}.md`;
+					const template = `# ${nextId}: Untitled\n\n- **Status:** open\n`;
+					await project.write(targetFile, template);
+					await project.refresh();
+					project.openFile(targetFile);
+				}
 			}
 		} catch (e) {
 			console.error(e);

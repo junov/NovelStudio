@@ -77,7 +77,7 @@ Acceptance:
 - Given an agent tool modifying project files,
   when completed,
   then all modified files remain unstaged in Git until the author clicks an Accept button in the navigator.
-- Given the `novel-author` skill and agent system prompt,
+- Given the agent system prompt and active skill execution context,
   when configured,
   then instructions explicitly direct the agent to leave changes unstaged for user review without attempting baseline acceptance.
 

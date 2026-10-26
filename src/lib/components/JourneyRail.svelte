@@ -4,7 +4,7 @@
 	 * @spec AGT-008, AGT-009, JRN-001, JRN-002 (Issue #7, #8)
 	 */
 	import { project } from '$lib/stores/project.svelte';
-	import { PIPELINE, type PipelineStage } from '$lib/stages';
+	import { PIPELINE, resolveStageExecution, type PipelineStage } from '$lib/stages';
 	import { agent } from '$lib/agent/engine.svelte';
 	import { getStageActionInfo } from '$lib/stagesHover';
 	import JourneyHoverCard from './JourneyHoverCard.svelte';
@@ -47,33 +47,42 @@
 		if (!status) return { status: 'pending', badge: '' };
 
 		const syncName = stage.sync;
-		const baseline = syncName ? status.baselines[syncName] : null;
-		const drift = syncName && status.drift[syncName] ? status.drift[syncName].length : 0;
+		const baseline = syncName ? status.baselines?.[syncName] : null;
+		const localDrift = syncName && status.drift?.[syncName] ? status.drift[syncName].length : 0;
+		const upstreamDrift =
+			syncName && status.upstream_drift?.[syncName] ? status.upstream_drift[syncName].length : 0;
+		const totalDrift = localDrift + upstreamDrift;
 
 		let pendingCount = 0;
-		if (stage.id === 'abridged') pendingCount = status.pending.abridged;
-		if (stage.id === 'manuscript') pendingCount = status.pending.manuscript;
-		if (stage.id === 'graphics') pendingCount = status.graphics.pending;
+		if (stage.id === 'abridged') pendingCount = status.pending?.abridged ?? 0;
+		if (stage.id === 'manuscript') pendingCount = status.pending?.manuscript ?? 0;
+		if (stage.id === 'publishable') {
+			pendingCount = status.illustrations?.pending ?? status.graphics?.pending ?? 0;
+		}
+		if (stage.id === 'world') {
+			pendingCount = status.pending_items?.['research']?.length ?? status.catalog?.['RQ'] ?? 0;
+		}
 
-		if (drift > 0 || pendingCount > 0) {
+		if (totalDrift > 0 || pendingCount > 0) {
 			return {
 				status: 'needs-sync',
-				badge: drift > 0 ? `${drift} drift` : `${pendingCount} pending`
+				badge: totalDrift > 0 ? `${totalDrift} drift` : `${pendingCount} pending`
 			};
 		}
 
-		if (baseline) {
+		if (baseline || status.generatedStages?.[stage.id]) {
 			return { status: 'synced', badge: 'synced' };
 		}
 
-		// Stage hasn't been synced yet
+		// Stage hasn't been generated/accepted yet
 		return { status: 'pending', badge: '' };
 	}
 
 	function runStageSkill(stage: PipelineStage) {
 		const action = getStageActionInfo(stage, project.status);
 		if (!action.isActionable) return;
-		agent.run(stage.skill, stage.prompt, stage.id);
+		const resolved = resolveStageExecution(stage, project.status);
+		agent.run(resolved.skill, resolved.prompt, stage.id);
 	}
 </script>
 

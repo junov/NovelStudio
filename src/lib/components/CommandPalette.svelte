@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { project } from '$lib/stores/project.svelte';
-	import { PIPELINE } from '$lib/stages';
+	import { PIPELINE, resolveStageExecution } from '$lib/stages';
 	import { agent } from '$lib/agent/engine.svelte';
 
 	interface Props {
@@ -51,15 +51,16 @@
 			});
 		}
 
-		// 3. Skills
+		// 3. Stage Actions
 		for (const stage of PIPELINE) {
+			const resolved = resolveStageExecution(stage, project.status);
 			items.push({
-				id: `skill_${stage.skill}`,
+				id: `stage_${stage.id}`,
 				type: 'skill',
-				title: `Run ${stage.skill}`,
+				title: `${resolved.isGenerated ? 'Sync' : 'Generate'} ${stage.label} (${resolved.skill})`,
 				subtitle: stage.description,
 				action: () => {
-					agent.run(stage.skill, stage.prompt, stage.id);
+					agent.run(resolved.skill, resolved.prompt, stage.id);
 					onClose();
 				}
 			});

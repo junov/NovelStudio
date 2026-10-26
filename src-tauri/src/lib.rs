@@ -17,7 +17,15 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 const KEYCHAIN_SERVICE: &str = "dev.junov.novelstudio";
 
 /// Directory names never listed in the project explorer.
-const IGNORED_DIRS: &[&str] = &[".git", "node_modules", "build", "third_party", ".specnovelist", "target"];
+const IGNORED_DIRS: &[&str] = &[
+    ".git",
+    "node_modules",
+    "build",
+    "third_party",
+    ".specnovelist",
+    ".specnovel",
+    "target",
+];
 
 #[derive(Serialize)]
 pub struct CmdOutput {

@@ -406,46 +406,48 @@ describe('AGT-006: Grouped Activity Feed Work Cards with In-Progress Indicator',
 
 describe('AGT-007: Interactive Skill Routing for Author Feed Messages', () => {
 	// @spec AGT-007
-	it('routes Story Bible entities, character details, places, or worldbuilding to novel-author', () => {
-		expect(routeUserPrompt('Create a new character named Dr. Elena Voss')).toBe('novel-author');
-		expect(routeUserPrompt('Update [[CHR-001]] to include an allergy')).toBe('novel-author');
-		expect(routeUserPrompt('Add a secret underground place in the city')).toBe('novel-author');
-		expect(routeUserPrompt('What if the villain has a change of heart?')).toBe('novel-author');
-		expect(routeUserPrompt('Establish a world rule for the magic system')).toBe('novel-author');
+	it('routes Story Bible entities, character details, places, worldbuilding, beats, or directives to novel-feedback', () => {
+		expect(routeUserPrompt('Create a new character named Dr. Elena Voss')).toBe('novel-feedback');
+		expect(routeUserPrompt('Update [[CHR-001]] to include an allergy')).toBe('novel-feedback');
+		expect(routeUserPrompt('Add a secret underground place in the city')).toBe('novel-feedback');
+		expect(routeUserPrompt('What if the villain has a change of heart?')).toBe('novel-feedback');
+		expect(routeUserPrompt('Establish a world rule for the magic system')).toBe('novel-feedback');
+		expect(routeUserPrompt('Update [[BET-004]] and add directive [[DIR-001]]')).toBe('novel-feedback');
 	});
 
 	// @spec AGT-007
-	it('routes real-world facts or research questions to novel-research', () => {
-		expect(routeUserPrompt('Look up the melting point of titanium')).toBe('novel-research');
-		expect(routeUserPrompt('Research the history of the canal in 1890')).toBe('novel-research');
-		expect(routeUserPrompt('Fact-check the historical date of the battle')).toBe('novel-research');
-		expect(routeUserPrompt('Verify facts for [[RQ-001]]')).toBe('novel-research');
+	it('routes explicit initial stage generation, discovery interview, and drafting requests to novel-generate', () => {
+		expect(routeUserPrompt('Run discovery interview for the new project')).toBe('novel-generate');
+		expect(routeUserPrompt('Generate the narrative stage')).toBe('novel-generate');
+		expect(routeUserPrompt('Formulate research questions for the novel')).toBe('novel-generate');
+		expect(routeUserPrompt('Draft the prose for chapter 1')).toBe('novel-generate');
+		expect(routeUserPrompt('Write the scene with intense dialogue')).toBe('novel-generate');
+		expect(routeUserPrompt('Render prose for manuscript')).toBe('novel-generate');
+		expect(routeUserPrompt('Compile the book to epub')).toBe('novel-generate');
 	});
 
 	// @spec AGT-007
-	it('routes scene structure, chapter sequence, and story DAG to novel-outline', () => {
-		expect(routeUserPrompt('Update the outline to reorder scenes 3 and 4')).toBe('novel-outline');
-		expect(routeUserPrompt('Check the story dag prerequisites')).toBe('novel-outline');
-		expect(routeUserPrompt('Add a scene where Karl escapes')).toBe('novel-outline');
-		expect(routeUserPrompt('Change the chapter sequence in Part 1')).toBe('novel-outline');
-		expect(routeUserPrompt('Edit [[SCN-002]] outline structure')).toBe('novel-outline');
+	it('routes incremental synchronization and pending asset rendering to novel-sync', () => {
+		expect(routeUserPrompt('Synchronize the structure stage with upstream changes')).toBe('novel-sync');
+		expect(routeUserPrompt('Regenerate impacted scenes in abridged')).toBe('novel-sync');
+		expect(routeUserPrompt('Render pending illustrations')).toBe('novel-sync');
 	});
 
 	// @spec AGT-007
-	it('routes narrative drafting and prose rendering to novel-write or novel-abridge', () => {
-		expect(routeUserPrompt('Draft the prose for chapter 1')).toBe('novel-write');
-		expect(routeUserPrompt('Write the scene with intense dialogue')).toBe('novel-write');
-		expect(routeUserPrompt('Render prose for manuscript')).toBe('novel-write');
-		expect(routeUserPrompt('Create an abridged draft for chapter 2')).toBe('novel-abridge');
-		expect(routeUserPrompt('Generate a condensed pacing draft')).toBe('novel-abridge');
+	it('routes verification and telemetry analysis to novel-verify and novel-analyze', () => {
+		expect(routeUserPrompt('Verify consistency across the manuscript')).toBe('novel-verify');
+		expect(routeUserPrompt('Check continuity and Chekhov guns')).toBe('novel-verify');
+		expect(routeUserPrompt('Audit placeholders in the project')).toBe('novel-verify');
+		expect(routeUserPrompt('Analyze the pacing waveform and cadence entropy')).toBe('novel-analyze');
+		expect(routeUserPrompt('Generate a developmental report with dialogue ratio')).toBe('novel-analyze');
 	});
 
 	// @spec AGT-007
-	it('defaults ambiguous or general creative messages to novel-author', () => {
-		expect(routeUserPrompt('Hello, can you help me?')).toBe('novel-author');
-		expect(routeUserPrompt('Brainstorm some ideas for the next arc')).toBe('novel-author');
-		expect(routeUserPrompt('Tell me what you think of this premise')).toBe('novel-author');
-		expect(routeUserPrompt('')).toBe('novel-author');
+	it('defaults ambiguous or general creative messages to novel-feedback', () => {
+		expect(routeUserPrompt('Hello, can you help me?')).toBe('novel-feedback');
+		expect(routeUserPrompt('Brainstorm some ideas for the next arc')).toBe('novel-feedback');
+		expect(routeUserPrompt('Tell me what you think of this premise')).toBe('novel-feedback');
+		expect(routeUserPrompt('')).toBe('novel-feedback');
 	});
 
 	// @spec AGT-007
@@ -458,17 +460,28 @@ describe('AGT-007: Interactive Skill Routing for Author Feed Messages', () => {
 
 describe('AGT-008: Journey Rail Pipeline Stages and Story Bible Decoupling', () => {
 	// @spec AGT-008
-	it('displays exactly 7 sequential stages excluding Story Bible', () => {
-		expect(PIPELINE.length).toBe(7);
+	it('displays the 9 sequential SpecNovelist stages', () => {
+		expect(PIPELINE.length).toBe(9);
 		const stageIds = PIPELINE.map((s) => s.id);
-		expect(stageIds).toEqual(['brief', 'research', 'outline', 'graphics', 'abridged', 'manuscript', 'publish']);
+		expect(stageIds).toEqual([
+			'initial',
+			'setup',
+			'research',
+			'world',
+			'narrative',
+			'structure',
+			'abridged',
+			'manuscript',
+			'publishable'
+		]);
 		expect(stageIds).not.toContain('bible');
 	});
 
 	// @spec AGT-008
-	it('JourneyRail component iterates over PIPELINE without any Story Bible stage node', () => {
+	it('JourneyRail component iterates over PIPELINE and resolves novel-generate vs novel-sync', () => {
 		const railSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
 		expect(railSource).toContain('{#each PIPELINE as stage, i}');
+		expect(railSource).toContain('resolveStageExecution');
 		expect(railSource).not.toContain("id === 'bible'");
 	});
 
@@ -498,16 +511,21 @@ describe('AGT-009: User-Controlled Journey Progression and Stage Isolation (Issu
 	});
 
 	// @spec AGT-009
-	it('enforces manual progression and stage isolation in specnovelist guidelines and skills', () => {
+	it('loads bundled 9-stage specnovelist skills in agent engine', () => {
 		const agentsSource = readFileSync(resolve(__dirname, '../third_party/specnovelist/AGENTS.md'), 'utf-8');
-		expect(agentsSource).toContain('Manual Pipeline Progression & Stage Isolation');
-		expect(agentsSource).toContain('Agents execute only the specific skill requested by the author');
+		expect(agentsSource).toContain('Manual Pipeline Progression');
+		expect(agentsSource).toContain('9 stages');
 
-		const initSource = readFileSync(
-			resolve(__dirname, '../third_party/specnovelist/.agents/skills/novel-init/SKILL.md'),
+		const generateSource = readFileSync(
+			resolve(__dirname, '../third_party/specnovelist/.agents/skills/novel-generate/SKILL.md'),
 			'utf-8'
 		);
-		expect(initSource).not.toContain('Recommend the next step');
-		expect(initSource).toContain('Do not prompt, ask, or suggest to the author to advance to subsequent pipeline stages');
+		expect(generateSource).toContain('novel-generate');
+
+		const syncSource = readFileSync(
+			resolve(__dirname, '../third_party/specnovelist/.agents/skills/novel-sync/SKILL.md'),
+			'utf-8'
+		);
+		expect(syncSource).toContain('novel-sync');
 	});
 });

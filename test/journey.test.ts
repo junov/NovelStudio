@@ -1,4 +1,4 @@
-// @spec JRN-001, JRN-002
+// @spec JRN-001, JRN-002, JRN-003
 import { describe, it, expect } from 'vitest';
 import { PIPELINE, resolveStageExecution } from '../src/lib/stages';
 import {
@@ -299,7 +299,7 @@ describe('JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling (I
 		expect(pubAction.disabledReason).toContain('0 rendered scenes');
 	});
 
-	// @spec JRN-001, JRN-002
+	// @spec JRN-001, JRN-002, JRN-003
 	it('uses craft action titles and does not expose raw skill names in play button hover cards', () => {
 		const status = createMockStatus({
 			pending: { abridged: 2, manuscript: 3 },
@@ -332,3 +332,15 @@ describe('JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling (I
 		expect(railSource).toContain('getStageActionInfo');
 	});
 });
+
+describe('JRN-003: Journey Rail Stage Acceptance Action', () => {
+	const railSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
+
+	// @spec JRN-003
+	it('provides an accept pill button on stages that need sync / have drift', () => {
+		expect(railSource).toContain('accept-btn');
+		expect(railSource).toContain('acceptStage');
+		expect(railSource).toContain('project.acceptStage');
+	});
+});
+

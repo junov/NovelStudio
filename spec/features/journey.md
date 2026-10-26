@@ -43,3 +43,19 @@ Acceptance:
 
 Notes: Linked to #7.
 
+### JRN-003: Journey Rail Stage Acceptance Action
+WHEN a pipeline stage on the Journey Rail has unaccepted changes or drift,
+THE SYSTEM SHALL provide an interactive "Accept" pill action on the stage node that runs `specnovel accept --stage <stage>` to commit and baseline the stage changes in Git.
+
+Acceptance:
+- Given a stage on the Journey Rail with drift or unaccepted stage changes,
+  when displayed,
+  then the stage node provides an interactive "Accept" pill action adjacent to its status pill.
+- Given an author clicks the "Accept" pill on a stage node,
+  when clicked,
+  then the system invokes `specnovel accept --stage <stage>`, committing the stage files and recording the `Novel-Sync: <stage>` trailer.
+- Given the stage changes are accepted,
+  when the operation completes and project status refreshes,
+  then the stage status pill updates to "synced" and the Accept pill is dismissed.
+
+

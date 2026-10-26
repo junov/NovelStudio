@@ -47,25 +47,20 @@ describe('REV-001: Unstaged Change Tracking and Navigator Visual Cues', () => {
 	});
 });
 
-describe('REV-002: Navigator Item and File Accept and Revert Actions', () => {
+describe('REV-002: Stage-Level Acceptance over Navigator Action Buttons', () => {
 	const explorerSrc = readFileSync(resolve(__dirname, '../src/lib/components/Explorer.svelte'), 'utf-8');
 
 	// @spec REV-002
-	it('renders paired Accept and Revert buttons next to modified items and files', () => {
-		expect(explorerSrc).toContain('class="review-btn accept"');
-		expect(explorerSrc).toContain('class="review-btn revert"');
-		expect(explorerSrc).toContain('project.acceptItem');
-		expect(explorerSrc).toContain('project.revertItem');
-		expect(explorerSrc).toContain('project.acceptFile');
-		expect(explorerSrc).toContain('project.revertFile');
+	it('omits granular inline Accept and Revert buttons from navigators', () => {
+		expect(explorerSrc).not.toContain('class="review-btn accept"');
+		expect(explorerSrc).not.toContain('class="review-btn revert"');
+		expect(explorerSrc).not.toContain('project.acceptItem');
+		expect(explorerSrc).not.toContain('project.revertItem');
 	});
 
 	// @spec REV-002
-	it('provides project store actions to accept and revert files and items', () => {
-		expect(typeof project.acceptFile).toBe('function');
-		expect(typeof project.revertFile).toBe('function');
-		expect(typeof project.acceptItem).toBe('function');
-		expect(typeof project.revertItem).toBe('function');
+	it('provides project store action to accept stages', () => {
+		expect(typeof project.acceptStage).toBe('function');
 	});
 });
 

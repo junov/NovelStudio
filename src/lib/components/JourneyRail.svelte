@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * Pipeline Journey Rail
-	 * @spec AGT-008, AGT-009, JRN-001, JRN-002 (Issue #7, #8)
+	 * @spec AGT-008, AGT-009, JRN-001, JRN-002, JRN-003 (Issue #7, #8)
 	 */
 	import { project } from '$lib/stores/project.svelte';
 	import { PIPELINE, resolveStageExecution, type PipelineStage } from '$lib/stages';
@@ -78,6 +78,18 @@
 		return { status: 'pending', badge: '' };
 	}
 
+	let acceptingStage = $state<string | null>(null);
+
+	async function acceptStage(stage: PipelineStage) {
+		if (acceptingStage) return;
+		acceptingStage = stage.sync;
+		try {
+			await project.acceptStage(stage.sync);
+		} finally {
+			acceptingStage = null;
+		}
+	}
+
 	function runStageSkill(stage: PipelineStage) {
 		const action = getStageActionInfo(stage, project.status);
 		if (!action.isActionable) return;
@@ -121,6 +133,19 @@
 						>
 							{st.badge}
 						</span>
+					{/if}
+					{#if st.status === 'needs-sync'}
+						<button
+							class="pill accept-btn"
+							disabled={acceptingStage === stage.sync}
+							title="Accept stage baseline ({stage.sync})"
+							onclick={(e) => {
+								e.stopPropagation();
+								acceptStage(stage);
+							}}
+						>
+							{acceptingStage === stage.sync ? 'accepting...' : '✓ accept'}
+						</button>
 					{/if}
 				</div>
 
@@ -224,6 +249,12 @@
 		font-size: 12.5px;
 	}
 
+	.node-meta {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
 	.pill {
 		font-size: 10.5px;
 		padding: 1px 6px;
@@ -237,6 +268,26 @@
 	.pill.needs-sync {
 		background: color-mix(in srgb, var(--warn) 15%, transparent);
 		color: var(--warn);
+	}
+	.pill.accept-btn {
+		background: color-mix(in srgb, var(--ok) 18%, transparent);
+		color: var(--ok);
+		border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 3px;
+		font-weight: 600;
+		transition: all 0.15s ease;
+	}
+	.pill.accept-btn:hover:not(:disabled) {
+		background: var(--ok);
+		color: #fff;
+		border-color: var(--ok);
+	}
+	.pill.accept-btn:disabled {
+		opacity: 0.6;
+		cursor: wait;
 	}
 
 	.run-skill-btn {

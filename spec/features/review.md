@@ -20,23 +20,20 @@ Acceptance:
 
 Notes: Linked to #6.
 
-### REV-002: Navigator Item and File Accept and Revert Actions
-WHEN an item in the Story Bible or Files navigator has unstaged changes,
-THE SYSTEM SHALL display paired Accept and Revert buttons next to the item, committing the item's changes on accept or restoring the committed version on revert, and immediately dismiss the buttons once either action is triggered.
+### REV-002: Stage-Level Acceptance over Navigator Action Buttons
+WHEN an author modifies files or completes an agent stage workflow,
+THE SYSTEM SHALL handle baseline acceptance at the pipeline stage level via the Journey Rail acceptance action running `specnovel accept --stage <stage>`, omitting granular per-item accept/revert buttons in the navigators to preserve clean exploratory browsing.
 
 Acceptance:
-- Given an item in the Story Bible or Files navigator with unstaged changes,
-  when displayed,
-  then both an Accept button and a Revert button are rendered alongside the item.
-- Given an author clicks the Accept button on a file in the Files navigator,
+- Given items and files displayed in the Story Bible and Files navigators,
+  when displayed with unstaged changes,
+  then visual modification cues are shown but granular inline Accept and Revert buttons are omitted.
+- Given a pipeline stage with drift or unaccepted stage changes,
+  when displayed on the Journey Rail,
+  then an interactive Accept pill action is provided.
+- Given an author clicks the Accept pill on the Journey Rail,
   when clicked,
-  then the unstaged changes for that file are committed to Git and the accept/revert buttons disappear.
-- Given an author clicks the Accept button on an entity in the Story Bible navigator,
-  when clicked,
-  then the unstaged changes for that specific item are committed to Git and the buttons disappear.
-- Given an author clicks the Revert button on an item or file,
-  when clicked,
-  then the unstaged changes are reverted to the Git HEAD revision, restoring the previous content and dismissing the buttons.
+  then `specnovel accept --stage <stage>` is executed, committing stage changes to Git with the stage baseline trailer.
 
 Notes: Linked to #6.
 

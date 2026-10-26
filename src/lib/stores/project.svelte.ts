@@ -8,6 +8,8 @@ import {
 	readText,
 	readBytes,
 	writeText,
+	runSpecnovel,
+	runGit,
 	type FileEntry
 } from '$lib/tauri';
 import { parseFile, preferDefinition, type Definition, type Reference } from '$lib/entities';
@@ -186,6 +188,39 @@ class ProjectState {
 		const def = this.defs[id];
 		if (!def) return false;
 		return this.revertFile(def.path);
+	}
+
+	/**
+	 * Accept and baseline a pipeline stage using `specnovel accept --stage <stage>`.
+	 * Commits changes with the appropriate Novel-Sync trailer.
+	 * @spec JRN-003, REV-002
+	 */
+	async acceptStage(stageName: string, message?: string): Promise<{ success: boolean; error?: string }> {
+		if (!this.root) return { success: false, error: 'No active project' };
+		// Ensure git identity if not configured
+		try {
+			const checkEmail = await runGit(this.root, ['config', 'user.email']);
+			if (checkEmail.code !== 0 || !checkEmail.stdout.trim()) {
+				await runGit(this.root, ['config', 'user.email', 'author@novelstudio.local']);
+				await runGit(this.root, ['config', 'user.name', 'NovelStudio Author']);
+			}
+		} catch {
+			// ignore fallback
+		}
+
+		const args = ['accept', '--stage', stageName];
+		if (message) {
+			args.push('-m', message);
+		} else {
+			args.push('-m', `Accept ${stageName} stage`);
+		}
+		const res = await runSpecnovel(this.root, args);
+		if (res.code === 0) {
+			await this.refresh();
+			return { success: true };
+		} else {
+			return { success: false, error: res.stderr || res.stdout || 'Failed to accept stage' };
+		}
 	}
 
 	// ---------------------------------------------------------------- navigation

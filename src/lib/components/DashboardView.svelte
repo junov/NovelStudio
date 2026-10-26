@@ -1,3 +1,4 @@
+<!-- @spec PROJ-005 -->
 <script lang="ts">
 	import { project } from '$lib/stores/project.svelte';
 	import { agent } from '$lib/agent/engine.svelte';
@@ -68,33 +69,6 @@
 			<button class="card-btn" onclick={() => project.openFile('world/INDEX.md')}>
 				World Index →
 			</button>
-		</div>
-	</div>
-
-	<!-- Quick Launch Workflows -->
-	<div class="workflow-card card">
-		<h3 class="workflow-title">Pipeline Quick Actions</h3>
-		<div class="actions-grid">
-			<div class="action-box" onclick={() => runStage('setup')}>
-				<span class="action-icon">✦</span>
-				<h4>Discovery & Setup</h4>
-				<p>Refine brief, thematic pillars (THM), and prose style guide (STY).</p>
-			</div>
-			<div class="action-box" onclick={() => runStage('world')}>
-				<span class="action-icon">📚</span>
-				<h4>World & Research</h4>
-				<p>Resolve research questions into cited facts and build the world bible.</p>
-			</div>
-			<div class="action-box" onclick={() => runStage('narrative')}>
-				<span class="action-icon">⚡</span>
-				<h4>Narrative Beat DAG</h4>
-				<p>Design story arcs (ARC), causal narrative beats (BET), and illustrations (ILL).</p>
-			</div>
-			<div class="action-box" onclick={() => runStage('manuscript')}>
-				<span class="action-icon">🖋</span>
-				<h4>Render Prose</h4>
-				<p>Generate literary prose guided by setup/style.md and world lore.</p>
-			</div>
 		</div>
 	</div>
 
@@ -185,46 +159,6 @@
 	}
 	.card-btn:hover {
 		text-decoration: underline;
-	}
-
-	.workflow-card {
-		padding: 24px;
-	}
-	.workflow-title {
-		margin: 0 0 16px;
-		font-size: 16px;
-	}
-	.actions-grid {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 16px;
-	}
-	.action-box {
-		padding: 16px;
-		background: var(--bg-sunken);
-		border-radius: var(--radius);
-		border: 1px solid var(--line);
-		cursor: pointer;
-		transition: all 0.15s;
-	}
-	.action-box:hover {
-		border-color: var(--accent);
-		background: var(--paper);
-		box-shadow: var(--shadow);
-	}
-	.action-icon {
-		font-size: 20px;
-		color: var(--accent);
-	}
-	.action-box h4 {
-		margin: 8px 0 4px;
-		font-size: 14px;
-	}
-	.action-box p {
-		margin: 0;
-		font-size: 11.5px;
-		color: var(--ink-faint);
-		line-height: 1.4;
 	}
 
 	.integrity-card {

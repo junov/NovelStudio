@@ -54,3 +54,16 @@ Acceptance:
   when parsed for project model definitions and references,
   then the commented examples are ignored and do not produce dangling reference errors or Chekhov's gun violations.
 
+### PROJ-005: Project Overview Dashboard
+WHEN an author navigates to the Overview tab in the workspace view,
+THE SYSTEM SHALL display a project overview comprising the project title, seed synopsis, core project metrics, and project integrity diagnostics, omitting redundant pipeline quick actions that duplicate the journey rail.
+
+Acceptance:
+- Given an author views the Overview dashboard,
+  when rendered,
+  then it displays the project title, synopsis preview, core metrics (scenes structured, abridged words, manuscript words, story bible entities), and diagnostics if any.
+- Given an author views the Overview dashboard,
+  when rendered,
+  then it does not contain a "Pipeline Quick Actions" section or redundant pipeline stage action boxes.
+
+

@@ -1,4 +1,4 @@
-// @spec PROJ-001, PROJ-002, PROJ-003, PROJ-004
+// @spec PROJ-001, PROJ-002, PROJ-003, PROJ-004, PROJ-005
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
@@ -57,4 +57,22 @@ describe('PROJ-004: Clean Initial Project Integrity State', () => {
 		expect(specnovelPy).toContain('clean_text = strip_comments_outside_fences(text)');
 	});
 });
+
+describe('PROJ-005: Project Overview Dashboard', () => {
+	const dashboardSrc = readFileSync(resolve(__dirname, '../src/lib/components/DashboardView.svelte'), 'utf-8');
+
+	// @spec PROJ-005
+	it('omits Pipeline Quick Actions from Overview dashboard', () => {
+		expect(dashboardSrc).not.toContain('Pipeline Quick Actions');
+		expect(dashboardSrc).not.toContain('actions-grid');
+		expect(dashboardSrc).not.toContain('action-box');
+	});
+
+	// @spec PROJ-005
+	it('displays core metrics and integrity diagnostics', () => {
+		expect(dashboardSrc).toContain('metrics-grid');
+		expect(dashboardSrc).toContain('dashboard-hero');
+	});
+});
+
 

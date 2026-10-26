@@ -228,7 +228,7 @@
 		position: relative;
 		background: var(--bg-elev);
 		border-bottom: 1px solid var(--line);
-		padding: 10px 16px;
+		padding: 8px 14px 6px 14px;
 	}
 
 	.stages-track {
@@ -237,7 +237,7 @@
 		justify-content: space-between;
 		gap: 6px;
 		overflow-x: auto;
-		padding-bottom: 6px;
+		padding: 4px 6px 6px 4px;
 	}
 
 	.stage-node {
@@ -274,12 +274,12 @@
 	.stage-node.current {
 		opacity: 1;
 		border-color: var(--line-strong);
-		box-shadow: 3px 4px 12px rgba(0, 0, 0, 0.14), 1px 2px 4px rgba(0, 0, 0, 0.08);
-		transform: translate(-1px, -1px);
+		box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.12), 1px 1px 2px rgba(0, 0, 0, 0.08);
+		transform: translateY(-1px);
 		background: var(--paper);
 	}
 	:global([data-theme='dark']) .stage-node.current {
-		box-shadow: 3px 4px 16px rgba(0, 0, 0, 0.55), 1px 2px 5px rgba(0, 0, 0, 0.35);
+		box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.5), 1px 1px 3px rgba(0, 0, 0, 0.35);
 	}
 	.stage-node.current .node-step {
 		background: var(--accent);

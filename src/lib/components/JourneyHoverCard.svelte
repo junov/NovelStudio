@@ -65,6 +65,14 @@
 			<span class="stage-tag">{stage.label}</span>
 		</div>
 		<h4 class="card-title">{pillInfo.title}</h4>
+
+		{#if pillInfo.actionHint}
+			<div class="action-hint">
+				<span class="hint-icon">⚡</span>
+				<span class="hint-text">{pillInfo.actionHint}</span>
+			</div>
+		{/if}
+
 		<p class="card-desc">{pillInfo.description}</p>
 
 		{#if pillInfo.items && pillInfo.items.length > 0}
@@ -78,13 +86,6 @@
 						<li class="more-items">+ {pillInfo.items.length - 5} more</li>
 					{/if}
 				</ul>
-			</div>
-		{/if}
-
-		{#if pillInfo.actionHint}
-			<div class="action-hint">
-				<span class="hint-icon">⚡</span>
-				<span class="hint-text">{pillInfo.actionHint}</span>
 			</div>
 		{/if}
 

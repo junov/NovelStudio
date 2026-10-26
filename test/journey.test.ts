@@ -499,9 +499,17 @@ describe('JRN-006: Interactive Drift Pill Synchronization Action', () => {
 	});
 
 	// @spec JRN-006
-	it('integrates synchronization action guidance directly into the hover card', () => {
+	it('integrates synchronization action guidance directly into the hover card below the title', () => {
 		expect(hoverCardSource).toContain('action-hint');
 		expect(hoverCardSource).toContain('pillInfo.actionHint');
+		// Action hint appears directly following card-title in the pill hover section
+		const titleIdx = hoverCardSource.indexOf('<h4 class="card-title">{pillInfo.title}</h4>');
+		const hintIdx = hoverCardSource.indexOf('class="action-hint"');
+		const descIdx = hoverCardSource.indexOf('<p class="card-desc">{pillInfo.description}</p>');
+		expect(titleIdx).toBeGreaterThan(-1);
+		expect(hintIdx).toBeGreaterThan(titleIdx);
+		expect(descIdx).toBeGreaterThan(hintIdx);
+
 		const setupStage = PIPELINE.find((s) => s.id === 'setup')!;
 		const driftStatus = createMockStatus({
 			drift: { setup: ['brief.md'] },

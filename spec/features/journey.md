@@ -107,7 +107,7 @@ Acceptance:
   then the drift button is disabled to prevent concurrent agent runs.
 - Given an author hovers over the drift button,
   when hovered,
-  then the contextual hover card is displayed describing the drift items and integrating the synchronization action prompt directly within the hover card without exhibiting conflicting browser-native tooltip attributes.
+  then the contextual hover card is displayed describing the drift items and presenting the synchronization action prompt in an action callout box placed directly below the hover card title without exhibiting conflicting browser-native tooltip attributes.
 
 
 

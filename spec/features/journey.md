@@ -71,7 +71,7 @@ THE SYSTEM SHALL maintain a single active current stage across the pipeline, vis
 Acceptance:
 - Given the Journey Rail,
   when rendered,
-  then exactly one stage is designated as the current stage and is visually highlighted.
+  then exactly one stage is designated as the current stage and is visually highlighted without displaying an inset border on the node container.
 - Given an author clicks a stage node or any child widget within that stage node (step label, status pill, play button, or accept button),
   when clicked,
   then that stage becomes the active current stage and receives the visual highlight.

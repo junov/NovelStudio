@@ -241,21 +241,27 @@
 	}
 
 	.stage-node {
+		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 6px 10px;
+		padding: 6px 11px;
 		border-radius: var(--radius);
 		background: var(--paper);
 		border: 1px solid var(--line);
 		cursor: pointer;
 		user-select: none;
 		flex-shrink: 0;
-		transition: all 0.15s ease;
+		transition: all 0.18s ease;
 	}
-	.stage-node:hover {
+	.stage-node:not(.current) {
+		opacity: 0.85;
+	}
+	.stage-node:not(.current):hover {
+		opacity: 1;
 		border-color: var(--line-strong);
 		box-shadow: var(--shadow);
+		transform: translateY(-1px);
 	}
 
 	.stage-node.synced {
@@ -266,13 +272,30 @@
 	}
 
 	.stage-node.current {
-		border-color: var(--accent);
-		box-shadow: 0 0 0 2px var(--accent), var(--shadow);
-		background: color-mix(in srgb, var(--accent) 8%, var(--paper));
+		opacity: 1;
+		border-color: var(--line-strong);
+		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+		transform: translateY(-1px);
+		background: var(--paper);
+	}
+	.stage-node.current::after {
+		content: '';
+		position: absolute;
+		bottom: -1px;
+		left: 10px;
+		right: 10px;
+		height: 2.5px;
+		background: var(--accent);
+		border-radius: 2px 2px 0 0;
 	}
 	.stage-node.current .node-step {
 		background: var(--accent);
 		color: var(--accent-ink);
+		font-weight: 700;
+	}
+	.stage-node.current .node-label {
+		color: var(--ink);
+		font-weight: 700;
 	}
 
 	.node-badge-row {
@@ -294,6 +317,11 @@
 	.node-label {
 		font-weight: 600;
 		font-size: 12.5px;
+		color: var(--ink-soft);
+		transition: color 0.15s ease;
+	}
+	.stage-node:hover .node-label {
+		color: var(--ink);
 	}
 
 	.node-meta {

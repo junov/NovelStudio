@@ -58,4 +58,17 @@ Acceptance:
   when the operation completes and project status refreshes,
   then the stage status pill updates to "synced" and the Accept pill is dismissed.
 
+### JRN-004: Current Stage Tracking and Highlighting
+WHEN an author interacts with the workspace,
+THE SYSTEM SHALL maintain a single active current stage across the pipeline, visually highlight the current stage node in the Journey Rail, and update the current stage whenever the author clicks a stage node or any of its child widgets.
+
+Acceptance:
+- Given the Journey Rail,
+  when rendered,
+  then exactly one stage is designated as the current stage and is visually highlighted.
+- Given an author clicks a stage node or any child widget within that stage node (step label, status pill, play button, or accept button),
+  when clicked,
+  then that stage becomes the active current stage and receives the visual highlight.
+
+
 

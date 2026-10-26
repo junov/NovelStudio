@@ -223,3 +223,69 @@ export function stageForSkill(skill: string): string {
 			return PIPELINE.find((s) => s.skill === skill)?.id ?? 'default';
 	}
 }
+
+export const PREFIX_TO_STAGE: Record<string, SyncStage> = {
+	THM: 'setup',
+	STY: 'setup',
+	RQ: 'research',
+	CHR: 'world',
+	PLC: 'world',
+	ORG: 'world',
+	OBJ: 'world',
+	WLD: 'world',
+	TML: 'world',
+	GLS: 'world',
+	FCT: 'world',
+	SRC: 'world',
+	ARC: 'narrative',
+	BET: 'narrative',
+	ILL: 'narrative',
+	VOL: 'structure',
+	ACT: 'structure',
+	PRT: 'structure',
+	CHP: 'structure',
+	SCN: 'structure',
+	DIR: 'structure'
+};
+
+export const STAGE_PREFIXES: Record<SyncStage, string[]> = {
+	initial: [],
+	setup: ['THM', 'STY'],
+	research: ['RQ'],
+	world: ['CHR', 'PLC', 'ORG', 'OBJ', 'WLD', 'TML', 'GLS', 'FCT', 'SRC'],
+	narrative: ['ARC', 'BET', 'ILL'],
+	structure: ['VOL', 'ACT', 'PRT', 'CHP', 'SCN', 'DIR'],
+	abridged: [],
+	manuscript: [],
+	publishable: []
+};
+
+export function stageOfPath(path: string): SyncStage | null {
+	const normalized = path.replace(/\\/g, '/');
+	if (normalized.startsWith('initial/')) return 'initial';
+	if (normalized.startsWith('setup/')) return 'setup';
+	if (normalized.startsWith('research/')) return 'research';
+	if (normalized.startsWith('world/') || normalized.startsWith('kb/')) return 'world';
+	if (normalized.startsWith('narrative/')) return 'narrative';
+	if (
+		normalized.startsWith('structure/') ||
+		normalized.startsWith('outline/') ||
+		normalized.startsWith('directives/')
+	) {
+		return 'structure';
+	}
+	if (normalized.startsWith('abridged/')) return 'abridged';
+	if (normalized.startsWith('manuscript/') || normalized.startsWith('story/')) return 'manuscript';
+	if (normalized.startsWith('publishable/')) return 'publishable';
+	return null;
+}
+
+export function stageOfId(id: string, path?: string): SyncStage | null {
+	if (path) {
+		const st = stageOfPath(path);
+		if (st) return st;
+	}
+	const prefix = id.split('-')[0];
+	return PREFIX_TO_STAGE[prefix] ?? null;
+}
+

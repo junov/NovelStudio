@@ -128,7 +128,9 @@
 			{@const action = getStageActionInfo(stage, project.status)}
 			<div
 				class="stage-node {st.status}"
+				class:current={project.currentStage === stage.id}
 				onclick={() => {
+					project.setCurrentStage(stage.id);
 					// Open main file for this stage
 					if (stage.paths.length > 0) {
 						project.openFile(stage.paths[0]);
@@ -137,6 +139,9 @@
 			>
 				<div
 					class="node-badge-row"
+					onclick={() => {
+						project.setCurrentStage(stage.id);
+					}}
 					onmouseenter={(e) => showHover('step', stage, i, st, e.currentTarget)}
 					onmouseleave={hideHover}
 				>
@@ -148,6 +153,9 @@
 					{#if st.badge}
 						<span
 							class="pill {st.status}"
+							onclick={() => {
+								project.setCurrentStage(stage.id);
+							}}
 							onmouseenter={(e) => {
 								e.stopPropagation();
 								showHover('pill', stage, i, st, e.currentTarget);
@@ -164,6 +172,7 @@
 							title="Accept stage baseline ({stage.sync})"
 							onclick={(e) => {
 								e.stopPropagation();
+								project.setCurrentStage(stage.id);
 								acceptStage(stage);
 							}}
 						>
@@ -178,6 +187,7 @@
 					disabled={!action.isActionable || agent.status === 'running'}
 					onclick={(e) => {
 						e.stopPropagation();
+						project.setCurrentStage(stage.id);
 						runStageSkill(stage);
 					}}
 					onmouseenter={(e) => {
@@ -249,6 +259,16 @@
 	}
 	.stage-node.needs-sync {
 		border-left: 3px solid var(--warn);
+	}
+
+	.stage-node.current {
+		border-color: var(--accent);
+		box-shadow: 0 0 0 2px var(--accent), var(--shadow);
+		background: color-mix(in srgb, var(--accent) 8%, var(--paper));
+	}
+	.stage-node.current .node-step {
+		background: var(--accent);
+		color: var(--accent-ink);
 	}
 
 	.node-badge-row {

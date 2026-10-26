@@ -59,6 +59,9 @@ Acceptance:
 - Given a wiki-link referencing an entity within the currently active document,
   when clicked,
   then the view scrolls directly to the position of that item within the open document without failing or ignoring the click.
+- Given an author clicks a wiki-link,
+  when clicked,
+  then the active current stage is automatically updated to the stage corresponding to the destination entity or file.
 
 Notes: Linked to #4.
 
@@ -79,3 +82,19 @@ Acceptance:
 - Given the navigation pane is in a collapsed state,
   when the author clicks the expand button or an icon tab shortcut,
   then the pane re-expands to its previously configured width.
+
+### BBL-005: Stage-Filtered Navigators
+WHEN the current pipeline stage is active,
+THE SYSTEM SHALL filter the Story Bible and Files navigators so they only display items and files that belong to the current stage.
+
+Acceptance:
+- Given an active current stage,
+  when the Files navigator is viewed,
+  then it displays only the files residing in or mapped to the current stage.
+- Given an active current stage,
+  when the Story Bible navigator is viewed,
+  then it displays only entity groups and items defined within that current stage.
+- Given an author navigates to a wiki link or clicks a stage in the Journey Rail,
+  when the current stage changes,
+  then both the Files and Story Bible navigators dynamically update to reflect the newly active stage.
+

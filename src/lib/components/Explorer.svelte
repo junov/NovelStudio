@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import { project } from '$lib/stores/project.svelte';
 	import { PREFIXES, prefixOf, type Definition } from '$lib/entities';
+	import { STAGE_PREFIXES, stageOfPath } from '$lib/stages';
 	import { runSpecnovel } from '$lib/tauri';
 
 	const DEFAULT_WIDTH = 280;
@@ -119,6 +120,18 @@
 		return groups;
 	});
 
+	// Stage-filtered Story Bible prefixes (@spec BBL-005)
+	const filteredPrefixes = $derived(
+		Object.entries(PREFIXES).filter(([prefix]) =>
+			STAGE_PREFIXES[project.currentStage]?.includes(prefix)
+		)
+	);
+
+	// Stage-filtered files (@spec BBL-005)
+	const filteredFiles = $derived(
+		project.files.filter((file) => stageOfPath(file.path) === project.currentStage)
+	);
+
 	// Quick create next entity
 	async function createNextEntity(prefix: string) {
 		if (!project.root) return;
@@ -230,76 +243,84 @@
 	<div class="sidebar-content">
 		{#if currentTab === 'bible'}
 			<div class="entity-groups">
-				{#each Object.entries(PREFIXES) as [prefix, info]}
-					{@const items = groupedDefs()[prefix] || []}
-					<details
-						class="group-details"
-						open={isSectionOpen(prefix, items.length)}
-						ontoggle={(e) => handleSectionToggle(prefix, e.currentTarget.open)}
-					>
-						<summary class="group-summary">
-							<span class="group-chevron" aria-hidden="true">
-								<svg
-									viewBox="0 0 16 16"
-									width="12"
-									height="12"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
+				{#if filteredPrefixes.length === 0}
+					<div class="nav-empty-state">No Story Bible entities in the {project.currentStage} stage.</div>
+				{:else}
+					{#each filteredPrefixes as [prefix, info]}
+						{@const items = groupedDefs()[prefix] || []}
+						<details
+							class="group-details"
+							open={isSectionOpen(prefix, items.length)}
+							ontoggle={(e) => handleSectionToggle(prefix, e.currentTarget.open)}
+						>
+							<summary class="group-summary">
+								<span class="group-chevron" aria-hidden="true">
+									<svg
+										viewBox="0 0 16 16"
+										width="12"
+										height="12"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									>
+										<polyline points="4 6 8 10 12 6" />
+									</svg>
+								</span>
+								<span class="group-icon">{info.icon}</span>
+								<span class="group-title">{info.plural}</span>
+								<span class="group-count">{items.length}</span>
+								<button
+									class="add-item-btn"
+									onclick={(e) => {
+										e.stopPropagation();
+										createNextEntity(prefix);
+									}}
+									title="Add next {info.label}"
 								>
-									<polyline points="4 6 8 10 12 6" />
-								</svg>
-							</span>
-							<span class="group-icon">{info.icon}</span>
-							<span class="group-title">{info.plural}</span>
-							<span class="group-count">{items.length}</span>
-							<button
-								class="add-item-btn"
-								onclick={(e) => {
-									e.stopPropagation();
-									createNextEntity(prefix);
-								}}
-								title="Add next {info.label}"
-							>
-								+
-							</button>
-						</summary>
+									+
+								</button>
+							</summary>
 
-						<div class="group-items">
-							{#each items as item}
-								<div
-									class="entity-item"
-									onclick={() => project.openId(item.id)}
-									title="{item.id}: {item.title}"
-								>
-									<span class="entity-id" style="color: hsl({info.hue} 60% 45%)">{item.id}</span>
-									<span class="entity-name">{item.title}</span>
-									{#if project.hasItemUnstagedChanges(item.id)}
-										<span class="change-cue" title="Unstaged changes">●</span>
-									{/if}
-								</div>
-							{/each}
-						</div>
-					</details>
-				{/each}
+							<div class="group-items">
+								{#each items as item}
+									<div
+										class="entity-item"
+										onclick={() => project.openId(item.id)}
+										title="{item.id}: {item.title}"
+									>
+										<span class="entity-id" style="color: hsl({info.hue} 60% 45%)">{item.id}</span>
+										<span class="entity-name">{item.title}</span>
+										{#if project.hasItemUnstagedChanges(item.id)}
+											<span class="change-cue" title="Unstaged changes">●</span>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						</details>
+					{/each}
+				{/if}
 			</div>
 		{:else}
 			<div class="file-tree">
-				{#each project.files as file}
-					<div
-						class="file-item"
-						class:active={project.view.kind === 'file' && project.view.path === file.path}
-						onclick={() => project.openFile(file.path)}
-					>
-						<span class="file-icon">{file.path.endsWith('.md') ? '📄' : '📁'}</span>
-						<span class="file-path">{file.path}</span>
-						{#if project.hasUnstagedChanges(file.path)}
-							<span class="change-cue" title="Unstaged changes">●</span>
-						{/if}
-					</div>
-				{/each}
+				{#if filteredFiles.length === 0}
+					<div class="nav-empty-state">No files in the {project.currentStage} stage yet.</div>
+				{:else}
+					{#each filteredFiles as file}
+						<div
+							class="file-item"
+							class:active={project.view.kind === 'file' && project.view.path === file.path}
+							onclick={() => project.openFile(file.path)}
+						>
+							<span class="file-icon">{file.path.endsWith('.md') ? '📄' : '📁'}</span>
+							<span class="file-path">{file.path}</span>
+							{#if project.hasUnstagedChanges(file.path)}
+								<span class="change-cue" title="Unstaged changes">●</span>
+							{/if}
+						</div>
+					{/each}
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -574,5 +595,14 @@
 		font-size: 10px;
 		margin-left: 4px;
 		flex-shrink: 0;
+	}
+
+	.nav-empty-state {
+		padding: 24px 16px;
+		font-size: 12px;
+		color: var(--ink-soft);
+		font-style: italic;
+		text-align: center;
+		line-height: 1.4;
 	}
 </style>

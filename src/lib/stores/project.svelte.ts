@@ -15,6 +15,7 @@ import {
 import { parseFile, preferDefinition, type Definition, type Reference } from '$lib/entities';
 import type { StatusJson } from '$lib/types';
 import { getUnstagedFiles, acceptGitFile, revertGitFile } from '$lib/git';
+import { stageOfPath, stageOfId, type SyncStage } from '$lib/stages';
 
 export type View =
 	| { kind: 'dashboard' }
@@ -44,6 +45,8 @@ class ProjectState {
 	unstagedFiles = $state<Set<string>>(new Set());
 	/** Bumped whenever files change on disk so open editors can reload. */
 	revision = $state(0);
+	/** Currently active pipeline stage (@spec JRN-004, BBL-005). */
+	currentStage = $state<SyncStage>('initial');
 
 	view = $state<View>({ kind: 'dashboard' });
 	#back: View[] = [];
@@ -70,6 +73,7 @@ class ProjectState {
 		this.defs = {};
 		this.backlinks = {};
 		this.status = null;
+		this.currentStage = 'initial';
 	}
 
 	/** Re-scan files, rebuild the wiki-link index, check git status, and refresh `status --json`. */
@@ -232,7 +236,15 @@ class ProjectState {
 		this.#syncNav();
 	}
 
+	setCurrentStage(stage: SyncStage) {
+		this.currentStage = stage;
+	}
+
 	openFile(path: string, line?: number) {
+		const targetStage = stageOfPath(path);
+		if (targetStage) {
+			this.setCurrentStage(targetStage);
+		}
 		this.navigate({ kind: 'file', path, line });
 	}
 
@@ -244,6 +256,10 @@ class ProjectState {
 	openId(id: string): boolean {
 		const d = this.defs[id];
 		if (!d) return false;
+		const targetStage = stageOfPath(d.path) || stageOfId(id);
+		if (targetStage) {
+			this.setCurrentStage(targetStage);
+		}
 		this.navigate({ kind: 'file', path: d.path, line: d.line, id });
 		return true;
 	}

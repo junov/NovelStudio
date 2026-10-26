@@ -1,4 +1,4 @@
-// @spec JRN-001, JRN-002, JRN-003
+// @spec JRN-001, JRN-002, JRN-003, JRN-004
 import { describe, it, expect } from 'vitest';
 import { PIPELINE, resolveStageExecution } from '../src/lib/stages';
 import {
@@ -9,6 +9,7 @@ import {
 	hasStageGeneratedContent
 } from '../src/lib/stagesHover';
 import type { StatusJson } from '../src/lib/types';
+import { project } from '../src/lib/stores/project.svelte';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -301,7 +302,7 @@ describe('JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling (I
 		expect(pubAction.disabledReason).toContain('0 rendered scenes');
 	});
 
-	// @spec JRN-001, JRN-002, JRN-003
+	// @spec JRN-001, JRN-002, JRN-003, JRN-004
 	it('uses craft action titles and does not expose raw skill names in play button hover cards', () => {
 		const status = createMockStatus({
 			pending: { abridged: 2, manuscript: 3 },
@@ -387,6 +388,26 @@ describe('JRN-003: Journey Rail Stage Acceptance Action', () => {
 
 		// After agent or user populates synopsis file
 		expect(hasStageGeneratedContent(initialStage, freshStatus, [{ path: 'initial/synopsis.md' }])).toBe(true);
+	});
+});
+
+describe('JRN-004: Current Stage Tracking and Highlighting', () => {
+	const journeyRailSrc = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
+
+	// @spec JRN-004
+	it('manages currentStage in project store and allows setting it', () => {
+		expect(project.currentStage).toBeDefined();
+		project.setCurrentStage('world');
+		expect(project.currentStage).toBe('world');
+		project.setCurrentStage('initial');
+		expect(project.currentStage).toBe('initial');
+	});
+
+	// @spec JRN-004
+	it('renders current stage styling in JourneyRail.svelte and attaches click handlers to stage nodes and children', () => {
+		expect(journeyRailSrc).toContain('class:current={project.currentStage === stage.id}');
+		expect(journeyRailSrc).toContain('.stage-node.current');
+		expect(journeyRailSrc).toContain('project.setCurrentStage(stage.id)');
 	});
 });
 

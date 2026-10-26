@@ -1,4 +1,4 @@
-// @spec BBL-001, BBL-002, BBL-003, BBL-004
+// @spec BBL-001, BBL-002, BBL-003, BBL-004, BBL-005
 import { describe, it, expect } from 'vitest';
 import { parseFile, prefixOf, prefixInfo } from '../src/lib/entities';
 import { renderMarkdown, renderWikiChips } from '../src/lib/markdown';
@@ -110,6 +110,22 @@ describe('BBL-003: Centralized Wiki-Link Navigation and Target Item Scrolling', 
 		expect(project.openId('NONEXISTENT-999')).toBe(false);
 	});
 
+	// @spec BBL-003
+	it('updates project.currentStage to destination stage when openId is called', () => {
+		project.defs['CHR-001'] = {
+			id: 'CHR-001',
+			title: 'Red',
+			path: 'world/characters/CHR-001-red.md',
+			line: 12,
+			level: 1,
+			layer: 'plan'
+		};
+		project.setCurrentStage('setup');
+		expect(project.currentStage).toBe('setup');
+		project.openId('CHR-001');
+		expect(project.currentStage).toBe('world');
+	});
+
 	// @spec BBL-003 (Issue #4)
 	it('integrates target item scrolling and wikiLinks click delegation in Editor and AgentPanel', () => {
 		const editorSource = readFileSync(resolve(__dirname, '../src/lib/components/Editor.svelte'), 'utf-8');
@@ -152,3 +168,21 @@ describe('BBL-004: Collapsible and Resizable Navigation Pane', () => {
 		expect(explorerSrc).toContain('class="collapsed-strip"');
 	});
 });
+
+describe('BBL-005: Stage-Filtered Navigators', () => {
+	const explorerSrc = readFileSync(resolve(__dirname, '../src/lib/components/Explorer.svelte'), 'utf-8');
+
+	// @spec BBL-005
+	it('filters file list by project.currentStage', () => {
+		expect(explorerSrc).toContain('filteredFiles');
+		expect(explorerSrc).toContain('stageOfPath');
+		expect(explorerSrc).toContain('project.currentStage');
+	});
+
+	// @spec BBL-005
+	it('filters Story Bible entities by project.currentStage', () => {
+		expect(explorerSrc).toContain('filteredPrefixes');
+		expect(explorerSrc).toContain('project.currentStage');
+	});
+});
+

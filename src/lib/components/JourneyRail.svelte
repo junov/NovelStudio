@@ -274,12 +274,12 @@
 	.stage-node.current {
 		opacity: 1;
 		border-color: var(--line-strong);
-		box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.12), 1px 1px 2px rgba(0, 0, 0, 0.08);
+		box-shadow: 2px 3px 6px rgba(115, 35, 20, 0.28), 1px 1px 2px rgba(85, 20, 12, 0.18);
 		transform: translateY(-1px);
 		background: var(--paper);
 	}
 	:global([data-theme='dark']) .stage-node.current {
-		box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.5), 1px 1px 3px rgba(0, 0, 0, 0.35);
+		box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.65), 1px 2px 5px rgba(180, 60, 35, 0.35);
 	}
 	.stage-node.current .node-step {
 		background: var(--accent);

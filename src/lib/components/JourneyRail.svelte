@@ -302,17 +302,17 @@
 
 	/* @spec JRN-004 */
 	.stage-node.current {
-		border-color: rgba(158, 75, 28, 0.6);
+		border-color: rgba(158, 75, 28, 0.45);
 		transform: translateY(1px);
 		background:
 			radial-gradient(
 				ellipse at center,
-				rgba(255, 255, 255, 0.6) 0%,
-				rgba(255, 252, 232, 0.6) 20%,
-				rgba(247, 231, 150, 0.6) 48%,
-				rgba(230, 191, 74, 0.6) 68%,
-				rgba(179, 111, 32, 0.6) 86%,
-				rgba(138, 59, 18, 0.6) 100%
+				rgba(255, 255, 255, 0.4) 0%,
+				rgba(255, 252, 232, 0.4) 20%,
+				rgba(247, 231, 150, 0.4) 48%,
+				rgba(230, 191, 74, 0.4) 68%,
+				rgba(179, 111, 32, 0.4) 86%,
+				rgba(138, 59, 18, 0.4) 100%
 			),
 			var(--paper);
 	}

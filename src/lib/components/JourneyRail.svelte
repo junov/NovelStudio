@@ -307,9 +307,10 @@
 		background: radial-gradient(
 			ellipse at center,
 			#ffffff 0%,
-			#fbf4eb 30%,
-			#e4cca8 65%,
-			#b87532 85%,
+			#fffce8 20%,
+			#f7e796 48%,
+			#e6bf4a 68%,
+			#b36f20 86%,
 			#8a3b12 100%
 		);
 	}

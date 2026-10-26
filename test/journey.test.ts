@@ -438,10 +438,11 @@ describe('JRN-004: Current Stage Tracking and Highlighting', () => {
 		expect(journeyRailSrc).toContain('class:current={project.currentStage === stage.id}');
 		expect(journeyRailSrc).toContain('.stage-node.current');
 		expect(journeyRailSrc).toContain('project.setCurrentStage(stage.id)');
-		// Backlit amber radial gradient background
+		// Backlit amber radial gradient background with yellowish tint
 		expect(journeyRailSrc).toContain('radial-gradient');
 		expect(journeyRailSrc).toContain('ellipse at center');
 		expect(journeyRailSrc).toContain('#ffffff 0%');
+		expect(journeyRailSrc).toContain('#f7e796');
 		expect(journeyRailSrc).toContain('#8a3b12 100%');
 		// Inset border shadow removed from current stage
 		expect(journeyRailSrc).not.toContain('box-shadow: inset 0 0 0 2px var(--accent)');

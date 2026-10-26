@@ -289,12 +289,32 @@
 		flex-shrink: 0;
 		transition: all 0.18s ease;
 	}
+	/* @spec JRN-004 */
 	.stage-node:not(.current) {
 		box-shadow: 4px 5px 8px rgba(0, 0, 0, 0.38), 2px 3px 3px rgba(0, 0, 0, 0.22);
 		transform: translateY(-1px);
+		background:
+			radial-gradient(
+				ellipse at center,
+				rgba(255, 255, 255, 0.25) 0%,
+				rgba(245, 240, 230, 0.2) 25%,
+				rgba(220, 205, 185, 0.18) 55%,
+				rgba(160, 135, 110, 0.16) 80%,
+				rgba(110, 75, 45, 0.18) 100%
+			),
+			var(--paper);
 	}
 	:global([data-theme='dark']) .stage-node:not(.current) {
 		box-shadow: 4px 5px 10px rgba(0, 0, 0, 0.8), 2px 3px 5px rgba(200, 70, 40, 0.55);
+		background:
+			radial-gradient(
+				ellipse at center,
+				rgba(255, 255, 255, 0.04) 0%,
+				rgba(40, 35, 30, 0.2) 30%,
+				rgba(25, 20, 15, 0.4) 70%,
+				rgba(15, 10, 8, 0.65) 100%
+			),
+			var(--paper);
 	}
 	.stage-node:not(.current):hover {
 		border-color: var(--line-strong);

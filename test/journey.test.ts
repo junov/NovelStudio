@@ -447,6 +447,9 @@ describe('JRN-004: Current Stage Tracking and Highlighting', () => {
 		expect(journeyRailSrc).toContain('var(--paper)');
 		// Inset border shadow removed from current stage
 		expect(journeyRailSrc).not.toContain('box-shadow: inset 0 0 0 2px var(--accent)');
+		// Unlit radial gradient on non-current stages
+		expect(journeyRailSrc).toContain('.stage-node:not(.current)');
+		expect(journeyRailSrc).toContain('rgba(110, 75, 45, 0.18) 100%');
 	});
 });
 

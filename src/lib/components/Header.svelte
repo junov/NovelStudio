@@ -42,6 +42,15 @@
 				<span class="project-name">{project.title}</span>
 				<span class="project-change">▾</span>
 			</div>
+			<!-- @spec PROJ-003 -->
+			<button
+				class="new-project-btn"
+				onclick={onNewProject}
+				title="Create New Novel Project"
+				aria-label="Create New Novel Project"
+			>
+				+
+			</button>
 		{/if}
 	</div>
 
@@ -179,6 +188,28 @@
 	.project-change {
 		font-size: 10px;
 		color: var(--ink-faint);
+	}
+
+	.new-project-btn {
+		width: 24px;
+		height: 24px;
+		border-radius: var(--radius);
+		border: 1px solid var(--line);
+		background: var(--bg-sunken);
+		color: var(--ink-soft);
+		font-size: 15px;
+		font-weight: 600;
+		line-height: 1;
+		display: grid;
+		place-items: center;
+		cursor: pointer;
+		transition: all 0.15s ease;
+		padding: 0;
+	}
+	.new-project-btn:hover {
+		background: var(--accent);
+		color: var(--accent-ink);
+		border-color: var(--accent);
 	}
 
 	.palette-trigger {

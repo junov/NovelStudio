@@ -29,3 +29,15 @@ Acceptance:
 - Given a project already in the recents list,
   when reopened,
   then it moves to the top without creating a duplicate entry.
+
+### PROJ-003: New Project Creation Action in Workspace Header
+WHEN an author is in the workspace view with an open novel project,
+THE SYSTEM SHALL provide a dedicated new project creation button ("+" icon) immediately adjacent to the project title widget in the application header, which triggers the new project scaffolding modal.
+
+Acceptance:
+- Given an active open novel project displayed in the workspace header,
+  when viewed,
+  then a "+" button is displayed adjacent to the project title widget.
+- Given the author clicks the "+" button next to the project title widget,
+  when clicked,
+  then the New Project modal opens to allow scaffolding a new novel project.

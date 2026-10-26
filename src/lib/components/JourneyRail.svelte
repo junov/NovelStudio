@@ -274,7 +274,7 @@
 	.stage-node.current {
 		opacity: 1;
 		border-color: var(--line-strong);
-		box-shadow: 4px 5px 8px rgba(115, 30, 18, 0.46), 2px 3px 3px rgba(85, 20, 12, 0.32);
+		box-shadow: 4px 5px 8px rgba(0, 0, 0, 0.38), 2px 3px 3px rgba(0, 0, 0, 0.22);
 		transform: translateY(-1px);
 		background: var(--paper);
 	}

@@ -255,13 +255,14 @@
 		transition: all 0.18s ease;
 	}
 	.stage-node:not(.current) {
-		opacity: 0.85;
+		box-shadow: 4px 5px 8px rgba(0, 0, 0, 0.38), 2px 3px 3px rgba(0, 0, 0, 0.22);
+		transform: translateY(-1px);
+	}
+	:global([data-theme='dark']) .stage-node:not(.current) {
+		box-shadow: 4px 5px 10px rgba(0, 0, 0, 0.8), 2px 3px 5px rgba(200, 70, 40, 0.55);
 	}
 	.stage-node:not(.current):hover {
-		opacity: 1;
 		border-color: var(--line-strong);
-		box-shadow: var(--shadow);
-		transform: translateY(-1px);
 	}
 
 	.stage-node.synced {
@@ -272,14 +273,10 @@
 	}
 
 	.stage-node.current {
-		opacity: 1;
 		border-color: var(--line-strong);
-		box-shadow: 4px 5px 8px rgba(0, 0, 0, 0.38), 2px 3px 3px rgba(0, 0, 0, 0.22);
-		transform: translateY(-1px);
+		box-shadow: none;
+		transform: translateY(1px);
 		background: var(--paper);
-	}
-	:global([data-theme='dark']) .stage-node.current {
-		box-shadow: 4px 5px 10px rgba(0, 0, 0, 0.8), 2px 3px 5px rgba(200, 70, 40, 0.55);
 	}
 	.stage-node.current .node-step {
 		background: var(--accent);

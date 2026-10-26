@@ -83,12 +83,14 @@
 			pendingCount = status.pending_items?.['research']?.length ?? status.catalog?.['RQ'] ?? 0;
 		}
 
-		// Stage unbaselined: once generated, ready for initial baseline acceptance
+		const hasUncommittedDiffs = stageUnstaged.length > 0;
+
+		// Stage unbaselined: once generated, ready for initial baseline acceptance if uncommitted diffs exist (@spec JRN-003)
 		if (!baseline) {
 			return {
 				status: 'needs-sync',
 				badge: effectiveDrift > 0 ? `${effectiveDrift} drift` : 'unaccepted',
-				canAccept: true
+				canAccept: hasUncommittedDiffs
 			};
 		}
 
@@ -96,7 +98,7 @@
 			return {
 				status: 'needs-sync',
 				badge: effectiveDrift > 0 ? `${effectiveDrift} drift` : `${pendingCount} pending`,
-				canAccept: effectiveDrift > 0
+				canAccept: hasUncommittedDiffs
 			};
 		}
 

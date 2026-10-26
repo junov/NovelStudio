@@ -44,13 +44,16 @@ Acceptance:
 Notes: Linked to #7.
 
 ### JRN-003: Journey Rail Stage Acceptance Action
-WHEN a pipeline stage on the Journey Rail has unaccepted changes or drift,
-THE SYSTEM SHALL provide an interactive "Accept" pill action on the stage node that runs `specnovel accept --stage <stage>` to commit and baseline the stage changes in Git.
+WHEN a pipeline stage on the Journey Rail has uncommitted diffs or unaccepted changes,
+THE SYSTEM SHALL provide an interactive "Accept" pill action on the stage node that runs `specnovel accept --stage <stage>` to commit and baseline the stage changes in Git, displaying the action only on stages with uncommitted working-tree diffs.
 
 Acceptance:
-- Given a stage on the Journey Rail with drift or unaccepted stage changes (including newly generated stage content prior to its initial baseline),
+- Given a stage on the Journey Rail with uncommitted diffs in the working tree,
   when displayed,
   then the stage node provides an interactive "Accept" pill action adjacent to its status pill.
+- Given a stage on the Journey Rail with no uncommitted diffs in the working tree (even if upstream drift or pending items are flagged),
+  when displayed,
+  then the stage node does not display the "Accept" pill action.
 - Given an author clicks the "Accept" pill on a stage node,
   when clicked,
   then the system invokes `specnovel accept --stage <stage>`, committing the stage files and recording the `Novel-Sync: <stage>` trailer.

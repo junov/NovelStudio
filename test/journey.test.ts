@@ -348,6 +348,12 @@ describe('JRN-003: Journey Rail Stage Acceptance Action', () => {
 	});
 
 	// @spec JRN-003
+	it('only enables canAccept for stages with uncommitted diffs', () => {
+		expect(railSource).toContain('const hasUncommittedDiffs = stageUnstaged.length > 0;');
+		expect(railSource).toContain('canAccept: hasUncommittedDiffs');
+	});
+
+	// @spec JRN-003
 	it('matches unstaged working tree files to pipeline stages', () => {
 		const initialStage = PIPELINE.find((s) => s.id === 'initial')!;
 		const unstaged = new Set(['initial/synopsis.md', 'initial/config.md', 'world/characters/CHR-001.md']);

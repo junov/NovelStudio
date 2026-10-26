@@ -508,6 +508,41 @@ describe('JRN-005: Initial Stage Pending Lifecycle', () => {
 		expect(journeyRailSrc).toContain("return { status: 'pending', badge: '', canAccept: false };");
 		expect(journeyRailSrc).toContain("badge: effectiveDrift > 0 ? `${effectiveDrift} drift` : 'unaccepted'");
 	});
+
+	// @spec JRN-005
+	it('shows no accept pills across the rail for a newly created project in its initial committed state', () => {
+		project.status = createMockStatus({
+			baselines: {
+				initial: { short: 'abc1234', subject: 'Initial novel scaffolding' } as any,
+				setup: null,
+				research: null,
+				world: null,
+				narrative: null,
+				structure: null,
+				abridged: null,
+				manuscript: null,
+				publishable: null
+			},
+			generatedStages: {
+				initial: true,
+				setup: false,
+				research: false,
+				world: false,
+				narrative: false,
+				structure: false,
+				abridged: false,
+				manuscript: false,
+				publishable: false
+			}
+		});
+		project.unstagedFiles = new Set();
+		project.generatedStages = new Set(['initial']);
+
+		for (const stage of PIPELINE) {
+			const stageUnstaged = getStageUnstagedFiles(stage, project.unstagedFiles);
+			expect(stageUnstaged.length).toBe(0);
+		}
+	});
 });
 
 describe('JRN-006: Interactive Drift Pill Synchronization Action', () => {

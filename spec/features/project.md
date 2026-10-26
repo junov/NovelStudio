@@ -66,4 +66,17 @@ Acceptance:
   when rendered,
   then it does not contain a "Pipeline Quick Actions" section or redundant pipeline stage action boxes.
 
+### PROJ-006: Initial Project Files Commitment and Clean Initial State
+WHEN a new novel project is created,
+THE SYSTEM SHALL stage and commit all initial files (scaffolding templates, `.gitignore`, directory markers, initial project configuration, and the seed synopsis) and establish the `initial` stage baseline, ensuring that the working tree is completely clean and zero "Accept" pills are visible on the Journey Rail in the initial project state.
+
+Acceptance:
+- Given a user creates a new project via the New Project modal,
+  when project scaffolding and initialization complete,
+  then all initial files including `initial/synopsis.md`, `initial/config.md`, `.gitignore`, and scaffolded directory markers are staged and committed to git with the `Novel-Sync: initial` trailer.
+- Given a newly created project in its initial state,
+  when displayed on the Journey Rail,
+  then no stage displays an "Accept" pill action, the initial stage is in the "synced" state, and all subsequent stages are in the "pending" state.
+
+
 

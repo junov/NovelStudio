@@ -2,7 +2,7 @@
 	import { project } from '$lib/stores/project.svelte';
 	import { settings } from '$lib/stores/settings.svelte';
 	import { agent } from '$lib/agent/engine.svelte';
-	import { ensureDir, runSpecnovel, pickFolder } from '$lib/tauri';
+	import { ensureDir, runSpecnovel, runGit, pickFolder } from '$lib/tauri';
 
 	interface Props {
 		onClose: () => void;
@@ -59,6 +59,19 @@
 				if (author) cfg = cfg.replace(/- \*\*Name:\*\* .*/, `- **Name:** ${author}`);
 				await project.write('initial/config.md', cfg);
 			}
+
+			// 6. Stage and commit all initial files so repository is clean and initial stage baseline is accepted (@spec PROJ-006, JRN-003, JRN-005)
+			await runGit(projectPath, ['add', '-A']);
+			const acceptRes = await project.acceptStage(
+				'initial',
+				`Initial novel scaffolding and seed synopsis: ${title || 'Untitled Novel'}`
+			);
+			if (!acceptRes.success) {
+				console.warn('Initial stage baseline accept warning:', acceptRes.error);
+			}
+
+			// Advance to setup stage for the discovery interview
+			project.setCurrentStage('setup');
 
 			await project.refresh();
 			onClose();

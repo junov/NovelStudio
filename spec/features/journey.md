@@ -93,6 +93,9 @@ Acceptance:
 - Given an author accepts the stage baseline,
   when accepted,
   then the stage transitions to the "synced" state.
+- Given a novel project in its initial state immediately following creation,
+  when viewed on the Journey Rail,
+  then all initial files are committed, the initial stage is in the "synced" state, and zero "Accept" pills are exhibited across the pipeline.
 
 ### JRN-006: Interactive Drift Pill Synchronization Action
 WHEN a stage on the Journey Rail exhibits local or upstream drift,

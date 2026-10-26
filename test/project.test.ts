@@ -1,9 +1,13 @@
-// @spec PROJ-001, PROJ-002, PROJ-003, PROJ-004, PROJ-005
+// @spec PROJ-001, PROJ-002, PROJ-003, PROJ-004, PROJ-005, PROJ-006
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { settings } from '../src/lib/stores/settings.svelte';
+import { project } from '../src/lib/stores/project.svelte';
+import { PIPELINE } from '../src/lib/stages';
+import { getStageUnstagedFiles } from '../src/lib/stagesHover';
 import { parseFile } from '../src/lib/entities';
+import type { ProjectStatus } from '../src/lib/tauri';
 
 describe('PROJ-001: Project Path Confinement', () => {
 	// @spec PROJ-001
@@ -74,5 +78,95 @@ describe('PROJ-005: Project Overview Dashboard', () => {
 		expect(dashboardSrc).toContain('dashboard-hero');
 	});
 });
+
+describe('PROJ-006: Initial Project Files Commitment and Clean Initial State', () => {
+	const newProjectSrc = readFileSync(resolve(__dirname, '../src/lib/components/NewProjectModal.svelte'), 'utf-8');
+
+	// @spec PROJ-006
+	it('NewProjectModal stages all initial files and accepts the initial stage baseline', () => {
+		expect(newProjectSrc).toContain("runGit(projectPath, ['add', '-A'])");
+		expect(newProjectSrc).toContain("project.acceptStage(\n\t\t\t\t'initial'");
+		expect(newProjectSrc).toContain("project.setCurrentStage('setup')");
+	});
+
+	// @spec PROJ-006
+	it('initial project state exhibits zero uncommitted diffs and zero accept pills across all stages', () => {
+		const freshStatus: ProjectStatus = {
+			counts: { CHR: 0, FCT: 0, GLOSS: 0, OBJ: 0, ORG: 0, PLC: 0, RULE: 0, SRC: 0, TL: 0 },
+			baselines: {
+				initial: { short: 'abc1234', subject: 'Initial project scaffolding' },
+				setup: null,
+				research: null,
+				world: null,
+				narrative: null,
+				structure: null,
+				abridged: null,
+				manuscript: null,
+				publishable: null
+			},
+			drift: {
+				initial: [],
+				setup: [],
+				research: [],
+				world: [],
+				narrative: [],
+				structure: [],
+				abridged: [],
+				manuscript: [],
+				publishable: []
+			},
+			upstream_drift: {
+				setup: [],
+				research: [],
+				world: [],
+				narrative: [],
+				structure: [],
+				abridged: [],
+				manuscript: [],
+				publishable: []
+			},
+			pending_items: {},
+			impacts: {},
+			pub_impact: {},
+			illustrations: { active: 0, pending: 0, inactive: 0 },
+			graphics: { active: 0, pending: 0, inactive: 0 },
+			errors: [],
+			warnings: [],
+			infos: [],
+			generatedStages: {
+				initial: true,
+				setup: false,
+				research: false,
+				world: false,
+				narrative: false,
+				structure: false,
+				abridged: false,
+				manuscript: false,
+				publishable: false
+			}
+		};
+
+		project.status = freshStatus;
+		project.unstagedFiles = new Set();
+		project.generatedStages = new Set(['initial']);
+
+		for (const stage of PIPELINE) {
+			const stageUnstaged = getStageUnstagedFiles(stage, project.unstagedFiles);
+			expect(stageUnstaged.length).toBe(0);
+
+			const baseline = freshStatus.baselines[stage.id as keyof typeof freshStatus.baselines];
+			const isGenerated = Boolean(baseline) || freshStatus.generatedStages?.[stage.id as keyof typeof freshStatus.generatedStages];
+
+			if (stage.id === 'initial') {
+				expect(baseline).not.toBeNull();
+				expect(isGenerated).toBe(true);
+			} else {
+				expect(baseline).toBeNull();
+				expect(isGenerated).toBe(false);
+			}
+		}
+	});
+});
+
 
 

@@ -328,19 +328,29 @@
 
 	/* @spec JRN-004 */
 	.stage-node.current {
-		border-color: rgba(158, 75, 28, 0.45);
+		border-color: var(--line-strong);
 		transform: translateY(1px);
 		background:
 			radial-gradient(
 				ellipse at center,
-				rgba(255, 255, 255, 0.4) 0%,
-				rgba(255, 252, 232, 0.4) 20%,
-				rgba(247, 231, 150, 0.4) 48%,
-				rgba(230, 191, 74, 0.4) 68%,
-				rgba(179, 111, 32, 0.4) 86%,
-				rgba(138, 59, 18, 0.4) 100%
+				rgba(255, 255, 255, 0.25) 0%,
+				rgba(245, 240, 230, 0.2) 25%,
+				rgba(220, 205, 185, 0.18) 55%,
+				rgba(160, 135, 110, 0.16) 80%,
+				rgba(110, 75, 45, 0.18) 100%
 			),
-			var(--paper);
+			#ffffff;
+	}
+	:global([data-theme='dark']) .stage-node.current {
+		background:
+			radial-gradient(
+				ellipse at center,
+				rgba(255, 255, 255, 0.04) 0%,
+				rgba(40, 35, 30, 0.2) 30%,
+				rgba(25, 20, 15, 0.4) 70%,
+				rgba(15, 10, 8, 0.65) 100%
+			),
+			#36322a;
 	}
 	.stage-node.current .node-step {
 		background: var(--accent);
@@ -348,27 +358,26 @@
 		font-weight: 700;
 	}
 	.stage-node.current .node-label {
-		color: #2b2620;
+		color: var(--ink);
 		font-weight: 700;
 	}
 	.stage-node.current .pill.synced {
-		color: #2e6239;
-		background: rgba(46, 98, 57, 0.14);
-		font-weight: 600;
+		color: var(--ok);
+		background: color-mix(in srgb, var(--ok) 18%, transparent);
 	}
 	.stage-node.current button.pill.drift-btn,
 	.stage-node.current .pill.needs-sync {
-		color: #7c2d12;
-		border-color: rgba(124, 45, 18, 0.45);
-		background: rgba(124, 45, 18, 0.12);
+		color: var(--warn);
+		border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+		background: color-mix(in srgb, var(--warn) 15%, transparent);
 	}
 	.stage-node.current .run-skill-btn {
-		background: rgba(138, 59, 18, 0.15);
-		color: #8a3b12;
+		background: color-mix(in srgb, var(--accent) 15%, transparent);
+		color: var(--accent);
 	}
 	.stage-node.current .run-skill-btn:hover:not(.disabled) {
-		background: #8a3b12;
-		color: #ffffff;
+		background: var(--accent);
+		color: var(--accent-ink);
 	}
 
 	.node-badge-row {

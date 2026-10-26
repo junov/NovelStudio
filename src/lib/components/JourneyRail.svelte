@@ -302,24 +302,24 @@
 
 	/* @spec JRN-004 */
 	.stage-node.current {
-		border-color: #b45309;
+		border-color: #9e4b1c;
 		transform: translateY(1px);
 		background: radial-gradient(
 			ellipse at center,
 			#ffffff 0%,
-			#fffaee 25%,
-			#fcd68a 60%,
-			#d97706 85%,
-			#8f3e00 100%
+			#fbf4eb 30%,
+			#e4cca8 65%,
+			#b87532 85%,
+			#8a3b12 100%
 		);
 	}
 	.stage-node.current .node-step {
-		background: #8a3b12;
-		color: #ffffff;
+		background: var(--accent);
+		color: var(--accent-ink);
 		font-weight: 700;
 	}
 	.stage-node.current .node-label {
-		color: #24180a;
+		color: #2b2620;
 		font-weight: 700;
 	}
 	.stage-node.current .pill.synced {

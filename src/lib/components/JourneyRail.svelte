@@ -274,19 +274,12 @@
 	.stage-node.current {
 		opacity: 1;
 		border-color: var(--line-strong);
-		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-		transform: translateY(-1px);
+		box-shadow: 3px 4px 12px rgba(0, 0, 0, 0.14), 1px 2px 4px rgba(0, 0, 0, 0.08);
+		transform: translate(-1px, -1px);
 		background: var(--paper);
 	}
-	.stage-node.current::after {
-		content: '';
-		position: absolute;
-		bottom: -1px;
-		left: 10px;
-		right: 10px;
-		height: 2.5px;
-		background: var(--accent);
-		border-radius: 2px 2px 0 0;
+	:global([data-theme='dark']) .stage-node.current {
+		box-shadow: 3px 4px 16px rgba(0, 0, 0, 0.55), 1px 2px 5px rgba(0, 0, 0, 0.35);
 	}
 	.stage-node.current .node-step {
 		background: var(--accent);

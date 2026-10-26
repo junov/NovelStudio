@@ -41,3 +41,16 @@ Acceptance:
 - Given the author clicks the "+" button next to the project title widget,
   when clicked,
   then the New Project modal opens to allow scaffolding a new novel project.
+
+### PROJ-004: Clean Initial Project Integrity State
+WHEN a novel project is scaffolded and initialized,
+THE SYSTEM SHALL ensure that the project's initial state contains zero integrity check errors and zero dangling references, ignoring guidance and template examples contained within HTML comments.
+
+Acceptance:
+- Given a newly created novel project directory,
+  when `specnovel init` is executed followed by `specnovel check`,
+  then the check completes with exit code 0 and zero integrity check errors.
+- Given template guidance and example entities enclosed inside HTML comments (`<!-- ... -->`),
+  when parsed for project model definitions and references,
+  then the commented examples are ignored and do not produce dangling reference errors or Chekhov's gun violations.
+

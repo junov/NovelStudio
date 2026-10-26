@@ -93,7 +93,10 @@ export interface Reference {
 	context?: string;
 }
 
-/** Parse ID headings (definitions) and wiki-link references from one markdown file. */
+/** 
+ * Parse ID headings (definitions) and wiki-link references from one markdown file.
+ * @spec PROJ-004
+ */
 export function parseFile(path: string, text: string): { defs: Definition[]; refs: Reference[] } {
 	const defs: Definition[] = [];
 	const refs: Reference[] = [];

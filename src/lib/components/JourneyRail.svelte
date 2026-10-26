@@ -111,7 +111,14 @@
 		if (acceptingStage) return;
 		acceptingStage = stage.sync;
 		try {
-			await project.acceptStage(stage.sync);
+			const res = await project.acceptStage(stage.sync);
+			if (!res.success) {
+				console.error(`Failed to accept stage ${stage.id}:`, res.error);
+				alert(`Failed to accept ${stage.label} stage:\n${res.error || 'Unknown error'}`);
+			}
+		} catch (e) {
+			console.error(`Error accepting stage ${stage.id}:`, e);
+			alert(`Error accepting ${stage.label} stage:\n${e}`);
 		} finally {
 			acceptingStage = null;
 		}

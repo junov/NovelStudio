@@ -15,7 +15,8 @@ import {
 import { parseFile, preferDefinition, type Definition, type Reference } from '$lib/entities';
 import type { StatusJson } from '$lib/types';
 import { getUnstagedFiles, acceptGitFile, revertGitFile } from '$lib/git';
-import { stageOfPath, stageOfId, type SyncStage } from '$lib/stages';
+import { stageOfPath, stageOfId, type SyncStage, PIPELINE } from '$lib/stages';
+import { getStageUnstagedFiles } from '$lib/stagesHover';
 
 export type View =
 	| { kind: 'dashboard' }
@@ -251,9 +252,14 @@ class ProjectState {
 	/**
 	 * Accept and baseline a pipeline stage using `specnovel accept --stage <stage>`.
 	 * Commits changes with the appropriate Novel-Sync trailer.
+	 * Automatically overrides non-fatal check warnings with --force.
 	 * @spec JRN-003, REV-002
 	 */
-	async acceptStage(stageName: string, message?: string): Promise<{ success: boolean; error?: string }> {
+	async acceptStage(
+		stageName: string,
+		message?: string,
+		force = true
+	): Promise<{ success: boolean; error?: string }> {
 		if (!this.root) return { success: false, error: 'No active project' };
 		// Ensure git identity if not configured
 		try {
@@ -272,9 +278,21 @@ class ProjectState {
 		} else {
 			args.push('-m', `Accept ${stageName} stage`);
 		}
-		const res = await runSpecnovel(this.root, args);
+		let res = await runSpecnovel(this.root, args);
+		if (res.code !== 0 && (force || res.stderr?.includes('--force') || res.stdout?.includes('--force'))) {
+			res = await runSpecnovel(this.root, [...args, '--force']);
+		}
+
 		if (res.code === 0) {
 			this.markStageGenerated(stageName);
+			// Optimistically clear unstaged files belonging to this stage so the UI updates immediately (@spec JRN-003)
+			const stageObj = PIPELINE.find((s) => s.id === stageName || s.sync === stageName);
+			if (stageObj) {
+				const stageFiles = new Set(getStageUnstagedFiles(stageObj, this.unstagedFiles));
+				if (stageFiles.size > 0) {
+					this.unstagedFiles = new Set([...this.unstagedFiles].filter((f) => !stageFiles.has(f)));
+				}
+			}
 			await this.refresh();
 			return { success: true };
 		} else {

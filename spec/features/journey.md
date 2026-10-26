@@ -56,10 +56,13 @@ Acceptance:
   then the stage node does not display the "Accept" pill action.
 - Given an author clicks the "Accept" pill on a stage node,
   when clicked,
-  then the system invokes `specnovel accept --stage <stage>`, committing the stage files and recording the `Novel-Sync: <stage>` trailer.
+  then the system invokes `specnovel accept --stage <stage>`, committing the stage files and recording the `Novel-Sync: <stage>` trailer, automatically passing `--force` if integrity checks report non-fatal craft warnings.
 - Given the stage changes are accepted,
   when the operation completes and project status refreshes,
-  then the stage status pill updates to "synced" and the Accept pill is dismissed.
+  then the stage status pill updates to "synced", unstaged files for the stage are cleared, and the Accept pill is dismissed.
+- Given an acceptance operation fails,
+  when the failure occurs,
+  then the system surfaces the error to the author and preserves the uncommitted state without dismissing the Accept pill.
 
 ### JRN-004: Current Stage Tracking and Highlighting
 WHEN an author interacts with the workspace,

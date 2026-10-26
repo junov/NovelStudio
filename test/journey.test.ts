@@ -395,6 +395,16 @@ describe('JRN-003: Journey Rail Stage Acceptance Action', () => {
 		// After agent or user populates synopsis file
 		expect(hasStageGeneratedContent(initialStage, freshStatus, [{ path: 'initial/synopsis.md' }])).toBe(true);
 	});
+
+	// @spec JRN-003
+	it('acceptStage falls back to --force on check failure and dismisses stage unstaged files', async () => {
+		const projectSrc = readFileSync(resolve(__dirname, '../src/lib/stores/project.svelte.ts'), 'utf-8');
+		expect(projectSrc).toContain("[...args, '--force']");
+		expect(projectSrc).toContain('res.stderr?.includes');
+		expect(projectSrc).toContain('this.unstagedFiles = new Set');
+		expect(railSource).toContain('if (!res.success)');
+		expect(railSource).toContain('alert(');
+	});
 });
 
 describe('JRN-004: Current Stage Tracking and Highlighting', () => {

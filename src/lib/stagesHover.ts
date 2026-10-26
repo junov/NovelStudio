@@ -102,6 +102,59 @@ export function getStageStepInfo(
 }
 
 /**
+ * Filters unstaged file paths belonging to a stage.
+ * @spec JRN-003
+ */
+export function getStageUnstagedFiles(stage: PipelineStage, unstagedFiles: Set<string>): string[] {
+	const stagePrefixes = stage.paths.map((p) => (p.includes('.') ? p : p.replace(/\/?$/, '/')));
+	return Array.from(unstagedFiles).filter((f) =>
+		stagePrefixes.some((p) =>
+			p.endsWith('/')
+				? f.startsWith(p) || (f.endsWith('/') && p.startsWith(f))
+				: f === p || (f.endsWith('/') && p.startsWith(f))
+		)
+	);
+}
+
+/**
+ * Checks whether an unbaselined stage has generated content ready for initial baseline acceptance.
+ * @spec JRN-003
+ */
+export function hasStageGeneratedContent(
+	stage: PipelineStage,
+	status: StatusJson | null,
+	files: { path: string }[]
+): boolean {
+	if (!status) return false;
+	switch (stage.id) {
+		case 'initial':
+			return files.some((f) => f.path.startsWith('initial/synopsis.md') || f.path === 'initial/synopsis.md');
+		case 'setup':
+			return (status.catalog?.THM ?? 0) > 0 || files.some((f) => f.path.startsWith('setup/brief.md'));
+		case 'research':
+			return (status.catalog?.RQ ?? 0) > 0;
+		case 'world':
+			return (
+				(status.catalog?.CHR ?? 0) > 0 ||
+				(status.catalog?.PLC ?? 0) > 0 ||
+				(status.catalog?.FCT ?? 0) > 0
+			);
+		case 'narrative':
+			return (status.catalog?.ARC ?? 0) > 0 || (status.beats ?? 0) > 0;
+		case 'structure':
+			return (status.scenes?.structure ?? 0) > 0;
+		case 'abridged':
+			return (status.words?.abridged ?? 0) > 0;
+		case 'manuscript':
+			return (status.words?.manuscript ?? 0) > 0;
+		case 'publishable':
+			return (status.illustrations?.active ?? 0) > 0;
+		default:
+			return false;
+	}
+}
+
+/**
  * Extracts upstream drift and local drift for a stage.
  */
 function getStageDriftDetails(stage: PipelineStage, status: StatusJson | null) {
@@ -178,6 +231,16 @@ export function getStagePillInfo(
 				: undefined) ??
 			(stage.id === 'world' ? status?.pending_items?.['research'] : undefined) ??
 			[];
+
+		if (badge === 'unaccepted' || (!status?.baselines?.[syncName] && pendingCount === 0)) {
+			return {
+				title: `${stage.label} Ready for Acceptance`,
+				badge,
+				status: pillStatus,
+				description: `Initial content for ${stage.label} has been generated and is ready to be accepted into Git baseline.`,
+				items: stage.paths
+			};
+		}
 
 		return {
 			title: 'Pending Generation',

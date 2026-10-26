@@ -4,7 +4,9 @@ import { PIPELINE, resolveStageExecution } from '../src/lib/stages';
 import {
 	getStageStepInfo,
 	getStagePillInfo,
-	getStageActionInfo
+	getStageActionInfo,
+	getStageUnstagedFiles,
+	hasStageGeneratedContent
 } from '../src/lib/stagesHover';
 import type { StatusJson } from '../src/lib/types';
 import { readFileSync } from 'fs';
@@ -341,6 +343,50 @@ describe('JRN-003: Journey Rail Stage Acceptance Action', () => {
 		expect(railSource).toContain('accept-btn');
 		expect(railSource).toContain('acceptStage');
 		expect(railSource).toContain('project.acceptStage');
+		expect(railSource).toContain('st.canAccept');
+	});
+
+	// @spec JRN-003
+	it('matches unstaged working tree files to pipeline stages', () => {
+		const initialStage = PIPELINE.find((s) => s.id === 'initial')!;
+		const unstaged = new Set(['initial/synopsis.md', 'initial/config.md', 'world/characters/CHR-001.md']);
+		const matches = getStageUnstagedFiles(initialStage, unstaged);
+		expect(matches).toEqual(['initial/synopsis.md', 'initial/config.md']);
+	});
+
+	// @spec JRN-003
+	it('detects generated content for unbaselined stages ready to accept', () => {
+		const initialStage = PIPELINE.find((s) => s.id === 'initial')!;
+		const freshStatus = createMockStatus({
+			baselines: {
+				initial: null,
+				setup: null,
+				research: null,
+				world: null,
+				narrative: null,
+				structure: null,
+				abridged: null,
+				manuscript: null,
+				publishable: null
+			},
+			generatedStages: {
+				initial: false,
+				setup: false,
+				research: false,
+				world: false,
+				narrative: false,
+				structure: false,
+				abridged: false,
+				manuscript: false,
+				publishable: false
+			}
+		});
+
+		// Before synopsis exists
+		expect(hasStageGeneratedContent(initialStage, freshStatus, [])).toBe(false);
+
+		// After agent or user populates synopsis file
+		expect(hasStageGeneratedContent(initialStage, freshStatus, [{ path: 'initial/synopsis.md' }])).toBe(true);
 	});
 });
 

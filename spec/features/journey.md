@@ -48,7 +48,7 @@ WHEN a pipeline stage on the Journey Rail has unaccepted changes or drift,
 THE SYSTEM SHALL provide an interactive "Accept" pill action on the stage node that runs `specnovel accept --stage <stage>` to commit and baseline the stage changes in Git.
 
 Acceptance:
-- Given a stage on the Journey Rail with drift or unaccepted stage changes,
+- Given a stage on the Journey Rail with drift or unaccepted stage changes (including newly generated stage content prior to its initial baseline),
   when displayed,
   then the stage node provides an interactive "Accept" pill action adjacent to its status pill.
 - Given an author clicks the "Accept" pill on a stage node,

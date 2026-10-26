@@ -6,7 +6,11 @@
 	import { project } from '$lib/stores/project.svelte';
 	import { PIPELINE, resolveStageExecution, type PipelineStage } from '$lib/stages';
 	import { agent } from '$lib/agent/engine.svelte';
-	import { getStageActionInfo } from '$lib/stagesHover';
+	import {
+		getStageActionInfo,
+		getStageUnstagedFiles,
+		hasStageGeneratedContent
+	} from '$lib/stagesHover';
 	import JourneyHoverCard from './JourneyHoverCard.svelte';
 
 	let railContainer = $state<HTMLDivElement | null>(null);
@@ -15,7 +19,7 @@
 		type: 'step' | 'pill' | 'play';
 		stage: PipelineStage;
 		stageIndex: number;
-		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string };
+		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string; canAccept?: boolean };
 		targetRect: DOMRect;
 		railRect: DOMRect;
 	} | null>(null);
@@ -24,7 +28,7 @@
 		type: 'step' | 'pill' | 'play',
 		stage: PipelineStage,
 		stageIndex: number,
-		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string },
+		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string; canAccept?: boolean },
 		el: HTMLElement
 	) {
 		if (!railContainer) return;
@@ -42,16 +46,21 @@
 		activeHover = null;
 	}
 
-	function getStageState(stage: PipelineStage): { status: 'needs-sync' | 'synced' | 'pending'; badge: string } {
+	function getStageState(stage: PipelineStage): {
+		status: 'needs-sync' | 'synced' | 'pending';
+		badge: string;
+		canAccept: boolean;
+	} {
 		const status = project.status;
-		if (!status) return { status: 'pending', badge: '' };
+		if (!status) return { status: 'pending', badge: '', canAccept: false };
 
 		const syncName = stage.sync;
 		const baseline = syncName ? status.baselines?.[syncName] : null;
 		const localDrift = syncName && status.drift?.[syncName] ? status.drift[syncName].length : 0;
 		const upstreamDrift =
 			syncName && status.upstream_drift?.[syncName] ? status.upstream_drift[syncName].length : 0;
-		const totalDrift = localDrift + upstreamDrift;
+		const stageUnstaged = getStageUnstagedFiles(stage, project.unstagedFiles);
+		const effectiveDrift = Math.max(localDrift + upstreamDrift, stageUnstaged.length);
 
 		let pendingCount = 0;
 		if (stage.id === 'abridged') pendingCount = status.pending?.abridged ?? 0;
@@ -63,19 +72,33 @@
 			pendingCount = status.pending_items?.['research']?.length ?? status.catalog?.['RQ'] ?? 0;
 		}
 
-		if (totalDrift > 0 || pendingCount > 0) {
+		if (effectiveDrift > 0 || pendingCount > 0) {
 			return {
 				status: 'needs-sync',
-				badge: totalDrift > 0 ? `${totalDrift} drift` : `${pendingCount} pending`
+				badge: effectiveDrift > 0 ? `${effectiveDrift} drift` : `${pendingCount} pending`,
+				canAccept: effectiveDrift > 0
 			};
 		}
 
+		// Stage unbaselined: check if stage has generated content ready for initial baseline acceptance
+		if (!baseline && !status.generatedStages?.[stage.id]) {
+			const hasContent = hasStageGeneratedContent(stage, status, project.files);
+			if (hasContent) {
+				return {
+					status: 'needs-sync',
+					badge: 'unaccepted',
+					canAccept: true
+				};
+			}
+			return { status: 'pending', badge: '', canAccept: false };
+		}
+
 		if (baseline || status.generatedStages?.[stage.id]) {
-			return { status: 'synced', badge: 'synced' };
+			return { status: 'synced', badge: 'synced', canAccept: false };
 		}
 
 		// Stage hasn't been generated/accepted yet
-		return { status: 'pending', badge: '' };
+		return { status: 'pending', badge: '', canAccept: false };
 	}
 
 	let acceptingStage = $state<string | null>(null);
@@ -134,7 +157,7 @@
 							{st.badge}
 						</span>
 					{/if}
-					{#if st.status === 'needs-sync'}
+					{#if st.canAccept}
 						<button
 							class="pill accept-btn"
 							disabled={acceptingStage === stage.sync}

@@ -302,17 +302,19 @@
 
 	/* @spec JRN-004 */
 	.stage-node.current {
-		border-color: #9e4b1c;
+		border-color: rgba(158, 75, 28, 0.6);
 		transform: translateY(1px);
-		background: radial-gradient(
-			ellipse at center,
-			#ffffff 0%,
-			#fffce8 20%,
-			#f7e796 48%,
-			#e6bf4a 68%,
-			#b36f20 86%,
-			#8a3b12 100%
-		);
+		background:
+			radial-gradient(
+				ellipse at center,
+				rgba(255, 255, 255, 0.6) 0%,
+				rgba(255, 252, 232, 0.6) 20%,
+				rgba(247, 231, 150, 0.6) 48%,
+				rgba(230, 191, 74, 0.6) 68%,
+				rgba(179, 111, 32, 0.6) 86%,
+				rgba(138, 59, 18, 0.6) 100%
+			),
+			var(--paper);
 	}
 	.stage-node.current .node-step {
 		background: var(--accent);

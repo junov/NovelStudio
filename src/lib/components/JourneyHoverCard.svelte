@@ -81,6 +81,13 @@
 			</div>
 		{/if}
 
+		{#if pillInfo.actionHint}
+			<div class="action-hint">
+				<span class="hint-icon">⚡</span>
+				<span class="hint-text">{pillInfo.actionHint}</span>
+			</div>
+		{/if}
+
 		{#if pillInfo.lastAcceptedDate}
 			<div class="accepted-info">
 				<span class="footer-label">Last Accepted:</span>
@@ -304,5 +311,22 @@
 		font-size: 11.5px;
 		line-height: 1.4;
 		color: var(--ink-soft);
+	}
+
+	.action-hint {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin-top: 4px;
+		padding: 4px 8px;
+		background: color-mix(in srgb, var(--accent) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+		border-radius: 4px;
+		font-size: 11px;
+		color: var(--accent);
+		font-weight: 500;
+	}
+	.hint-icon {
+		font-size: 12px;
 	}
 </style>

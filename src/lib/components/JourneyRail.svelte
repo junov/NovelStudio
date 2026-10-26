@@ -177,7 +177,6 @@
 							<button
 								class="pill {st.status} drift-btn"
 								disabled={agent.status === 'running'}
-								title="Click to synchronize stage with upstream changes"
 								onclick={(e) => {
 									e.stopPropagation();
 									syncStage(stage);
@@ -210,7 +209,6 @@
 						<button
 							class="pill accept-btn"
 							disabled={acceptingStage === stage.sync}
-							title="Accept stage baseline ({stage.sync})"
 							onclick={(e) => {
 								e.stopPropagation();
 								project.setCurrentStage(stage.id);

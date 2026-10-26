@@ -21,6 +21,7 @@ export interface StagePillInfo {
 	status: 'needs-sync' | 'synced' | 'pending';
 	items: string[];
 	lastAcceptedDate?: string;
+	actionHint?: string;
 }
 
 export interface StageActionInfo {
@@ -196,8 +197,9 @@ export function getStagePillInfo(
 				title: 'Upstream Changes Detected',
 				badge,
 				status: pillStatus,
-				description: `${allUpstream.length} upstream item(s) have changed since ${stage.label} was last accepted. Click pill to synchronize.`,
-				items: allUpstream
+				description: `${allUpstream.length} upstream item(s) have changed since ${stage.label} was last accepted.`,
+				items: allUpstream,
+				actionHint: 'Click to synchronize stage with upstream changes'
 			};
 		}
 
@@ -206,8 +208,9 @@ export function getStagePillInfo(
 				title: `${stage.label} Changes Detected`,
 				badge,
 				status: pillStatus,
-				description: `${localDrift.length} item(s) have changed in ${stage.label} since last sync. Click pill to synchronize.`,
-				items: localDrift
+				description: `${localDrift.length} item(s) have changed in ${stage.label} since last sync.`,
+				items: localDrift,
+				actionHint: 'Click to synchronize stage'
 			};
 		}
 

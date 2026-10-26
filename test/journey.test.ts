@@ -486,13 +486,30 @@ describe('JRN-005: Initial Stage Pending Lifecycle', () => {
 
 describe('JRN-006: Interactive Drift Pill Synchronization Action', () => {
 	const railSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
+	const hoverCardSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyHoverCard.svelte'), 'utf-8');
 
 	// @spec JRN-006
-	it('renders drift pills as interactive buttons that trigger stage synchronization', () => {
+	it('renders drift pills as interactive buttons that trigger stage synchronization without native tooltip attributes', () => {
 		expect(railSource).toContain("st.badge.includes('drift')");
 		expect(railSource).toContain('drift-btn');
 		expect(railSource).toContain('syncStage(stage)');
 		expect(railSource).toContain("disabled={agent.status === 'running'}");
+		// Native browser title attribute omitted to prevent collision with custom hover card
+		expect(railSource).not.toMatch(/<button[^>]*class="[^"]*drift-btn[^"]*"[^>]*title=/);
+	});
+
+	// @spec JRN-006
+	it('integrates synchronization action guidance directly into the hover card', () => {
+		expect(hoverCardSource).toContain('action-hint');
+		expect(hoverCardSource).toContain('pillInfo.actionHint');
+		const setupStage = PIPELINE.find((s) => s.id === 'setup')!;
+		const driftStatus = createMockStatus({
+			drift: { setup: ['brief.md'] },
+			upstream_drift: { setup: [] }
+		});
+		const pillInfo = getStagePillInfo(setupStage, driftStatus, '1 drift', 'needs-sync');
+		expect(pillInfo.actionHint).toBeDefined();
+		expect(pillInfo.actionHint).toContain('synchronize');
 	});
 
 	// @spec JRN-006

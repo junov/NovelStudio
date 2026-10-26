@@ -237,7 +237,7 @@
 		justify-content: space-between;
 		gap: 6px;
 		overflow-x: auto;
-		padding: 4px 6px 6px 4px;
+		padding: 4px 8px 8px 4px;
 	}
 
 	.stage-node {
@@ -274,12 +274,12 @@
 	.stage-node.current {
 		opacity: 1;
 		border-color: var(--line-strong);
-		box-shadow: 2px 3px 6px rgba(115, 35, 20, 0.28), 1px 1px 2px rgba(85, 20, 12, 0.18);
+		box-shadow: 4px 5px 8px rgba(115, 30, 18, 0.46), 2px 3px 3px rgba(85, 20, 12, 0.32);
 		transform: translateY(-1px);
 		background: var(--paper);
 	}
 	:global([data-theme='dark']) .stage-node.current {
-		box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.65), 1px 2px 5px rgba(180, 60, 35, 0.35);
+		box-shadow: 4px 5px 10px rgba(0, 0, 0, 0.8), 2px 3px 5px rgba(200, 70, 40, 0.55);
 	}
 	.stage-node.current .node-step {
 		background: var(--accent);

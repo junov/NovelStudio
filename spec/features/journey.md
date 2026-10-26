@@ -70,5 +70,21 @@ Acceptance:
   when clicked,
   then that stage becomes the active current stage and receives the visual highlight.
 
+### JRN-005: Initial Stage Pending Lifecycle
+WHEN a novel project is opened or initialized,
+THE SYSTEM SHALL present all pipeline stages in the pending state until each stage is generated for the first time, transitioning unbaselined stages to an unaccepted state with an accept action only after stage generation has completed.
+
+Acceptance:
+- Given a newly created or ungenerated project stage,
+  when displayed on the Journey Rail,
+  then the stage begins in the "pending" state without exhibiting drift or unaccepted pills.
+- Given an author runs stage generation via the agent or generates initial stage content,
+  when generation completes,
+  then the stage transitions from "pending" to "needs-sync" with an "unaccepted" status and displays the interactive "Accept" pill.
+- Given an author accepts the stage baseline,
+  when accepted,
+  then the stage transitions to the "synced" state.
+
+
 
 

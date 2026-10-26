@@ -1,4 +1,4 @@
-// @spec JRN-001, JRN-002, JRN-003, JRN-004
+// @spec JRN-001, JRN-002, JRN-003, JRN-004, JRN-005
 import { describe, it, expect } from 'vitest';
 import { PIPELINE, resolveStageExecution } from '../src/lib/stages';
 import {
@@ -302,7 +302,7 @@ describe('JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling (I
 		expect(pubAction.disabledReason).toContain('0 rendered scenes');
 	});
 
-	// @spec JRN-001, JRN-002, JRN-003, JRN-004
+	// @spec JRN-001, JRN-002, JRN-003, JRN-004, JRN-005
 	it('uses craft action titles and does not expose raw skill names in play button hover cards', () => {
 		const status = createMockStatus({
 			pending: { abridged: 2, manuscript: 3 },
@@ -410,4 +410,62 @@ describe('JRN-004: Current Stage Tracking and Highlighting', () => {
 		expect(journeyRailSrc).toContain('project.setCurrentStage(stage.id)');
 	});
 });
+
+describe('JRN-005: Initial Stage Pending Lifecycle', () => {
+	const journeyRailSrc = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
+
+	// @spec JRN-005
+	it('treats ungenerated stages as not generated until marked or baselined', () => {
+		project.status = createMockStatus({
+			baselines: {
+				initial: null,
+				setup: null,
+				research: null,
+				world: null,
+				narrative: null,
+				structure: null,
+				abridged: null,
+				manuscript: null,
+				publishable: null
+			},
+			generatedStages: {
+				initial: false,
+				setup: false,
+				research: false,
+				world: false,
+				narrative: false,
+				structure: false,
+				abridged: false,
+				manuscript: false,
+				publishable: false
+			},
+			catalog: { RQ: 0, FCT: 0, CHR: 0, BET: 0, ILL: 0, DIR: 0 },
+			beats: 0,
+			scenes: { structure: 0, outline: 0, abridged: 0, manuscript: 0 },
+			words: { abridged: 0, manuscript: 0 },
+			illustrations: { active: 0, pending: 0, inactive: 0 },
+			graphics: { active: 0, pending: 0, inactive: 0 }
+		});
+		project.generatedStages = new Set();
+
+		// Initially all ungenerated stages report false
+		for (const stage of PIPELINE) {
+			expect(project.isStageGenerated(stage.id)).toBe(false);
+		}
+
+		// Marking initial as generated transitions initial only
+		project.markStageGenerated('initial');
+		expect(project.isStageGenerated('initial')).toBe(true);
+		expect(project.isStageGenerated('setup')).toBe(false);
+		expect(project.isStageGenerated('world')).toBe(false);
+	});
+
+	// @spec JRN-005
+	it('ensures JourneyRail enforces pending status until stages are generated', () => {
+		expect(journeyRailSrc).toContain('project.isStageGenerated(stage.id)');
+		expect(journeyRailSrc).toContain("return { status: 'pending', badge: '', canAccept: false };");
+		expect(journeyRailSrc).toContain("badge: effectiveDrift > 0 ? `${effectiveDrift} drift` : 'unaccepted'");
+	});
+});
+
 

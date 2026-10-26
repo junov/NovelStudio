@@ -290,6 +290,9 @@ class AgentEngine {
 			const msg = err instanceof Error ? err.message : String(err);
 			this.addFeed('error', 'Agent execution failed', msg, undefined, 'error');
 		} finally {
+			if (stageId && this.status !== 'failed') {
+				project.markStageGenerated(stageId);
+			}
 			await project.refresh();
 			if (this.status === 'running') this.status = 'idle';
 		}

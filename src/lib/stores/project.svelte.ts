@@ -47,6 +47,8 @@ class ProjectState {
 	revision = $state(0);
 	/** Currently active pipeline stage (@spec JRN-004, BBL-005). */
 	currentStage = $state<SyncStage>('initial');
+	/** Stages that have been generated at least once (@spec JRN-005). */
+	generatedStages = $state<Set<string>>(new Set());
 
 	view = $state<View>({ kind: 'dashboard' });
 	#back: View[] = [];
@@ -64,6 +66,12 @@ class ProjectState {
 		this.#back = [];
 		this.#forward = [];
 		this.#syncNav();
+		try {
+			const saved = localStorage.getItem(`novelstudio.generated_stages:${root}`);
+			this.generatedStages = saved ? new Set(JSON.parse(saved)) : new Set();
+		} catch {
+			this.generatedStages = new Set();
+		}
 		await this.refresh();
 	}
 
@@ -74,6 +82,52 @@ class ProjectState {
 		this.backlinks = {};
 		this.status = null;
 		this.currentStage = 'initial';
+		this.generatedStages = new Set();
+	}
+
+	markStageGenerated(stageId: string) {
+		const next = new Set(this.generatedStages);
+		next.add(stageId);
+		this.generatedStages = next;
+		if (this.root) {
+			try {
+				localStorage.setItem(
+					`novelstudio.generated_stages:${this.root}`,
+					JSON.stringify(Array.from(this.generatedStages))
+				);
+			} catch {
+				// ignore localStorage errors
+			}
+		}
+	}
+
+	isStageGenerated(stageId: string): boolean {
+		if (this.status?.baselines?.[stageId]) return true;
+		if (this.status?.generatedStages?.[stageId]) return true;
+		if (this.generatedStages.has(stageId)) return true;
+		const status = this.status;
+		if (status) {
+			if (stageId === 'setup' && ((status.catalog?.THM ?? 0) > 0 || (status.catalog?.STY ?? 0) > 0)) {
+				return true;
+			}
+			if (stageId === 'research' && (status.catalog?.RQ ?? 0) > 0) return true;
+			if (
+				stageId === 'world' &&
+				((status.catalog?.CHR ?? 0) > 0 ||
+					(status.catalog?.PLC ?? 0) > 0 ||
+					(status.catalog?.FCT ?? 0) > 0)
+			) {
+				return true;
+			}
+			if (stageId === 'narrative' && ((status.catalog?.ARC ?? 0) > 0 || (status.beats ?? 0) > 0)) {
+				return true;
+			}
+			if (stageId === 'structure' && (status.scenes?.structure ?? 0) > 0) return true;
+			if (stageId === 'abridged' && (status.words?.abridged ?? 0) > 0) return true;
+			if (stageId === 'manuscript' && (status.words?.manuscript ?? 0) > 0) return true;
+			if (stageId === 'publishable' && (status.illustrations?.active ?? 0) > 0) return true;
+		}
+		return false;
 	}
 
 	/** Re-scan files, rebuild the wiki-link index, check git status, and refresh `status --json`. */
@@ -220,6 +274,7 @@ class ProjectState {
 		}
 		const res = await runSpecnovel(this.root, args);
 		if (res.code === 0) {
+			this.markStageGenerated(stageName);
 			await this.refresh();
 			return { success: true };
 		} else {

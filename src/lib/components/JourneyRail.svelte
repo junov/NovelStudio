@@ -56,6 +56,17 @@
 
 		const syncName = stage.sync;
 		const baseline = syncName ? status.baselines?.[syncName] : null;
+
+		// All stages start in the pending state, until they are generated for the first time (@spec JRN-005)
+		const isGenerated =
+			Boolean(baseline) ||
+			Boolean(status.generatedStages?.[stage.id]) ||
+			project.isStageGenerated(stage.id);
+
+		if (!isGenerated) {
+			return { status: 'pending', badge: '', canAccept: false };
+		}
+
 		const localDrift = syncName && status.drift?.[syncName] ? status.drift[syncName].length : 0;
 		const upstreamDrift =
 			syncName && status.upstream_drift?.[syncName] ? status.upstream_drift[syncName].length : 0;
@@ -72,6 +83,15 @@
 			pendingCount = status.pending_items?.['research']?.length ?? status.catalog?.['RQ'] ?? 0;
 		}
 
+		// Stage unbaselined: once generated, ready for initial baseline acceptance
+		if (!baseline) {
+			return {
+				status: 'needs-sync',
+				badge: effectiveDrift > 0 ? `${effectiveDrift} drift` : 'unaccepted',
+				canAccept: true
+			};
+		}
+
 		if (effectiveDrift > 0 || pendingCount > 0) {
 			return {
 				status: 'needs-sync',
@@ -80,25 +100,7 @@
 			};
 		}
 
-		// Stage unbaselined: check if stage has generated content ready for initial baseline acceptance
-		if (!baseline && !status.generatedStages?.[stage.id]) {
-			const hasContent = hasStageGeneratedContent(stage, status, project.files);
-			if (hasContent) {
-				return {
-					status: 'needs-sync',
-					badge: 'unaccepted',
-					canAccept: true
-				};
-			}
-			return { status: 'pending', badge: '', canAccept: false };
-		}
-
-		if (baseline || status.generatedStages?.[stage.id]) {
-			return { status: 'synced', badge: 'synced', canAccept: false };
-		}
-
-		// Stage hasn't been generated/accepted yet
-		return { status: 'pending', badge: '', canAccept: false };
+		return { status: 'synced', badge: 'synced', canAccept: false };
 	}
 
 	let acceptingStage = $state<string | null>(null);

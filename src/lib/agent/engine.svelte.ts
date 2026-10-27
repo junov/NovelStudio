@@ -10,6 +10,7 @@ import {
 	readToolkit,
 	runSpecnovel,
 	runAntigravity,
+	runAntigravityStreaming,
 	secretGet,
 	inTauri
 } from '$lib/tauri';
@@ -208,7 +209,7 @@ class AgentEngine {
 					const args: string[] = [
 						'--dangerously-skip-permissions',
 						'--output-format',
-						'json'
+						'stream-json'
 					];
 
 					// Continue previous conversation session if available
@@ -222,41 +223,37 @@ class AgentEngine {
 
 					args.push('--print', safePrompt);
 
-					const out = await runAntigravity(project.root!, args);
-					const rawStderr = out.stderr ? `\n[stderr]\n${out.stderr}` : '';
+					let lastResponseText = '';
+					let streamError: string | null = null;
 
-					let responseText = out.stdout;
-					let parsedError: string | null = null;
-					try {
-						const parsed = JSON.parse(out.stdout.trim());
-						if (parsed.status === 'ERROR' && parsed.error) {
-							parsedError = parsed.error;
-						} else {
-							if (parsed.response) {
-								responseText = parsed.response;
-							}
-							if (parsed.conversation_id) {
-								this.#agyConversationId = parsed.conversation_id;
-							}
-							if (parsed.usage) {
-								if (typeof parsed.usage.input_tokens === 'number') {
-									this.totalPromptTokens += parsed.usage.input_tokens;
-								}
-								if (typeof parsed.usage.output_tokens === 'number') {
-									this.totalCompletionTokens += parsed.usage.output_tokens;
-								}
-							}
+					const onLine = (line: string) => {
+						const res = this.handleAgyStreamLine(line);
+						if (res.responseText) {
+							lastResponseText = res.responseText;
 						}
+						if (res.error) {
+							streamError = res.error;
+						}
+					};
+
+					let out;
+					try {
+						out = await runAntigravityStreaming(project.root!, args, onLine);
 					} catch {
-						// If output is not JSON, use raw stdout
+						// Fall back to standard runAntigravity if streaming invoke is not supported
+						out = await runAntigravity(project.root!, args);
+						for (const line of out.stdout.split('\n')) {
+							onLine(line);
+						}
 					}
 
-					if (parsedError) {
-						this.addFeed('error', 'Antigravity CLI error', parsedError, undefined, 'error');
+					const rawStderr = out.stderr ? `\n[stderr]\n${out.stderr}` : '';
+
+					if (streamError) {
 						this.status = 'failed';
 					} else if (out.code === 0) {
-						if (responseText && responseText.trim()) {
-							this.addFeed('thought', 'Antigravity CLI Output', responseText.trim());
+						if (lastResponseText && lastResponseText.trim()) {
+							this.addFeed('thought', 'Antigravity Output', lastResponseText.trim());
 						}
 						this.addFeed('message', `${effectiveSkill} completed via Antigravity CLI`, undefined, undefined, 'success');
 						this.status = 'completed';
@@ -606,6 +603,128 @@ ${skillMd}
 			};
 		}
 	}
+
+	/**
+	 * Processes a single line of NDJSON from `agy --output-format stream-json`.
+	 * Maps fine-grained work items (tool calls, thinking, messages, progress) into the agent feed.
+	 * @spec AGT-010
+	 */
+	public handleAgyStreamLine(line: string): { responseText?: string; error?: string } {
+		const trimmed = line.trim();
+		if (!trimmed) return {};
+
+		let parsed: any;
+		try {
+			parsed = JSON.parse(trimmed);
+		} catch {
+			// Plain text log line from child process
+			if (trimmed.length > 0 && !trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+				this.addFeed('thought', 'Antigravity Log', trimmed);
+			}
+			return {};
+		}
+
+		if (typeof parsed !== 'object' || parsed === null) return {};
+
+		// 1. Session / Conversation continuity
+		if (parsed.conversation_id) {
+			this.#agyConversationId = parsed.conversation_id;
+		}
+
+		// 2. Telemetry / Token usage (preserves parsed.usage compatibility)
+		if (parsed.usage) {
+			if (typeof parsed.usage.input_tokens === 'number') {
+				this.totalPromptTokens += parsed.usage.input_tokens;
+			}
+			if (typeof parsed.usage.output_tokens === 'number') {
+				this.totalCompletionTokens += parsed.usage.output_tokens;
+			}
+		}
+
+		// 3. Error reporting
+		if (parsed.status === 'ERROR' && parsed.error) {
+			this.addFeed('error', 'Antigravity CLI error', parsed.error, undefined, 'error');
+			return { error: parsed.error };
+		}
+
+		// 4. Tool calls (array or single object)
+		const rawToolCalls = Array.isArray(parsed.tool_calls)
+			? parsed.tool_calls
+			: parsed.tool_call
+				? [parsed.tool_call]
+				: parsed.type === 'tool_use' || parsed.type === 'tool_call'
+					? [parsed]
+					: [];
+
+		for (const tc of rawToolCalls) {
+			const name = tc.name || tc.tool || 'tool';
+			const args = tc.args || tc.input || tc.arguments || tc.parameters || {};
+
+			let toolTitle = `Tool: ${name}`;
+			let detail = '';
+
+			if (name === 'read_file') {
+				const p = args.Path || args.path || '';
+				toolTitle = `Read File: ${p}`;
+				detail = `Path: ${p}`;
+			} else if (name === 'edit_file') {
+				const p = args.Path || args.path || '';
+				toolTitle = `Edit File: ${p}`;
+				detail = `Path: ${p}\n\nTarget:\n${args.Target || args.target || ''}\n\nReplacement:\n${args.Replacement || args.replacement || ''}`;
+			} else if (name === 'write_file') {
+				const p = args.Path || args.path || '';
+				toolTitle = `Write File: ${p}`;
+				detail = `Path: ${p}`;
+			} else if (name === 'run_command') {
+				const cmd = args.CommandLine || args.command || args.toolSummary || '';
+				toolTitle = args.toolSummary ? `Run: ${args.toolSummary}` : `Run Command: ${cmd}`;
+				detail = `Command: ${cmd}`;
+			} else if (name === 'search_web') {
+				toolTitle = `Web Search: ${args.query || ''}`;
+				detail = `Query: ${args.query || ''}`;
+			} else {
+				detail = JSON.stringify(args, null, 2);
+			}
+
+			this.addFeed('tool_start', toolTitle, detail, undefined, 'running');
+		}
+
+		// 5. Tool result
+		if (parsed.type === 'tool_result' || parsed.tool_result) {
+			const res = parsed.tool_result || parsed.result || parsed.output;
+			const toolName = parsed.tool || parsed.name || 'Tool';
+			const detail = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
+			this.addFeed('tool_end', `Completed: ${toolName}`, detail, undefined, 'success');
+		}
+
+		// 6. Thinking / Model reasoning
+		const thinking =
+			typeof parsed.thinking === 'string'
+				? parsed.thinking
+				: parsed.type === 'thought' || parsed.type === 'thinking'
+					? parsed.content || parsed.text || ''
+					: null;
+		if (thinking && thinking.trim()) {
+			this.addFeed('thought', 'Antigravity Reasoning', thinking.trim());
+		}
+
+		// 7. Step progress updates
+		if (parsed.type === 'step_update' || parsed.type === 'progress') {
+			const msg = parsed.description || parsed.message || (parsed.step ? `Step ${parsed.step}` : null);
+			if (msg && typeof msg === 'string' && msg.trim()) {
+				this.addFeed('thought', 'Step Update', msg.trim());
+			}
+		}
+
+		// 8. Terminal response payload
+		const response = parsed.response || (parsed.type === 'result' ? parsed.content || parsed.text : null);
+		if (response && typeof response === 'string' && response.trim()) {
+			return { responseText: response.trim() };
+		}
+
+		return {};
+	}
 }
 
+export { AgentEngine };
 export const agent = new AgentEngine();

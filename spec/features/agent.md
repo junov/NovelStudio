@@ -196,7 +196,7 @@ Notes: Linked to #8.
 
 ### AGT-010: Antigravity CLI Agent Driver Option in Provider Selection
 WHEN an author configures AI providers and models in Settings,
-THE SYSTEM SHALL provide "Antigravity CLI" as a selectable option in the Provider dropdown menu, persist this preference in settings, and route agent task execution through the local Antigravity CLI (`agy`) driver using structured headless mode (`--print`, `--output-format json`, `--dangerously-skip-permissions`) with multi-turn conversation session continuity (`--conversation`) and token metrics tracking without requiring direct provider API credentials.
+THE SYSTEM SHALL provide "Antigravity CLI" as a selectable option in the Provider dropdown menu, persist this preference in settings, and route agent task execution through the local Antigravity CLI (`agy`) driver using structured headless mode (`--print`, `--output-format stream-json`, `--dangerously-skip-permissions`) with real-time event streaming of fine-grained work items (tool calls, thinking, messages, and progress updates) into the agent feed, multi-turn conversation session continuity (`--conversation`), and token metrics tracking without requiring direct provider API credentials.
 
 Acceptance:
 - Given the Settings modal or window,
@@ -207,7 +207,7 @@ Acceptance:
   then defaultModel.provider is set to "antigravity" (with useAntigravityCli enabled and agentDriver set to "antigravity") and persisted in the settings store across reloads.
 - Given an agent task is initiated with the Antigravity CLI provider selected,
   when execution starts,
-  then the execution engine dispatches the instruction through the Antigravity CLI driver with --print, --output-format json, and --dangerously-skip-permissions, parses the structured response payload and token usage into the agent feed, and preserves conversation continuity across turns via conversation IDs.
+  then the execution engine dispatches the instruction through the Antigravity CLI driver with --print, --output-format stream-json, and --dangerously-skip-permissions, streams real-time stdout events line-by-line into fine-grained feed work items (tool calls, thoughts, messages, and step updates), tracks token usage, and preserves conversation continuity across turns via conversation IDs.
 - Given a model that does not support reasoning effort (such as flash) configured under the Antigravity CLI,
   when constructing CLI invocation flags,
   then reasoning effort parameters (--effort) are omitted to avoid invalid model selection errors.

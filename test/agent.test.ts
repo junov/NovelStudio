@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { AGENT_TOOLS } from '../src/lib/agent/tools';
 import { initAnswers } from '../src/lib/components/InterviewCard.svelte';
-import { parseAskUserQuestions } from '../src/lib/agent/engine.svelte';
+import { parseAskUserQuestions, AgentEngine } from '../src/lib/agent/engine.svelte';
 import { groupFeedItems, isWorkItemType } from '../src/lib/agent/feed';
 import { routeUserPrompt } from '../src/lib/agent/router';
 import { PIPELINE } from '../src/lib/stages';
@@ -585,23 +585,78 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(engineSource).toContain("'--print'");
 		expect(engineSource).toContain("'--dangerously-skip-permissions'");
 		expect(engineSource).toContain("'--output-format'");
-		expect(engineSource).toContain("'json'");
+		expect(engineSource).toContain("'stream-json'");
 		expect(engineSource).toContain("'--conversation'");
 		expect(engineSource).toContain("parsed.usage");
+		expect(engineSource).toContain('runAntigravityStreaming');
 
 		const tauriSource = readFileSync(
 			resolve(__dirname, '../src/lib/tauri.ts'),
 			'utf-8'
 		);
 		expect(tauriSource).toContain('runAntigravity');
+		expect(tauriSource).toContain('runAntigravityStreaming');
 		expect(tauriSource).toContain('run_antigravity');
+		expect(tauriSource).toContain('run_antigravity_streaming');
 
 		const rustSource = readFileSync(
 			resolve(__dirname, '../src-tauri/src/lib.rs'),
 			'utf-8'
 		);
 		expect(rustSource).toContain('run_antigravity');
+		expect(rustSource).toContain('run_antigravity_streaming');
 		expect(rustSource).toContain('find_agy');
+	});
+
+	// @spec AGT-010
+	it('parses fine-grained stream-json events from Antigravity CLI into agent feed items', () => {
+		const agent = new AgentEngine();
+
+		// 1. Thinking / reasoning event
+		agent.handleAgyStreamLine(JSON.stringify({
+			type: 'thinking',
+			content: 'Examining setup/brief.md to verify themes'
+		}));
+		const thoughtItem = agent.feed.find((f) => f.title === 'Antigravity Reasoning');
+		expect(thoughtItem).toBeDefined();
+		expect(thoughtItem?.content).toContain('Examining setup/brief.md');
+
+		// 2. Tool call event
+		agent.handleAgyStreamLine(JSON.stringify({
+			type: 'step_update',
+			tool_calls: [{
+				name: 'edit_file',
+				args: { Path: 'setup/brief.md', Target: 'Draft', Replacement: 'Final' }
+			}]
+		}));
+		const toolItem = agent.feed.find((f) => f.type === 'tool_start' && f.title === 'Edit File: setup/brief.md');
+		expect(toolItem).toBeDefined();
+		expect(toolItem?.content).toContain('setup/brief.md');
+
+		// 3. Step progress event
+		agent.handleAgyStreamLine(JSON.stringify({
+			type: 'step_update',
+			message: 'Synchronizing narrative beats'
+		}));
+		const stepItem = agent.feed.find((f) => f.title === 'Step Update');
+		expect(stepItem).toBeDefined();
+		expect(stepItem?.content).toBe('Synchronizing narrative beats');
+
+		// 4. Token telemetry
+		const initialPromptTokens = agent.totalPromptTokens;
+		const initialCompTokens = agent.totalCompletionTokens;
+		agent.handleAgyStreamLine(JSON.stringify({
+			usage: { input_tokens: 350, output_tokens: 120 }
+		}));
+		expect(agent.totalPromptTokens).toBe(initialPromptTokens + 350);
+		expect(agent.totalCompletionTokens).toBe(initialCompTokens + 120);
+
+		// 5. Terminal result event
+		const result = agent.handleAgyStreamLine(JSON.stringify({
+			type: 'result',
+			response: 'Setup creative brief successfully synchronized with themes.'
+		}));
+		expect(result.responseText).toContain('Setup creative brief successfully synchronized');
 	});
 
 	// @spec AGT-010

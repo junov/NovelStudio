@@ -40,6 +40,21 @@ export const runGit = (project: string, args: string[]) =>
 export const runAntigravity = (project: string, args: string[]) =>
 	invoke<CmdOutput>('run_antigravity', { project, args });
 
+/**
+ * Run `agy <args>` inside the project directory, streaming output lines to onLine callback.
+ * @spec AGT-010
+ */
+export const runAntigravityStreaming = async (
+	project: string,
+	args: string[],
+	onLine: (line: string) => void
+): Promise<CmdOutput> => {
+	const { Channel } = await import('@tauri-apps/api/core');
+	const channel = new Channel<string>();
+	channel.onmessage = onLine;
+	return invoke<CmdOutput>('run_antigravity_streaming', { project, args, onEvent: channel });
+};
+
 export const ensureDir = (path: string) => invoke<void>('ensure_dir', { path });
 
 export const pathExists = (project: string, rel: string) =>

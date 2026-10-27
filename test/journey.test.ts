@@ -688,6 +688,11 @@ describe('JRN-006: Interactive Sync Pill Synchronization Action', () => {
 		expect(railSource).toContain('button.pill.drift-btn:hover:not(:disabled)');
 		expect(railSource).toContain('button.pill.drift-btn:disabled');
 	});
+
+	// @spec JRN-001, JRN-006
+	it('formats journey rail pills in ALL CAPS using text-transform uppercase', () => {
+		expect(railSource).toMatch(/\.pill\s*\{[^}]*text-transform:\s*uppercase/);
+	});
 });
 
 

@@ -23,6 +23,9 @@ Acceptance:
 - Given any active hover card in the Journey Rail,
   when rendered,
   then it utilizes application literary design tokens without exposing Git-specific terms or porcelain codes, and positions itself adjacent to the hovered element without clipping viewport boundaries.
+- Given any status or action pill rendered on a stage node in the Journey Rail (including "sync", "synced", pending, "unaccepted", and "Accept"),
+  when displayed,
+  then its text label is presented in ALL CAPS (uppercase).
 
 Notes: Linked to #7.
 
@@ -107,7 +110,7 @@ THE SYSTEM SHALL present the status pill as an interactive "sync" button (withou
 Acceptance:
 - Given a stage on the Journey Rail with local or upstream drift,
   when displayed,
-  then its status pill is labeled "sync" (without numbers) and rendered as an interactive button with distinct hover and active states.
+  then its status pill is labeled "sync" (rendered in ALL CAPS as "SYNC", without numbers) and rendered as an interactive button with distinct hover and active states.
 - Given an author clicks the "sync" button,
   when clicked,
   then the system sets the stage as the current active stage and dispatches stage synchronization (`novel-sync`) with the stage's synchronization prompt.

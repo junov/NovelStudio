@@ -417,7 +417,9 @@
 		font-size: 10.5px;
 		padding: 1px 6px;
 		border-radius: 999px;
-		font-weight: 500;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
 	}
 	.pill.synced {
 		background: color-mix(in srgb, var(--ok) 15%, transparent);

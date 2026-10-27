@@ -207,4 +207,4 @@ Acceptance:
   then defaultModel.provider is set to "antigravity" (with useAntigravityCli enabled and agentDriver set to "antigravity") and persisted in the settings store across reloads.
 - Given an agent task is initiated with the Antigravity CLI provider selected,
   when execution starts,
-  then the execution engine dispatches the instruction through the Antigravity CLI workflow driver without blocking on missing provider API keys.
+  then the execution engine dispatches the instruction through the Antigravity CLI workflow driver using --print and auto-approved permissions (--dangerously-skip-permissions) with skill slash command context without blocking on missing provider API keys.

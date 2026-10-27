@@ -198,11 +198,16 @@ class AgentEngine {
 			try {
 				if (inTauri()) {
 					this.addFeed('thought', 'Antigravity CLI Driver', `Dispatching to agy with skill context "${effectiveSkill}"...`);
-					const out = await runAntigravity(project.root!, [
-						'--skill',
-						effectiveSkill,
-						userInstruction
-					]);
+					const prompt = effectiveSkill ? `/${effectiveSkill} ${userInstruction}` : userInstruction;
+					const args: string[] = ['--print', prompt, '--dangerously-skip-permissions'];
+					if (modelChoice.model && modelChoice.model !== 'default') {
+						args.push('--model', modelChoice.model);
+					}
+					if (modelChoice.thinkingLevel && modelChoice.thinkingLevel !== 'off') {
+						args.push('--effort', modelChoice.thinkingLevel);
+					}
+
+					const out = await runAntigravity(project.root!, args);
 					const text = out.stdout + (out.stderr ? `\n[stderr]\n${out.stderr}` : '');
 					if (out.code === 0) {
 						this.addFeed('message', `${effectiveSkill} completed via Antigravity CLI`, text || undefined, undefined, 'success');

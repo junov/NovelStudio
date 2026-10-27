@@ -582,6 +582,8 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(engineSource).toContain('useAntigravityCli');
 		expect(engineSource).toContain('runAntigravity');
 		expect(engineSource).toContain('Antigravity CLI');
+		expect(engineSource).toContain("'--print'");
+		expect(engineSource).toContain("'--dangerously-skip-permissions'");
 
 		const tauriSource = readFileSync(
 			resolve(__dirname, '../src/lib/tauri.ts'),

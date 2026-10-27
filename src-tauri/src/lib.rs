@@ -6,7 +6,7 @@
 //! * project-scoped file IO (all paths are confined to the project root),
 //! * OS keychain access for provider API keys.
 //!
-//! @spec PROJ-001, MOD-001, AGT-002
+//! @spec PROJ-001, MOD-001, AGT-002, AGT-010
 
 use serde::Serialize;
 use std::path::{Component, Path, PathBuf};
@@ -40,6 +40,8 @@ pub struct ToolkitInfo {
     python_path: Option<String>,
     python_version: Option<String>,
     git_version: Option<String>,
+    agy_path: Option<String>,
+    agy_version: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -127,6 +129,85 @@ fn python(app: &AppHandle) -> Option<(String, Vec<String>, String)> {
         .clone()
 }
 
+fn probe_agy(program: &str) -> Option<String> {
+    let mut cmd = if cfg!(windows) && (program.ends_with(".cmd") || program.ends_with(".bat")) {
+        let mut c = Command::new("cmd.exe");
+        c.arg("/C").arg(program);
+        c
+    } else {
+        Command::new(program)
+    };
+    cmd.arg("--version");
+    let out = no_window(&mut cmd).output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let trimmed = text.trim();
+    if !trimmed.is_empty() {
+        Some(trimmed.to_string())
+    } else {
+        None
+    }
+}
+
+/// Find Antigravity CLI (`agy`) binary: NOVELSTUDIO_AGY, AGY_PATH, standard install dirs, or PATH.
+fn find_agy() -> Option<(String, String)> {
+    let mut candidates: Vec<String> = Vec::new();
+
+    if let Ok(p) = std::env::var("NOVELSTUDIO_AGY") {
+        candidates.push(p);
+    }
+    if let Ok(p) = std::env::var("AGY_PATH") {
+        candidates.push(p);
+    }
+
+    if cfg!(windows) {
+        if let Ok(local) = std::env::var("LOCALAPPDATA") {
+            let base = PathBuf::from(local).join("agy").join("bin");
+            candidates.push(base.join("agy.exe").to_string_lossy().to_string());
+            candidates.push(base.join("agy.cmd").to_string_lossy().to_string());
+        }
+        if let Ok(user) = std::env::var("USERPROFILE") {
+            let user_p = PathBuf::from(user);
+            candidates.push(user_p.join(".local").join("bin").join("agy.exe").to_string_lossy().to_string());
+            candidates.push(user_p.join(".cargo").join("bin").join("agy.exe").to_string_lossy().to_string());
+        }
+        if let Ok(appdata) = std::env::var("APPDATA") {
+            let base = PathBuf::from(appdata).join("Antigravity").join("bin");
+            candidates.push(base.join("agy.exe").to_string_lossy().to_string());
+            candidates.push(base.join("agy.cmd").to_string_lossy().to_string());
+            candidates.push(base.join("agy-node.cmd").to_string_lossy().to_string());
+        }
+        candidates.push("agy.exe".into());
+        candidates.push("agy.cmd".into());
+    } else {
+        if let Ok(home) = std::env::var("HOME") {
+            let home_p = PathBuf::from(home);
+            candidates.push(home_p.join(".local").join("bin").join("agy").to_string_lossy().to_string());
+        }
+        candidates.push("/usr/local/bin/agy".into());
+        candidates.push("/opt/homebrew/bin/agy".into());
+    }
+
+    candidates.push("agy".into());
+
+    for prog in candidates {
+        let is_existing_file = Path::new(&prog).is_file();
+        let is_plain_name = !prog.contains(std::path::MAIN_SEPARATOR) && !prog.contains('/');
+        if is_existing_file || is_plain_name {
+            if let Some(v) = probe_agy(&prog) {
+                return Some((prog, v));
+            }
+        }
+    }
+    None
+}
+
 /// Join `rel` onto `root`, rejecting absolute paths and `..` escapes.
 fn confine(root: &str, rel: &str) -> Result<PathBuf, String> {
     let rel_path = Path::new(rel);
@@ -167,11 +248,14 @@ fn toolkit_info(app: AppHandle) -> ToolkitInfo {
             .ok()
             .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
     };
+    let agy = find_agy();
     ToolkitInfo {
         toolkit_path: toolkit_dir(&app).to_string_lossy().to_string(),
         python_path: py.as_ref().map(|p| p.0.clone()),
         python_version: py.map(|p| p.2),
         git_version,
+        agy_path: agy.as_ref().map(|a| a.0.clone()),
+        agy_version: agy.map(|a| a.1),
     }
 }
 
@@ -197,6 +281,30 @@ async fn run_git(project: String, args: Vec<String>) -> Result<CmdOutput, String
     tauri::async_runtime::spawn_blocking(move || {
         let mut cmd = Command::new("git");
         cmd.args(args);
+        exec_cmd(cmd, &project)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Run `agy <args>` inside the project directory.
+/// @spec AGT-010
+#[tauri::command]
+async fn run_antigravity(project: String, args: Vec<String>) -> Result<CmdOutput, String> {
+    let (prog, _) = find_agy().ok_or_else(|| {
+        "Antigravity CLI ('agy') was not found. Please verify that 'agy' is installed or set NOVELSTUDIO_AGY to its path.".to_string()
+    })?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let is_cmd = cfg!(windows) && (prog.ends_with(".cmd") || prog.ends_with(".bat"));
+        let cmd = if is_cmd {
+            let mut c = Command::new("cmd.exe");
+            c.arg("/C").arg(&prog).args(args);
+            c
+        } else {
+            let mut c = Command::new(&prog);
+            c.args(args);
+            c
+        };
         exec_cmd(cmd, &project)
     })
     .await
@@ -450,6 +558,7 @@ pub fn run() {
             toolkit_info,
             run_specnovel,
             run_git,
+            run_antigravity,
             pick_folder,
             ensure_dir,
             path_exists,

@@ -595,6 +595,6 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 			'utf-8'
 		);
 		expect(rustSource).toContain('run_antigravity');
-		expect(rustSource).toContain('Command::new("agy")');
+		expect(rustSource).toContain('find_agy');
 	});
 });

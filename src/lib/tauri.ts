@@ -15,6 +15,8 @@ export interface ToolkitInfo {
 	python_path: string | null;
 	python_version: string | null;
 	git_version: string | null;
+	agy_path?: string | null;
+	agy_version?: string | null;
 }
 
 export interface FileEntry {

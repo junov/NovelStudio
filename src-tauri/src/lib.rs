@@ -116,6 +116,28 @@ fn python(app: &AppHandle) -> Option<(String, Vec<String>, String)> {
                 candidates.push((p, vec![]));
             }
             if cfg!(windows) {
+                if let Ok(local) = std::env::var("LOCALAPPDATA") {
+                    let py_base = PathBuf::from(local).join("Programs").join("Python");
+                    if let Ok(entries) = std::fs::read_dir(&py_base) {
+                        for entry in entries.flatten() {
+                            let candidate = entry.path().join("python.exe");
+                            if candidate.is_file() {
+                                candidates.push((candidate.to_string_lossy().to_string(), vec![]));
+                            }
+                        }
+                    }
+                }
+                if let Ok(pf) = std::env::var("ProgramFiles") {
+                    let py_base = PathBuf::from(pf).join("Python");
+                    if let Ok(entries) = std::fs::read_dir(&py_base) {
+                        for entry in entries.flatten() {
+                            let candidate = entry.path().join("python.exe");
+                            if candidate.is_file() {
+                                candidates.push((candidate.to_string_lossy().to_string(), vec![]));
+                            }
+                        }
+                    }
+                }
                 candidates.push(("py".into(), vec!["-3".into()]));
             }
             candidates.push(("python3".into(), vec![]));
@@ -311,9 +333,19 @@ fn ensure_novelstudio_agent(app: &AppHandle, project_root: &str) {
     let _ = std::fs::create_dir_all(&agents_dir);
 
     let py_path = python(app).map(|p| p.0).unwrap_or_else(|| "python".to_string());
-    let script_path = toolkit_dir(app).join("scripts").join("novel_mcp_server.py");
-    let py_str = py_path.replace('\\', "/");
-    let script_str = script_path.to_string_lossy().replace('\\', "/");
+    let mut script_path = toolkit_dir(app).join("scripts").join("novel_mcp_server.py");
+    if !script_path.is_file() {
+        let fallback = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("scripts")
+            .join("novel_mcp_server.py");
+        if fallback.is_file() {
+            script_path = fallback;
+        }
+    }
+    let py_str = py_path.replace("\\\\?\\", "").replace('\\', "/");
+    let script_str = script_path.to_string_lossy().replace("\\\\?\\", "").replace('\\', "/");
+    let proj_str = root_path.to_string_lossy().replace("\\\\?\\", "").replace('\\', "/");
 
     let agent_md = format!(
         "---\n\
@@ -327,26 +359,36 @@ mcpServers:\n\
     command: \"{}\"\n\
     args:\n\
       - \"{}\"\n\
+      - \"--project\"\n\
+      - \"{}\"\n\
 ---\n\n\
 # NovelStudio Agent\n\n\
 You are NovelStudio's embedded AI novelist assistant operating in the novel project root.\n\
 You strictly adhere to the SpecNovelist specification-driven novel writing methodology.\n\
 You exclusively use the craft tools provided by NovelStudio via the Model Context Protocol (MCP).\n\
 Generic system commands and arbitrary shell executions are strictly prevented.\n",
-        py_str, script_str
+        py_str, script_str, proj_str
     );
 
     let _ = std::fs::write(agents_dir.join("novelstudio.md"), &agent_md);
 
     let mcp_json = format!(
-        "{{\n  \"mcpServers\": {{\n    \"novelstudio\": {{\n      \"command\": \"{}\",\n      \"args\": [\"{}\"],\n      \"disabled\": false\n    }}\n  }}\n}}",
-        py_str, script_str
+        "{{\n  \"mcpServers\": {{\n    \"novelstudio\": {{\n      \"command\": \"{}\",\n      \"args\": [\"{}\", \"--project\", \"{}\"],\n      \"disabled\": false\n    }}\n  }}\n}}",
+        py_str, script_str, proj_str
     );
     let _ = std::fs::write(mcp_dir.join("mcp_config.json"), mcp_json);
 
+    let skills_dir = toolkit_dir(app).join(".agents").join("skills");
+    let skills_str = skills_dir.to_string_lossy().replace("\\\\?\\", "").replace('\\', "/");
+    let skills_json = format!(
+        "{{\n  \"entries\": [\n    {{\n      \"path\": \"{}\"\n    }}\n  ]\n}}",
+        skills_str
+    );
+    let _ = std::fs::write(mcp_dir.join("skills.json"), skills_json);
+
     let gitignore_path = mcp_dir.join(".gitignore");
     if !gitignore_path.exists() {
-        let _ = std::fs::write(gitignore_path, "agents/novelstudio.md\nmcp_config.json\n");
+        let _ = std::fs::write(gitignore_path, "agents/novelstudio.md\nmcp_config.json\nskills.json\n");
     }
 }
 
@@ -386,6 +428,7 @@ async fn run_antigravity_streaming(
             .env("PYTHONIOENCODING", "utf-8")
             .env("PYTHONUTF8", "1")
             .env("NOVELSTUDIO_TOOLKIT", &toolkit)
+            .env("NOVELSTUDIO_PROJECT", &cwd)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         no_window(&mut cmd);
@@ -441,7 +484,7 @@ async fn run_antigravity(app: AppHandle, project: String, args: Vec<String>) -> 
     })?;
     tauri::async_runtime::spawn_blocking(move || {
         let is_cmd = cfg!(windows) && (prog.ends_with(".cmd") || prog.ends_with(".bat"));
-        let cmd = if is_cmd {
+        let mut cmd = if is_cmd {
             let mut c = Command::new("cmd.exe");
             c.arg("/C").arg(&prog).args(args);
             c
@@ -450,6 +493,7 @@ async fn run_antigravity(app: AppHandle, project: String, args: Vec<String>) -> 
             c.args(args);
             c
         };
+        cmd.env("NOVELSTUDIO_PROJECT", &cwd);
         exec_cmd(cmd, &cwd)
     })
     .await

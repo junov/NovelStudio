@@ -13,8 +13,14 @@ import urllib.request
 import subprocess
 from pathlib import Path
 
-# Base project directory is current working directory
+# Base project directory defaults to current working directory, overridable via --project or NOVELSTUDIO_PROJECT
 PROJECT_ROOT = Path.cwd().resolve()
+for _i, _arg in enumerate(sys.argv):
+    if _arg == "--project" and _i + 1 < len(sys.argv):
+        PROJECT_ROOT = Path(sys.argv[_i + 1]).resolve()
+        break
+if "NOVELSTUDIO_PROJECT" in os.environ:
+    PROJECT_ROOT = Path(os.environ["NOVELSTUDIO_PROJECT"]).resolve()
 
 def confine_path(rel_path: str) -> Path:
     p = Path(rel_path)

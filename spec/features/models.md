@@ -59,6 +59,9 @@ Acceptance:
 - Given the Model Selection control in Settings,
   when viewed,
   then a "Refresh List" button appears right next to the "Model Selection" label to query and update the list of available models from the active provider.
+- Given models queried or retrieved in Settings,
+  when viewed,
+  then no feedback banner box advertising the count of models retrieved from the provider is displayed.
 
 ### MOD-004: Configurable Thinking Levels for Reasoning Models
 WHEN an author configures model options in Settings,

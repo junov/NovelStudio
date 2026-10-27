@@ -133,6 +133,16 @@ describe('MOD-003: Dynamic Model Selector with Provider Display Names', () => {
 		const selectIdx = modalSource.indexOf('id="default-model"');
 		expect(refreshIdx).toBeLessThan(selectIdx);
 	});
+
+	// @spec MOD-003
+	it('does not display a feedback banner box advertising the count of retrieved models', () => {
+		const modalSource = readFileSync(
+			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
+			'utf-8'
+		);
+		expect(modalSource).not.toContain('info-banner ok');
+		expect(modalSource).not.toContain('Retrieved');
+	});
 });
 
 describe('MOD-004: Configurable Thinking Levels for Reasoning Models', () => {

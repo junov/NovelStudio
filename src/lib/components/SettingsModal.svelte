@@ -20,7 +20,6 @@
 		gemini: false,
 		antigravity: false
 	});
-	let queryMessage = $state<string | null>(null);
 	let queryError = $state<string | null>(null);
 
 	let isCustomModel = $state(false);
@@ -55,30 +54,24 @@
 		const key = apiKeys[pid]?.trim();
 		if (pid !== 'antigravity' && !key) {
 			queryError = `Please enter an API key for ${PROVIDERS[pid].label} first.`;
-			queryMessage = null;
 			return;
 		}
 
 		isQuerying[pid] = true;
 		queryError = null;
-		queryMessage = `Querying available models from ${PROVIDERS[pid].label}...`;
 
 		try {
 			const models = await fetchAvailableModels(pid, key);
 			if (models.length > 0) {
 				settings.updateModelCache(pid, models);
-				queryMessage = `✓ Retrieved ${models.length} available models from ${PROVIDERS[pid].label}.`;
 				// If current model is empty or not in retrieved models, select the top one
 				if (!models.some((m) => m.id === settings.value.defaultModel.model) && settings.value.defaultModel.provider === pid) {
 					settings.value.defaultModel.model = models[0].id;
 					isCustomModel = false;
 				}
-			} else {
-				queryMessage = `No models returned from ${PROVIDERS[pid].label}.`;
 			}
 		} catch (e) {
 			queryError = e instanceof Error ? e.message : String(e);
-			queryMessage = null;
 		} finally {
 			isQuerying[pid] = false;
 		}
@@ -111,11 +104,6 @@
 		<h2>Settings & AI Model Configuration</h2>
 
 		<!-- Feedback Messages -->
-		{#if queryMessage}
-			<div class="info-banner ok">
-				<span>{queryMessage}</span>
-			</div>
-		{/if}
 		{#if queryError}
 			<div class="info-banner err">
 				<span>⚠ {queryError}</span>
@@ -373,10 +361,6 @@
 		border-radius: var(--radius);
 		font-size: 12.5px;
 		margin-bottom: 14px;
-	}
-	.info-banner.ok {
-		background: color-mix(in srgb, var(--ok) 15%, transparent);
-		color: var(--ok);
 	}
 	.info-banner.err {
 		background: color-mix(in srgb, var(--err) 15%, transparent);

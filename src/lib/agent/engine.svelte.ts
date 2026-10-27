@@ -207,6 +207,8 @@ class AgentEngine {
 					const safePrompt = promptText.length > 25000 ? promptText.slice(0, 25000) : promptText;
 
 					const args: string[] = [
+						'--agent',
+						'novelstudio',
 						'--dangerously-skip-permissions',
 						'--output-format',
 						'stream-json'
@@ -647,17 +649,43 @@ ${skillMd}
 			return { error: parsed.error };
 		}
 
-		// 4. Tool calls (array or single object)
-		const rawToolCalls = Array.isArray(parsed.tool_calls)
-			? parsed.tool_calls
-			: parsed.tool_call
-				? [parsed.tool_call]
-				: parsed.type === 'tool_use' || parsed.type === 'tool_call'
-					? [parsed]
-					: [];
+		// 4. Tool calls (array or single object, plus step_update tool events)
+		let rawToolCalls: any[] = [];
+		if (Array.isArray(parsed.tool_calls)) {
+			rawToolCalls = parsed.tool_calls;
+		} else if (parsed.tool_call) {
+			rawToolCalls = [parsed.tool_call];
+		} else if (parsed.type === 'tool_use' || parsed.type === 'tool_call') {
+			rawToolCalls = [parsed];
+		} else if (parsed.step_update && (parsed.step_update.step_type === 'tool' || parsed.step_update.tool_info)) {
+			const su = parsed.step_update;
+			const ti = su.tool_info || {};
+			const rawName = ti.name || su.tool_name || 'tool';
+			const params = ti.parameters || {};
+
+			// Unwrap call_mcp_tool if dispatched via MCP
+			const isMcp = rawName === 'call_mcp_tool';
+			const unwrappedName = isMcp ? (params.ToolName || 'tool') : rawName;
+			const unwrappedArgs = isMcp ? (params.Arguments || {}) : params;
+
+			if (su.state === 'ACTIVE') {
+				rawToolCalls = [{
+					name: unwrappedName,
+					args: unwrappedArgs
+				}];
+			} else if (su.state === 'DONE' || su.state === 'ERROR' || ti.output !== undefined || ti.error !== undefined) {
+				const output = ti.output || (su.state === 'ERROR' ? (ti.error?.message || 'Tool execution error') : '');
+				const detail = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+				this.addFeed('tool_end', `Completed: ${unwrappedName}`, detail, undefined, su.state === 'ERROR' ? 'error' : 'success');
+			}
+		}
 
 		for (const tc of rawToolCalls) {
 			let name = tc.name || tc.tool || 'tool';
+			if (name === 'call_mcp_tool' && tc.args?.ToolName) {
+				name = tc.args.ToolName;
+				tc.args = tc.args.Arguments || {};
+			}
 			if (name.startsWith('novelstudio__')) {
 				name = name.slice('novelstudio__'.length);
 			} else if (name.startsWith('novelstudio_')) {

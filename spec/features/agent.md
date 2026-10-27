@@ -196,7 +196,7 @@ Notes: Linked to #8.
 
 ### AGT-010: Antigravity CLI Agent Driver Option in Provider Selection
 WHEN an author configures AI providers and models in Settings,
-THE SYSTEM SHALL provide "Antigravity CLI" as a selectable option in the Provider dropdown menu, persist this preference in settings, and route agent task execution through the local Antigravity CLI (`agy`) driver using structured headless mode (`--print`, `--output-format stream-json`, `--dangerously-skip-permissions`) with real-time event streaming of fine-grained work items (tool calls, thinking, messages, and progress updates) into the agent feed, multi-turn conversation session continuity (`--conversation`), and token metrics tracking without requiring direct provider API credentials.
+THE SYSTEM SHALL provide "Antigravity CLI" as a selectable option in the Provider dropdown menu, persist this preference in settings, and route agent task execution through the local Antigravity CLI (`agy`) driver scoped to a dedicated NovelStudio custom agent (`--agent novelstudio`) backed by a Model Context Protocol (MCP) server, suppressing Antigravity's built-in execution tools while delegating craft operations exclusively to NovelStudio's toolset with real-time event streaming of fine-grained work items (tool calls, thinking, messages, and progress updates) into the agent feed, multi-turn conversation session continuity (`--conversation`), and token metrics tracking without requiring direct provider API credentials.
 
 Acceptance:
 - Given the Settings modal or window,
@@ -207,8 +207,8 @@ Acceptance:
   then defaultModel.provider is set to "antigravity" (with useAntigravityCli enabled and agentDriver set to "antigravity") and persisted in the settings store across reloads.
 - Given an agent task is initiated with the Antigravity CLI provider selected,
   when execution starts,
-  then the execution engine dispatches the instruction through the Antigravity CLI driver with --print, --output-format stream-json, and --dangerously-skip-permissions, streams real-time stdout events line-by-line into fine-grained feed work items (tool calls, thoughts, messages, and step updates), tracks token usage, and preserves conversation continuity across turns via conversation IDs.
-- Given tool calls emitted during an Antigravity CLI execution session,
+  then the system auto-provisions the global NovelStudio custom agent definition (`novelstudio.md` with `tools: []` and attached `mcpServers`) and MCP configuration in the user's Antigravity configuration directory, dispatching execution with --agent novelstudio, --print, --output-format stream-json, and --dangerously-skip-permissions.
+- Given tool calls emitted via the NovelStudio MCP server (including unwrapped call_mcp_tool events) during an Antigravity CLI execution session,
   when processed,
   then the system normalizes tool names, arguments, and completion results, rendering fine-grained tool_start and tool_end cards in the agent activity feed.
 - Given a model that does not support reasoning effort (such as flash) configured under the Antigravity CLI,

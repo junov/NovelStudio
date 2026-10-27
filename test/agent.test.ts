@@ -609,15 +609,23 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 	});
 
 	// @spec AGT-010
-	it('dispatches Antigravity CLI driver with structured headless mode and stream-json output', () => {
+	it('dispatches Antigravity CLI driver with novelstudio custom agent and auto-provisioning', () => {
 		const engineSource = readFileSync(
 			resolve(__dirname, '../src/lib/agent/engine.svelte.ts'),
 			'utf-8'
 		);
+		expect(engineSource).toContain("'--agent'");
+		expect(engineSource).toContain("'novelstudio'");
 		expect(engineSource).toContain("'--output-format'");
 		expect(engineSource).toContain("'stream-json'");
 		expect(engineSource).toContain("'--dangerously-skip-permissions'");
 		expect(engineSource).toContain("'--print'");
+
+		const rustSource = readFileSync(
+			resolve(__dirname, '../src-tauri/src/lib.rs'),
+			'utf-8'
+		);
+		expect(rustSource).toContain('ensure_novelstudio_agent');
 	});
 
 	// @spec AGT-010
@@ -655,7 +663,49 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(endItem).toBeDefined();
 		expect(endItem?.content).toContain('Integrity check passed');
 
-		// 4. Step progress event
+		// 4. Unwrapped call_mcp_tool start event
+		agent.handleAgyStreamLine(JSON.stringify({
+			event: 'step_update',
+			step_update: {
+				step_type: 'tool',
+				tool_name: 'call_mcp_tool',
+				state: 'ACTIVE',
+				tool_info: {
+					name: 'call_mcp_tool',
+					parameters: {
+						ServerName: 'novelstudio',
+						ToolName: 'read_toolkit_doc',
+						Arguments: { path: 'AGENTS.md' }
+					}
+				}
+			}
+		}));
+		const mcpStart = agent.feed.find((f) => f.type === 'tool_start' && f.title === 'Read Toolkit Doc: AGENTS.md');
+		expect(mcpStart).toBeDefined();
+
+		// 5. Unwrapped call_mcp_tool completion event
+		agent.handleAgyStreamLine(JSON.stringify({
+			event: 'step_update',
+			step_update: {
+				step_type: 'tool',
+				tool_name: 'call_mcp_tool',
+				state: 'DONE',
+				tool_info: {
+					name: 'call_mcp_tool',
+					parameters: {
+						ServerName: 'novelstudio',
+						ToolName: 'read_toolkit_doc',
+						Arguments: { path: 'AGENTS.md' }
+					},
+					output: 'Project Guidelines'
+				}
+			}
+		}));
+		const mcpEnd = agent.feed.find((f) => f.type === 'tool_end' && f.title === 'Completed: read_toolkit_doc');
+		expect(mcpEnd).toBeDefined();
+		expect(mcpEnd?.content).toContain('Project Guidelines');
+
+		// 6. Step progress event
 		agent.handleAgyStreamLine(JSON.stringify({
 			type: 'step_update',
 			message: 'Synchronizing narrative beats'

@@ -22,6 +22,19 @@ for _i, _arg in enumerate(sys.argv):
 if "NOVELSTUDIO_PROJECT" in os.environ:
     PROJECT_ROOT = Path(os.environ["NOVELSTUDIO_PROJECT"]).resolve()
 
+# Bundled toolkit directory overridable via --toolkit or NOVELSTUDIO_TOOLKIT
+TOOLKIT_ROOT = None
+for _i, _arg in enumerate(sys.argv):
+    if _arg == "--toolkit" and _i + 1 < len(sys.argv):
+        TOOLKIT_ROOT = Path(sys.argv[_i + 1]).resolve()
+        break
+if not TOOLKIT_ROOT and "NOVELSTUDIO_TOOLKIT" in os.environ:
+    TOOLKIT_ROOT = Path(os.environ["NOVELSTUDIO_TOOLKIT"]).resolve()
+if not TOOLKIT_ROOT:
+    dev_assist = Path("C:/Users/Justin/Documents/dev/NovelAssist")
+    if (dev_assist / "third_party" / "specnovelist").is_dir():
+        TOOLKIT_ROOT = (dev_assist / "third_party" / "specnovelist").resolve()
+
 def confine_path(rel_path: str) -> Path:
     p = Path(rel_path)
     if p.is_absolute():
@@ -92,37 +105,56 @@ def tool_list_project_files(args: dict) -> str:
     return json.dumps(files[:500], indent=2)
 
 def tool_read_toolkit_doc(args: dict) -> str:
-    path_str = args.get("path", "")
+    path_str = str(args.get("path") or args.get("doc_path") or args.get("file") or "").strip()
     if not path_str:
         return "Error: path is required"
     env_toolkit = os.environ.get("NOVELSTUDIO_TOOLKIT", "")
-    candidates = [
-        PROJECT_ROOT / path_str,
-        PROJECT_ROOT / "third_party" / "specdrive" / path_str,
-        PROJECT_ROOT / ".agents" / path_str,
-        Path("C:/Users/Justin/Documents/dev/NovelAssist") / path_str,
-        Path("C:/Users/Justin/Documents/dev/NovelAssist/third_party/specdrive") / path_str
-    ]
+    bases: list[Path] = []
+    if TOOLKIT_ROOT:
+        bases.append(TOOLKIT_ROOT)
     if env_toolkit:
-        candidates.insert(0, Path(env_toolkit) / path_str)
-        candidates.insert(1, Path(env_toolkit) / "third_party" / "specdrive" / path_str)
+        bases.append(Path(env_toolkit))
+    bases.extend([
+        PROJECT_ROOT,
+        PROJECT_ROOT / "third_party" / "specnovelist",
+        PROJECT_ROOT / "third_party" / "specdrive",
+        PROJECT_ROOT / ".agents",
+        Path("C:/Users/Justin/Documents/dev/NovelAssist"),
+        Path("C:/Users/Justin/Documents/dev/NovelAssist/third_party/specnovelist"),
+        Path("C:/Users/Justin/Documents/dev/NovelAssist/third_party/specdrive"),
+        Path("C:/Users/Justin/Documents/dev/NovelAssist/src-tauri/target/debug/specnovelist")
+    ])
 
-    for c in candidates:
-        if c.is_file():
-            try:
-                return c.read_text(encoding="utf-8")
-            except Exception as e:
-                return f"Error reading toolkit doc: {e}"
+    variants = [
+        path_str,
+        f".agents/{path_str}",
+        f".agents/skills/{path_str}",
+        path_str.replace("skills/", ".agents/skills/")
+    ]
+
+    for b in bases:
+        for v in variants:
+            c = (b / v).resolve()
+            if c.is_file():
+                try:
+                    return c.read_text(encoding="utf-8")
+                except Exception as e:
+                    return f"Error reading toolkit doc: {e}"
     return f"Toolkit document not found: {path_str}"
 
 def tool_specnovel(args: dict) -> str:
     # @spec REV-004 Guardrail: block accept or git commit
-    subcommand = str(args.get("subcommand", "")).strip()
+    subcommand = str(args.get("subcommand") or args.get("command") or "").strip()
     raw_args = args.get("args", [])
     if isinstance(raw_args, str):
         raw_args = [raw_args]
     elif not isinstance(raw_args, list):
         raw_args = []
+    else:
+        raw_args = list(raw_args)
+
+    if not subcommand and raw_args:
+        subcommand = str(raw_args.pop(0)).strip()
 
     all_tokens = [subcommand] + [str(a) for a in raw_args]
     if "accept" in all_tokens:
@@ -135,8 +167,18 @@ def tool_specnovel(args: dict) -> str:
     # Locate specnovel.py
     script_candidates = [
         PROJECT_ROOT / "scripts" / "specnovel.py",
-        PROJECT_ROOT / "third_party" / "specdrive" / "scripts" / "specdrive.py"
+        PROJECT_ROOT / "third_party" / "specnovelist" / "scripts" / "specnovel.py",
+        PROJECT_ROOT / "third_party" / "specdrive" / "scripts" / "specdrive.py",
     ]
+    if TOOLKIT_ROOT:
+        script_candidates.insert(0, TOOLKIT_ROOT / "scripts" / "specnovel.py")
+        script_candidates.insert(1, TOOLKIT_ROOT / "third_party" / "specnovelist" / "scripts" / "specnovel.py")
+        script_candidates.insert(2, TOOLKIT_ROOT / "third_party" / "specdrive" / "scripts" / "specdrive.py")
+    script_candidates.extend([
+        Path("C:/Users/Justin/Documents/dev/NovelAssist/third_party/specnovelist/scripts/specnovel.py"),
+        Path("C:/Users/Justin/Documents/dev/NovelAssist/src-tauri/target/debug/specnovelist/scripts/specnovel.py")
+    ])
+
     script_path = None
     for cand in script_candidates:
         if cand.is_file():
@@ -144,9 +186,9 @@ def tool_specnovel(args: dict) -> str:
             break
 
     if not script_path:
-        return "Error: specnovel.py or specdrive.py not found in project scripts."
+        return "Error: specnovel.py or specdrive.py not found in project scripts or toolkit."
 
-    cmd = [sys.executable, str(script_path), subcommand] + [str(a) for a in raw_args]
+    cmd = [sys.executable, str(script_path), "-C", str(PROJECT_ROOT), subcommand] + [str(a) for a in raw_args]
     try:
         res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, timeout=60)
         out = res.stdout + (f"\n[stderr]\n{res.stderr}" if res.stderr else "")

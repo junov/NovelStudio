@@ -346,6 +346,7 @@ fn ensure_novelstudio_agent(app: &AppHandle, project_root: &str) {
     let py_str = py_path.replace("\\\\?\\", "").replace('\\', "/");
     let script_str = script_path.to_string_lossy().replace("\\\\?\\", "").replace('\\', "/");
     let proj_str = root_path.to_string_lossy().replace("\\\\?\\", "").replace('\\', "/");
+    let toolkit_str = toolkit_dir(app).to_string_lossy().replace("\\\\?\\", "").replace('\\', "/");
 
     let agent_md = format!(
         r#"---
@@ -361,6 +362,8 @@ mcpServers:
       - "{}"
       - "--project"
       - "{}"
+      - "--toolkit"
+      - "{}"
 ---
 
 # NovelStudio Agent
@@ -370,7 +373,7 @@ You strictly adhere to the SpecNovelist specification-driven novel writing metho
 You exclusively use the craft tools provided by NovelStudio via the Model Context Protocol (MCP).
 Generic system commands and arbitrary shell executions are strictly prevented.
 "#,
-        py_str, script_str, proj_str
+        py_str, script_str, proj_str, toolkit_str
     );
 
     let _ = std::fs::write(agents_dir.join("novelstudio.md"), &agent_md);
@@ -380,12 +383,12 @@ Generic system commands and arbitrary shell executions are strictly prevented.
   "mcpServers": {{
     "novelstudio": {{
       "command": "{}",
-      "args": ["{}", "--project", "{}"],
+      "args": ["{}", "--project", "{}", "--toolkit", "{}"],
       "disabled": false
     }}
   }}
 }}"#,
-        py_str, script_str, proj_str
+        py_str, script_str, proj_str, toolkit_str
     );
     let _ = std::fs::write(mcp_dir.join("mcp_config.json"), mcp_json);
 

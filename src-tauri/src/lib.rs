@@ -294,6 +294,11 @@ async fn run_antigravity(project: String, args: Vec<String>) -> Result<CmdOutput
     let (prog, _) = find_agy().ok_or_else(|| {
         "Antigravity CLI ('agy') was not found. Please verify that 'agy' is installed or set NOVELSTUDIO_AGY to its path.".to_string()
     })?;
+    let cwd = if project.trim().is_empty() {
+        ".".to_string()
+    } else {
+        project
+    };
     tauri::async_runtime::spawn_blocking(move || {
         let is_cmd = cfg!(windows) && (prog.ends_with(".cmd") || prog.ends_with(".bat"));
         let cmd = if is_cmd {
@@ -305,7 +310,7 @@ async fn run_antigravity(project: String, args: Vec<String>) -> Result<CmdOutput
             c.args(args);
             c
         };
-        exec_cmd(cmd, &project)
+        exec_cmd(cmd, &cwd)
     })
     .await
     .map_err(|e| e.to_string())?

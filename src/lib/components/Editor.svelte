@@ -11,8 +11,11 @@
 	import { getHeadFileContent } from '$lib/git';
 	import { diffHighlighter } from '$lib/diffHighlight';
 	import { EditorView, basicSetup } from 'codemirror';
+	import { hoverTooltip } from '@codemirror/view';
 	import { EditorState } from '@codemirror/state';
 	import { markdown } from '@codemirror/lang-markdown';
+	import { ID_PATTERN } from '$lib/entities';
+	import { wikiHover } from '$lib/wikiHover.svelte';
 
 	interface Props {
 		path: string;
@@ -241,10 +244,38 @@
 			cmHeadView = null;
 		}
 
+		const WIKI_CM_RE = new RegExp(`\\[\\[\\s*(${ID_PATTERN})\\s*(?:\\|\\s*([^\\]]*?)\\s*)?\\]\\]`, 'g');
+
+		const cmWikiTooltip = () =>
+			hoverTooltip((view, pos, side) => {
+				const line = view.state.doc.lineAt(pos);
+				for (const match of line.text.matchAll(WIKI_CM_RE)) {
+					const start = line.from + match.index!;
+					const end = start + match[0].length;
+					if (pos >= start && pos <= end) {
+						const id = match[1];
+						const startCoords = view.coordsAtPos(start);
+						const endCoords = view.coordsAtPos(end);
+						if (startCoords && endCoords) {
+							const rect = new DOMRect(
+								startCoords.left,
+								startCoords.top,
+								Math.max(20, endCoords.right - startCoords.left),
+								Math.max(16, endCoords.bottom - startCoords.top)
+							);
+							wikiHover.show(id, rect);
+						}
+						return null;
+					}
+				}
+				return null;
+			});
+
 		if ((mode === 'edit' || mode === 'diff') && isEditable(path) && cmContainer) {
 			const leftExtensions = [
 				basicSetup,
 				markdown(),
+				cmWikiTooltip(),
 				EditorView.updateListener.of((update) => {
 					if (update.docChanged) {
 						content = update.state.doc.toString();
@@ -272,6 +303,7 @@
 				extensions: [
 					basicSetup,
 					markdown(),
+					cmWikiTooltip(),
 					EditorState.readOnly.of(true),
 					diffHighlighter(() => content, false)
 				]

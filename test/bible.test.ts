@@ -1,8 +1,9 @@
-// @spec BBL-001, BBL-002, BBL-003, BBL-004, BBL-005
-import { describe, it, expect } from 'vitest';
+// @spec BBL-001, BBL-002, BBL-003, BBL-004, BBL-005, BBL-006
+import { describe, it, expect, vi } from 'vitest';
 import { parseFile, prefixOf, prefixInfo } from '../src/lib/entities';
 import { renderMarkdown, renderWikiChips } from '../src/lib/markdown';
 import { project } from '../src/lib/stores/project.svelte';
+import { getEntityPreview, clearWikiPreviewCache } from '../src/lib/wikiHover.svelte';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -185,4 +186,63 @@ describe('BBL-005: Stage-Filtered Navigators', () => {
 		expect(explorerSrc).toContain('project.currentStage');
 	});
 });
+
+describe('BBL-006: Wiki-Link Destination Hovercard Preview', () => {
+	const hoverCardSrc = readFileSync(resolve(__dirname, '../src/lib/components/WikiHoverCard.svelte'), 'utf-8');
+	const layoutSrc = readFileSync(resolve(__dirname, '../src/routes/+layout.svelte'), 'utf-8');
+	const editorSrc = readFileSync(resolve(__dirname, '../src/lib/components/Editor.svelte'), 'utf-8');
+
+	// @spec BBL-006
+	it('WikiHoverCard renders first 5 lines completely and fades 6th line vertically to transparent', () => {
+		expect(hoverCardSrc).toContain('wiki-preview-content');
+		expect(hoverCardSrc).toContain('line-height: 20px');
+		expect(hoverCardSrc).toContain('max-height: 120px');
+		// First 5 lines (100px) fully opaque, 6th line (100-120px) gradient to transparent
+		expect(hoverCardSrc).toContain('linear-gradient(to bottom, black 100px, transparent 120px)');
+	});
+
+	// @spec BBL-006
+	it('attaches global hovercard in +layout.svelte and CodeMirror tooltip in Editor.svelte', () => {
+		expect(layoutSrc).toContain('WikiHoverCard');
+		expect(layoutSrc).toContain('setupWikiHoverListeners');
+		expect(editorSrc).toContain('cmWikiTooltip');
+		expect(editorSrc).toContain('hoverTooltip');
+	});
+
+	// @spec BBL-006
+	it('getEntityPreview extracts and renders destination markdown content', async () => {
+		clearWikiPreviewCache();
+		project.defs = {
+			'CHR-001': {
+				id: 'CHR-001',
+				title: 'Elena Vance',
+				path: 'world/characters/CHR-001.md',
+				line: 1,
+				level: 1,
+				layer: 'plan'
+			}
+		};
+		vi.spyOn(project, 'read').mockResolvedValue(
+			'# CHR-001: Elena Vance\n- **Role:** protagonist\n- **Age:** 28\n- **Occupation:** Restorer\n- **Notes:** Secret agent\n- **Extra:** Line six content here\n- **More:** Extra line seven\n'
+		);
+
+		const preview = await getEntityPreview('CHR-001');
+		expect(preview.id).toBe('CHR-001');
+		expect(preview.title).toBe('Elena Vance');
+		expect(preview.path).toBe('world/characters/CHR-001.md');
+		expect(preview.renderedHtml).toContain('Elena Vance');
+		expect(preview.renderedHtml).toContain('protagonist');
+	});
+
+	// @spec BBL-006
+	it('getEntityPreview handles uncataloged or missing entities gracefully', async () => {
+		clearWikiPreviewCache();
+		project.defs = {};
+		const missingPreview = await getEntityPreview('CHR-999');
+		expect(missingPreview.id).toBe('CHR-999');
+		expect(missingPreview.isDefined).toBe(false);
+		expect(missingPreview.renderedHtml).toContain('No definition found');
+	});
+});
+
 

@@ -25,7 +25,7 @@ export function chipHtml(id: string, alias: string | undefined, opts: RenderOpti
 	const missing = opts.exists && !opts.exists(id);
 	const label = alias || id;
 	const tip = `${info.label} ${id}${title ? ` — ${title}` : ''}${missing ? ' (not defined)' : ''}`;
-	return `<a class="wiki-chip${missing ? ' missing' : ''}" data-wiki="${id}" data-prefix="${prefixOf(id)}" style="--hue:${info.hue}" title="${escapeHtml(tip)}" href="#${id}">${escapeHtml(label)}</a>`;
+	return `<a class="wiki-chip${missing ? ' missing' : ''}" data-wiki="${id}" data-prefix="${prefixOf(id)}" style="--hue:${info.hue}" data-tip="${escapeHtml(tip)}" href="#${id}">${escapeHtml(label)}</a>`;
 }
 
 /**

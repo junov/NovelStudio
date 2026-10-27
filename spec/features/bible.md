@@ -98,3 +98,22 @@ Acceptance:
   when the current stage changes,
   then both the Files and Story Bible navigators dynamically update to reflect the newly active stage.
 
+### BBL-006: Wiki-Link Destination Hovercard Preview
+WHEN an author hovers over a wiki-link anywhere in the user interface (including rendered markdown views, activity feeds, cards, or raw editor text),
+THE SYSTEM SHALL display a contextual hovercard showing a rendered markdown preview of the destination entity definition, presenting the first five lines completely and fading the sixth line vertically to transparent to indicate that content continues.
+
+Acceptance:
+- Given a wiki-link in the user interface,
+  when hovered by the author,
+  then a hovercard is displayed containing the destination entity metadata and a rendered markdown preview of the destination content.
+- Given the rendered markdown preview inside the wiki hovercard,
+  when displayed,
+  then the first five lines of text are shown completely without clipping.
+- Given destination content that extends to six or more lines of text,
+  when displayed in the wiki hovercard,
+  then the sixth line of text fades vertically to transparent.
+- Given an uncataloged or missing entity ID in a wiki-link,
+  when hovered,
+  then the hovercard displays a notice indicating that the entity definition was not found.
+
+

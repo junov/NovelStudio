@@ -16,7 +16,7 @@
 		type: 'step' | 'pill' | 'play' | 'accept';
 		stage: PipelineStage;
 		stageIndex: number;
-		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string };
+		stageState: { status: 'needs-sync' | 'synced'; badge: string };
 		status: StatusJson | null;
 		targetRect: DOMRect;
 		railRect: DOMRect;

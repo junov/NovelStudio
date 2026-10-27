@@ -14,13 +14,13 @@ Acceptance:
 - Given an author hovers over a stage node body or label,
   when the hover card appears,
   then it displays the full stage title, sequence position (Stage N of 9), comprehensive stage description, associated paths, and the assigned skill (`novel-generate` or `novel-sync`).
-- Given an author hovers over a status or action pill ("GEN", "SYNC", pending, or "SYNCED"),
+- Given an author hovers over a status or action pill ("GEN", "SYNC", or "SYNCED"),
   when the hover card appears,
   then for "SYNC" it displays a description of the drift state without Git-specific terminology, enumerating affected items contributing to drift under the subtitle "Upstream Items with Changes (<count>)" with the synchronization action prompt, and for "GEN" it displays the craft-oriented action title, description of initial generation actions, target scope, and action feasibility or prerequisite guidance.
 - Given any active hover card in the Journey Rail,
   when rendered,
   then it utilizes application literary design tokens without exposing Git-specific terms or porcelain codes, and positions itself adjacent to the hovered element without clipping viewport boundaries.
-- Given any status or action pill rendered on a stage node in the Journey Rail (including "GEN", "SYNC", "SYNCED", pending, "unaccepted", and "Accept"),
+- Given any status or action pill rendered on a stage node in the Journey Rail (including "GEN", "SYNC", "SYNCED", and "Accept"),
   when displayed,
   then its text label is presented in ALL CAPS (uppercase).
 
@@ -45,16 +45,16 @@ Notes: Linked to #7.
 
 ### JRN-003: Journey Rail Stage Acceptance Action
 WHEN a pipeline stage on the Journey Rail has uncommitted diffs or unaccepted changes,
-THE SYSTEM SHALL provide an interactive "Accept" pill action on the stage node that runs `specnovel accept --stage <stage>` to commit and baseline the stage changes in Git, displaying a contextual hovercard listing the uncommitted files belonging to the stage upon hover, while displaying the action only on stages with uncommitted working-tree diffs.
+THE SYSTEM SHALL provide an interactive "Accept" pill action on the stage node that runs `specnovel accept --stage <stage>` to commit and baseline the stage changes in Git, displaying a contextual hovercard listing the uncommitted files belonging to the stage upon hover, while providing the action on unbaselined generated stages and stages with uncommitted working-tree diffs.
 
 Acceptance:
-- Given a stage on the Journey Rail with uncommitted diffs in the working tree,
+- Given a stage on the Journey Rail with uncommitted diffs in the working tree, or an unbaselined stage with generated content,
   when displayed,
   then the stage node provides an interactive "Accept" pill action adjacent to its status pill.
 - Given an author hovers over the "Accept" pill on a stage node,
   when hovered,
   then a contextual hovercard is displayed listing the files with uncommitted changes that belong to that stage.
-- Given a stage on the Journey Rail with no uncommitted diffs in the working tree (including stages that only exhibit upstream drift or pending items without working-tree changes, and stages whose directories are unmodified boilerplate),
+- Given a baselined stage on the Journey Rail with no uncommitted diffs in the working tree (including stages that only exhibit upstream drift or pending items without working-tree changes, and stages whose directories are unmodified boilerplate),
   when displayed,
   then the stage node strictly does not display the "Accept" pill action.
 - Given an author clicks the "Accept" pill on a stage node,
@@ -82,17 +82,17 @@ Acceptance:
   when clicked,
   then that stage becomes the active current stage and receives the visual highlight.
 
-### JRN-005: Initial Stage Pending Lifecycle
+### JRN-005: Initial Stage Generation and Acceptance Lifecycle
 WHEN a novel project is opened or initialized,
-THE SYSTEM SHALL present all pipeline stages in the pending state until each stage is generated for the first time, transitioning unbaselined stages to an unaccepted state with an accept action only after stage generation has completed.
+THE SYSTEM SHALL present ungenerated pipeline stages in the needs-sync state with an interactive "GEN" pill action until each stage is generated for the first time, transitioning unbaselined generated stages to display the interactive "Accept" pill action.
 
 Acceptance:
 - Given a newly created or ungenerated project stage,
   when displayed on the Journey Rail,
-  then the stage presents an interactive "GEN" pill in the "pending" state to trigger initial generation without exhibiting drift or unaccepted pills.
+  then the stage presents an interactive "GEN" pill in the "needs-sync" state to trigger initial generation without exhibiting drift or Accept pills.
 - Given an author runs stage generation via the agent or generates initial stage content,
   when generation completes,
-  then the stage transitions from "pending" to "needs-sync" with an "unaccepted" status and displays the interactive "Accept" pill.
+  then the stage remains in "needs-sync" and displays the interactive "Accept" pill.
 - Given an author accepts the stage baseline,
   when accepted,
   then the stage transitions to the "synced" state.

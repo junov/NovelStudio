@@ -602,11 +602,21 @@ describe('JRN-005: Initial Stage Pending Lifecycle', () => {
 	});
 
 	// @spec JRN-005
-	it('ensures JourneyRail enforces pending status until stages are generated', () => {
+	it('ensures JourneyRail enforces needs-sync status until stages are generated and never renders unaccepted pills', () => {
 		const freshRailSrc = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
 		expect(freshRailSrc).toContain('project.isStageGenerated(stage.id)');
-		expect(freshRailSrc).toContain("return { status: 'pending', badge: 'gen', canAccept: false };");
-		expect(freshRailSrc).toContain("badge: effectiveDrift > 0 ? 'sync' : 'unaccepted'");
+		expect(freshRailSrc).toContain("return { status: 'needs-sync', badge: 'gen', canAccept: false };");
+		expect(freshRailSrc).toContain("badge: effectiveDrift > 0 ? 'sync' : ''");
+		expect(freshRailSrc).not.toContain("'unaccepted'");
+		expect(freshRailSrc).not.toContain("status: 'pending'");
+	});
+
+	// @spec JRN-003, JRN-005
+	it('provides accept action on unbaselined generated stages and eliminates unaccepted pills', () => {
+		const freshRailSrc = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
+		expect(freshRailSrc).not.toContain('unaccepted');
+		expect(freshRailSrc).toContain('if (!baseline)');
+		expect(freshRailSrc).toContain('canAccept: true');
 	});
 
 	// @spec JRN-005
@@ -707,7 +717,7 @@ describe('JRN-006: Interactive Stage Action Pill (GEN and SYNC)', () => {
 		expect(pillInfo.actionHint).toContain('synchronize');
 
 		// GEN pill hover info
-		const genInfo = getStagePillInfo(setupStage, createMockStatus({ baselines: { setup: null }, generatedStages: { setup: false } }), 'gen', 'pending');
+		const genInfo = getStagePillInfo(setupStage, createMockStatus({ baselines: { setup: null }, generatedStages: { setup: false } }), 'gen', 'needs-sync');
 		expect(genInfo.actionHint).toBeDefined();
 		expect(genInfo.badge).toBe('gen');
 	});

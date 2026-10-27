@@ -18,7 +18,7 @@ export interface StagePillInfo {
 	title: string;
 	description: string;
 	badge: string;
-	status: 'needs-sync' | 'synced' | 'pending';
+	status: 'needs-sync' | 'synced';
 	items: string[];
 	itemsLabel?: string;
 	lastAcceptedDate?: string;
@@ -110,7 +110,10 @@ export function getStageStepInfo(
  * @spec JRN-003
  */
 export function getStageUnstagedFiles(stage: PipelineStage, unstagedFiles: Set<string>): string[] {
-	const stagePrefixes = stage.paths.map((p) => (p.includes('.') ? p : p.replace(/\/?$/, '/')));
+	const stagePrefixes = [
+		`${stage.id}/`,
+		...stage.paths.map((p) => (p.includes('.') ? p : p.replace(/\/?$/, '/')))
+	];
 	return Array.from(unstagedFiles).filter((f) => {
 		if (!f || f.endsWith('/') || f.endsWith('.gitkeep')) return false;
 		return stagePrefixes.some((p) => (p.endsWith('/') ? f.startsWith(p) : f === p));
@@ -135,7 +138,9 @@ export function getStageAcceptInfo(stage: PipelineStage, unstagedFiles?: Set<str
 		description:
 			files.length === 1
 				? '1 file with uncommitted changes ready to be committed and accepted into the stage baseline.'
-				: `${files.length} files with uncommitted changes ready to be committed and accepted into the stage baseline.`,
+				: files.length > 1
+				? `${files.length} files with uncommitted changes ready to be committed and accepted into the stage baseline.`
+				: `Ready to baseline and accept ${stage.label} stage changes into project history.`,
 		files
 	};
 }
@@ -258,7 +263,7 @@ export function getStagePillInfo(
 	stage: PipelineStage,
 	status: StatusJson | null,
 	badge: string,
-	pillStatus: 'needs-sync' | 'synced' | 'pending',
+	pillStatus: 'needs-sync' | 'synced',
 	unstagedFiles?: Set<string>
 ): StagePillInfo {
 	const syncName = stage.sync;
@@ -269,7 +274,7 @@ export function getStagePillInfo(
 		return {
 			title: actionInfo.title || `Generate ${stage.label}`,
 			badge: 'gen',
-			status: 'pending',
+			status: 'needs-sync',
 			description: actionInfo.isActionable
 				? actionInfo.description
 				: actionInfo.disabledReason || `Prerequisites for ${stage.label} are not yet completed.`,
@@ -338,7 +343,7 @@ export function getStagePillInfo(
 			(stage.id === 'world' ? status?.pending_items?.['research'] : undefined) ??
 			[];
 
-		if (badge === 'unaccepted' || (!status?.baselines?.[syncName] && pendingCount === 0)) {
+		if (!status?.baselines?.[syncName] && pendingCount === 0) {
 			return {
 				title: `${stage.label} Ready for Acceptance`,
 				badge,
@@ -375,10 +380,10 @@ export function getStagePillInfo(
 	}
 
 	return {
-		title: `${stage.label} Not Yet Accepted`,
-		badge: 'pending',
-		status: 'pending',
-		description: `This stage has not yet been generated and accepted.`,
+		title: `${stage.label} Requires Generation`,
+		badge: 'gen',
+		status: 'needs-sync',
+		description: `This stage has not yet been generated.`,
 		items: []
 	};
 }

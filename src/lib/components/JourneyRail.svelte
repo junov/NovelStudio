@@ -19,7 +19,7 @@
 		type: 'step' | 'pill' | 'play' | 'accept';
 		stage: PipelineStage;
 		stageIndex: number;
-		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string; canAccept?: boolean };
+		stageState: { status: 'needs-sync' | 'synced'; badge: string; canAccept?: boolean };
 		targetRect: DOMRect;
 		railRect: DOMRect;
 	} | null>(null);
@@ -28,7 +28,7 @@
 		type: 'step' | 'pill' | 'play' | 'accept',
 		stage: PipelineStage,
 		stageIndex: number,
-		stageState: { status: 'needs-sync' | 'synced' | 'pending'; badge: string; canAccept?: boolean },
+		stageState: { status: 'needs-sync' | 'synced'; badge: string; canAccept?: boolean },
 		el: HTMLElement
 	) {
 		if (!railContainer) return;
@@ -47,24 +47,24 @@
 	}
 
 	function getStageState(stage: PipelineStage): {
-		status: 'needs-sync' | 'synced' | 'pending';
+		status: 'needs-sync' | 'synced';
 		badge: string;
 		canAccept: boolean;
 	} {
 		const status = project.status;
-		if (!status) return { status: 'pending', badge: '', canAccept: false };
+		if (!status) return { status: 'needs-sync', badge: '', canAccept: false };
 
 		const syncName = stage.sync;
 		const baseline = syncName ? status.baselines?.[syncName] : null;
 
-		// All stages start in the pending state, until they are generated for the first time (@spec JRN-005)
+		// Stages begin in needs-sync until generated for the first time (@spec JRN-005)
 		const isGenerated =
 			Boolean(baseline) ||
 			Boolean(status.generatedStages?.[stage.id]) ||
 			project.isStageGenerated(stage.id);
 
 		if (!isGenerated) {
-			return { status: 'pending', badge: 'gen', canAccept: false };
+			return { status: 'needs-sync', badge: 'gen', canAccept: false };
 		}
 
 		const localDrift = syncName && status.drift?.[syncName] ? status.drift[syncName].length : 0;
@@ -85,19 +85,19 @@
 
 		const hasUncommittedDiffs = stageUnstaged.length > 0;
 
-		// Stage unbaselined: once generated, ready for initial baseline acceptance if uncommitted diffs exist (@spec JRN-003)
+		// Stage unbaselined: once generated, ready for initial baseline acceptance (@spec JRN-003, JRN-005)
 		if (!baseline) {
 			return {
 				status: 'needs-sync',
-				badge: effectiveDrift > 0 ? 'sync' : 'unaccepted',
-				canAccept: hasUncommittedDiffs
+				badge: effectiveDrift > 0 ? 'sync' : '',
+				canAccept: true
 			};
 		}
 
 		if (effectiveDrift > 0 || pendingCount > 0) {
 			return {
 				status: 'needs-sync',
-				badge: effectiveDrift > 0 ? 'sync' : `${pendingCount} pending`,
+				badge: 'sync',
 				canAccept: hasUncommittedDiffs
 			};
 		}

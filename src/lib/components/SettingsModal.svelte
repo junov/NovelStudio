@@ -218,6 +218,23 @@
 				</div>
 			{/if}
 
+			{#if settings.value.defaultModel.provider === 'gemini'}
+				<div class="form-group">
+					<div class="label-row">
+						<label for="key-gemini">API Key</label>
+						<div class="label-actions">
+							<a href={PROVIDERS.gemini.keyUrl} target="_blank" class="external-link">Get Key ↗</a>
+						</div>
+					</div>
+					<input
+						id="key-gemini"
+						type="password"
+						placeholder="AIza..."
+						bind:value={apiKeys.gemini}
+					/>
+				</div>
+			{/if}
+
 			{#if settings.value.defaultModel.provider !== 'antigravity'}
 				<div class="form-row">
 					<div class="form-group flex-1">
@@ -248,36 +265,6 @@
 				</div>
 			{/if}
 		</div>
-
-		<!-- OS Keychain API Keys -->
-		{#if settings.value.defaultModel.provider === 'gemini'}
-			<div class="section">
-				<h3 class="section-title">API Key (Stored Securely in OS Keychain)</h3>
-				<p class="muted font-small">
-					Your credentials are saved directly into the OS Credential Manager / Keychain, never in plain project files.
-				</p>
-
-				{#each Object.entries(PROVIDERS).filter(([pid]) => pid !== 'antigravity') as [pid, meta]}
-					{@const pId = pid as ProviderId}
-					{#if pId === 'gemini' && settings.value.defaultModel.provider === 'gemini'}
-						<div class="form-group">
-							<div class="label-row">
-								<label for="key-{pid}">{meta.label}</label>
-								<div class="label-actions">
-									<a href={meta.keyUrl} target="_blank" class="external-link">Get Key ↗</a>
-								</div>
-							</div>
-							<input
-								id="key-{pid}"
-								type="password"
-								placeholder="AIza..."
-								bind:value={apiKeys[pId]}
-							/>
-						</div>
-					{/if}
-				{/each}
-			</div>
-		{/if}
 
 		<!-- Appearance & Font Size -->
 		<div class="section">

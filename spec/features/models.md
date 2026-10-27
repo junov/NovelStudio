@@ -19,14 +19,14 @@ Acceptance:
   then secretGet retrieves the key value into memory.
 - Given the Settings window or modal,
   when viewed,
-  then the API key configuration section is positioned below the provider and model selection controls.
+  then the API key setting is rendered directly below the provider and model selection controls with a text box label "API Key" rather than as a standalone section title, without explicit provider branding in the label.
 - Given the active AI provider in Settings is not Gemini (e.g. Antigravity CLI),
   when viewing settings,
-  then the Gemini API key text box is hidden from the UI.
+  then the API key text box is hidden from the UI.
 - Given the active AI provider in Settings is Gemini,
   when viewing settings,
-  then the Gemini API key text box is displayed.
-- Given the Gemini API key input in Settings,
+  then the API key text box is displayed.
+- Given the API key input in Settings,
   when viewed,
   then no redundant "Query Models" button is displayed above the text box.
 

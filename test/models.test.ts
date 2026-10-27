@@ -28,10 +28,20 @@ describe('MOD-001: OS Keychain Credential Storage', () => {
 			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
 			'utf-8'
 		);
-		const modelSelectIdx = modalSource.indexOf('AI Model Selection');
-		const apiKeyIdx = modalSource.indexOf('API Key (Stored Securely in OS Keychain)');
+		const modelSelectIdx = modalSource.indexOf('id="default-model"');
+		const apiKeyIdx = modalSource.indexOf('id="key-gemini"');
 		expect(modelSelectIdx).toBeGreaterThan(0);
 		expect(apiKeyIdx).toBeGreaterThan(modelSelectIdx);
+	});
+
+	// @spec MOD-001
+	it('renders API Key as a text box label without standalone section title or provider branding', () => {
+		const modalSource = readFileSync(
+			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
+			'utf-8'
+		);
+		expect(modalSource).not.toContain('API Key (Stored Securely in OS Keychain)');
+		expect(modalSource).toContain('<label for="key-gemini">API Key</label>');
 	});
 
 	// @spec MOD-001
@@ -45,7 +55,8 @@ describe('MOD-001: OS Keychain Credential Storage', () => {
 			modalSource.indexOf("settings.value.defaultModel.provider === 'gemini'"),
 			modalSource.indexOf('Reading Appearance & Theme')
 		);
-		expect(apiKeyBlock).toContain('id="key-{pid}"');
+		expect(apiKeyBlock).toContain('id="key-gemini"');
+		expect(apiKeyBlock).toContain('<label for="key-gemini">API Key</label>');
 	});
 
 	// @spec MOD-001

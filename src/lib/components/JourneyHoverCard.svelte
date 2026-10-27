@@ -80,7 +80,7 @@
 
 		{#if pillInfo.items && pillInfo.items.length > 0}
 			<div class="card-items-block">
-				<span class="footer-label">Affected Items:</span>
+				<span class="footer-label">{pillInfo.itemsLabel || 'Affected Items'}:</span>
 				<ul class="items-list">
 					{#each pillInfo.items.slice(0, 5) as item}
 						<li><code class="item-code">{item}</code></li>

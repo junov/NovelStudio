@@ -20,6 +20,7 @@ export interface StagePillInfo {
 	badge: string;
 	status: 'needs-sync' | 'synced' | 'pending';
 	items: string[];
+	itemsLabel?: string;
 	lastAcceptedDate?: string;
 	actionHint?: string;
 }
@@ -271,6 +272,7 @@ export function getStagePillInfo(
 				status: pillStatus,
 				description: `${allUpstream.length} upstream item(s) have changed since last sync.`,
 				items: allUpstream,
+				itemsLabel: `Upstream Items with Changes (${allUpstream.length})`,
 				actionHint: 'Click to synchronize stage with upstream changes'
 			};
 		}
@@ -282,6 +284,7 @@ export function getStagePillInfo(
 				status: pillStatus,
 				description: `${localDrift.length} item(s) have changed in ${stage.label} since last sync.`,
 				items: localDrift,
+				itemsLabel: `Changed Items (${localDrift.length})`,
 				actionHint: 'Click to synchronize stage'
 			};
 		}
@@ -293,6 +296,7 @@ export function getStagePillInfo(
 				status: pillStatus,
 				description: `Upstream items have changed since ${stage.label} was last synced.`,
 				items: allUpstream,
+				itemsLabel: `Upstream Items with Changes (${allUpstream.length})`,
 				actionHint: 'Click to synchronize stage with upstream changes'
 			};
 		}

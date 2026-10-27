@@ -119,6 +119,7 @@ describe('JRN-001: Contextual Hover Cards for Journey Rail Elements (Issue #7)',
 		const pillInfo = getStagePillInfo(structureStage, status, '2 drift', 'needs-sync');
 
 		expect(pillInfo.title).toContain('Upstream Changes Detected');
+		expect(pillInfo.itemsLabel).toBe('Upstream Items with Changes (2)');
 		expect(pillInfo.items).toContain('world/characters/CHR-001.md');
 		expect(pillInfo.items).toContain('setup/style.md');
 		expect(pillInfo.description).not.toMatch(/git|commit|sha|baseline/i);
@@ -141,6 +142,7 @@ describe('JRN-001: Contextual Hover Cards for Journey Rail Elements (Issue #7)',
 		const pillInfo = getStagePillInfo(structureStage, status, '3 drift', 'needs-sync');
 
 		expect(pillInfo.title).toBe('Upstream Changes Detected');
+		expect(pillInfo.itemsLabel).toBe('Upstream Items with Changes (2)');
 		expect(pillInfo.items).toContain('world/characters/CHR-001.md');
 		expect(pillInfo.items).toContain('narrative/beats.md');
 		expect(pillInfo.items).not.toContain('structure/outline.md');
@@ -163,6 +165,7 @@ describe('JRN-001: Contextual Hover Cards for Journey Rail Elements (Issue #7)',
 		const pillInfo = getStagePillInfo(narrativeStage, status, '3 drift', 'needs-sync', unstaged);
 
 		expect(pillInfo.title).toBe('Upstream Changes Detected');
+		expect(pillInfo.itemsLabel).toBe('Upstream Items with Changes (3)');
 		// Upstream items changed since last sync
 		expect(pillInfo.items).toContain('world/places/PLC-001.md');
 		expect(pillInfo.items).toContain('world/characters/CHR-002.md');
@@ -250,10 +253,10 @@ describe('JRN-001: Contextual Hover Cards for Journey Rail Elements (Issue #7)',
 	});
 
 	// @spec JRN-001
-	it('uses Affected Items label and omits Git baseline commit terminology in JourneyHoverCard.svelte', () => {
+	it('uses dynamic itemsLabel subtitle and omits Git baseline commit terminology in JourneyHoverCard.svelte', () => {
 		const cardSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyHoverCard.svelte'), 'utf-8');
 
-		expect(cardSource).toContain('Affected Items:');
+		expect(cardSource).toContain('pillInfo.itemsLabel');
 		expect(cardSource).not.toContain('Baseline Commit:');
 		expect(cardSource).not.toContain('commit-sha');
 		expect(cardSource).not.toContain('HEAD');

@@ -53,6 +53,9 @@ Acceptance:
 - Given an author chooses "Custom Model ID...",
   when selected,
   then a text input appears permitting arbitrary model strings.
+- Given the Model Selection control in Settings,
+  when viewed,
+  then a "Refresh List" button appears right next to the "Model Selection" label to query and update the list of available models from the active provider.
 
 ### MOD-004: Configurable Thinking Levels for Reasoning Models
 WHEN an author configures model options in Settings,

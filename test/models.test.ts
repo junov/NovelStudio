@@ -108,6 +108,22 @@ describe('MOD-003: Dynamic Model Selector with Provider Display Names', () => {
 		expect(formatModelLabel('gemini-1.5-pro', 'Gemini 1.5 Pro')).toBe('Gemini 1.5 Pro');
 		expect(formatModelLabel('custom-model-v2')).toBe('Custom Model V2');
 	});
+
+	// @spec MOD-003
+	it('renders a Refresh List button right next to the Model Selection label in SettingsModal', () => {
+		const modalSource = readFileSync(
+			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
+			'utf-8'
+		);
+		expect(modalSource).not.toContain('Fetch Models from Provider');
+		expect(modalSource).toContain('Refresh List');
+		const modelSelectIdx = modalSource.indexOf('Model Selection');
+		const refreshIdx = modalSource.indexOf('↻ Refresh List');
+		expect(modelSelectIdx).toBeGreaterThan(0);
+		expect(refreshIdx).toBeGreaterThan(modelSelectIdx);
+		const selectIdx = modalSource.indexOf('id="default-model"');
+		expect(refreshIdx).toBeLessThan(selectIdx);
+	});
 });
 
 describe('MOD-004: Configurable Thinking Levels for Reasoning Models', () => {

@@ -211,7 +211,7 @@ Acceptance:
 - Given a model that does not support reasoning effort (such as flash) configured under the Antigravity CLI,
   when constructing CLI invocation flags,
   then reasoning effort parameters (--effort) are omitted to avoid invalid model selection errors.
-- Given the author triggers "Fetch Models from Provider" with Antigravity CLI selected as provider,
+- Given the author triggers "Refresh List" with Antigravity CLI selected as provider,
   when executed,
   then the system invokes "agy models", parses the available model IDs and display names dynamically, and populates the model selector without requiring an API key.
 - Given Antigravity CLI selected as provider in Settings,

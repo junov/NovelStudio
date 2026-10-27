@@ -614,12 +614,12 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 	});
 
 	// @spec AGT-010
-	it('enables Fetch Models from Provider for Antigravity CLI without requiring API key', () => {
+	it('enables Refresh List next to Model Selection for Antigravity CLI without requiring API key', () => {
 		const modalSource = readFileSync(
 			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
 			'utf-8'
 		);
-		expect(modalSource).toContain('Fetch Models from Provider');
+		expect(modalSource).toContain('Refresh List');
 		expect(modalSource).toContain("settings.value.defaultModel.provider !== 'antigravity'");
 		expect(modalSource).toContain('queryModels(settings.value.defaultModel.provider)');
 	});

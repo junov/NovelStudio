@@ -124,16 +124,7 @@
 
 		<!-- Model Selection -->
 		<div class="section">
-			<div class="section-header-row">
-				<h3 class="section-title">AI Model Selection</h3>
-				<button
-					class="btn small ghost"
-					onclick={() => queryModels(settings.value.defaultModel.provider)}
-					disabled={isQuerying[settings.value.defaultModel.provider] || (settings.value.defaultModel.provider !== 'antigravity' && !apiKeys[settings.value.defaultModel.provider])}
-				>
-					{isQuerying[settings.value.defaultModel.provider] ? 'Refreshing...' : '↻ Fetch Models from Provider'}
-				</button>
-			</div>
+			<h3 class="section-title">AI Model Selection</h3>
 
 			<div class="form-row">
 				<div class="form-group flex-1">
@@ -173,10 +164,21 @@
 				</div>
 
 				<div class="form-group flex-2">
-					<label for="default-model">
-						Model Selection
-						<span class="muted font-normal">({availableModels.length} models)</span>
-					</label>
+					<div class="label-row inline">
+						<label for="default-model">
+							Model Selection
+							<span class="muted font-normal">({availableModels.length} models)</span>
+						</label>
+						<button
+							type="button"
+							class="btn small ghost text-btn"
+							onclick={() => queryModels(settings.value.defaultModel.provider)}
+							disabled={isQuerying[settings.value.defaultModel.provider] || (settings.value.defaultModel.provider !== 'antigravity' && !apiKeys[settings.value.defaultModel.provider])}
+							title="Refresh available models from provider"
+						>
+							{isQuerying[settings.value.defaultModel.provider] ? 'Refreshing...' : '↻ Refresh List'}
+						</button>
+					</div>
 					<select
 						id="default-model"
 						value={isCustomModel ? '__custom__' : settings.value.defaultModel.model}
@@ -349,14 +351,8 @@
 		margin-bottom: 12px;
 	}
 	.section-title {
-		margin: 0;
+		margin: 0 0 10px;
 		font-size: 14px;
-	}
-	.section-header-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 10px;
 	}
 	.font-small {
 		font-size: 11.5px;
@@ -414,6 +410,10 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+	}
+	.label-row.inline {
+		justify-content: flex-start;
+		gap: 8px;
 	}
 	.label-actions {
 		display: flex;

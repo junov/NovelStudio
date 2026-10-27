@@ -177,6 +177,7 @@ class ProjectState {
 	}
 
 	titleOf = (id: string): string | undefined => this.defs[id]?.title;
+	hasId = (id: string): boolean => Boolean(this.defs[id]);
 
 	read(path: string) {
 		return readText(this.root!, path);

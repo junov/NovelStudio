@@ -243,6 +243,41 @@ describe('BBL-006: Wiki-Link Destination Hovercard Preview', () => {
 		expect(missingPreview.isDefined).toBe(false);
 		expect(missingPreview.renderedHtml).toContain('No definition found');
 	});
+
+	// @spec BBL-006
+	it('getEntityPreview renders embedded wiki links using project.hasId without throwing', async () => {
+		clearWikiPreviewCache();
+		project.defs = {
+			'CHR-001': {
+				id: 'CHR-001',
+				title: 'Elena Vance',
+				path: 'world/characters/CHR-001.md',
+				line: 1,
+				level: 1,
+				layer: 'plan'
+			},
+			'ORG-001': {
+				id: 'ORG-001',
+				title: 'The Archive',
+				path: 'world/organizations/ORG-001.md',
+				line: 1,
+				level: 1,
+				layer: 'plan'
+			}
+		};
+		expect(typeof project.hasId).toBe('function');
+		expect(project.hasId('ORG-001')).toBe(true);
+		expect(project.hasId('NONEXISTENT-999')).toBe(false);
+
+		vi.spyOn(project, 'read').mockResolvedValue(
+			'# CHR-001: Elena Vance\n- **Affiliation:** Formerly associated with [[ORG-001]]\n- **Target:** [[PLC-002]]\n'
+		);
+
+		const preview = await getEntityPreview('CHR-001');
+		expect(preview.renderedHtml).not.toContain('Failed to load preview');
+		expect(preview.renderedHtml).toContain('data-wiki="ORG-001"');
+		expect(preview.renderedHtml).toContain('missing'); // PLC-002 is missing
+	});
 });
 
 

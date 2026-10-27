@@ -73,8 +73,8 @@ export async function getEntityPreview(id: string): Promise<EntityPreview> {
 		sectionText = sectionText.replace(/<!--[\s\S]*?-->/g, '').trim();
 
 		const renderedHtml = renderMarkdown(sectionText, {
-			titleOf: (refId) => project.titleOf(refId),
-			exists: (refId) => project.hasId(refId)
+			titleOf: (refId) => project.titleOf?.(refId),
+			exists: (refId) => (project.hasId ? project.hasId(refId) : Boolean(project.defs?.[refId]))
 		});
 
 		const preview: EntityPreview = {

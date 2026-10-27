@@ -6,7 +6,7 @@ import { load, type Store } from '@tauri-apps/plugin-store';
 import { inTauri } from '$lib/tauri';
 import type { DiscoveredModel, ThinkingLevel } from '$lib/agent/providers';
 
-export type ProviderId = 'openai' | 'anthropic' | 'gemini' | 'antigravity';
+export type ProviderId = 'gemini' | 'antigravity';
 export type AgentDriver = 'builtin' | 'antigravity';
 
 export interface ModelChoice {
@@ -39,16 +39,6 @@ export interface Settings {
 }
 
 export const PROVIDERS: Record<ProviderId, { label: string; keyName: string; keyUrl: string }> = {
-	openai: {
-		label: 'OpenAI',
-		keyName: 'openai_api_key',
-		keyUrl: 'https://platform.openai.com/api-keys'
-	},
-	anthropic: {
-		label: 'Anthropic Claude',
-		keyName: 'anthropic_api_key',
-		keyUrl: 'https://console.anthropic.com/settings/keys'
-	},
 	gemini: {
 		label: 'Google Gemini',
 		keyName: 'gemini_api_key',

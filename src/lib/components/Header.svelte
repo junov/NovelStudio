@@ -274,12 +274,6 @@
 		height: 8px;
 		border-radius: 50%;
 	}
-	.provider-dot.anthropic {
-		background: #d97706;
-	}
-	.provider-dot.openai {
-		background: #10b981;
-	}
 	.provider-dot.gemini {
 		background: #3b82f6;
 	}

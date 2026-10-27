@@ -7,7 +7,7 @@ status: active
 ## Requirements
 
 ### MOD-001: OS Keychain Credential Storage
-WHEN an author inputs an API key for Anthropic, OpenAI, or Gemini,
+WHEN an author inputs an API key for Gemini,
 THE SYSTEM SHALL store the credential securely in the operating system's native keychain and retrieve it on demand without writing plain text to disk.
 
 Acceptance:
@@ -26,12 +26,12 @@ Acceptance:
 - Given an API response from Google Gemini containing text generation models alongside embedding or internal models,
   when filterGenerativeModels is executed,
   then models lacking "generateContent" capability and non-chat models (e.g. containing "embedding", "aqa", "imagen") are excluded, and all valid generative models are returned without hardcoding specific model identifiers.
-- Given any newly released model returned by a provider backend (e.g. "gemini-4-argon", "gemini-3.8-flash", "claude-opus-5.5"),
+- Given any newly released model returned by a provider backend (e.g. "gemini-4-argon", "gemini-3.8-flash"),
   when models are queried,
   then the models are discovered dynamically and made available in the selector without requiring code changes.
-- Given a list of returned models from OpenAI or Anthropic with creation timestamps,
-  when sorted,
-  then models are ordered with the most recent models first.
+- Given models returned by Google Gemini or the Antigravity CLI driver,
+  when queried,
+  then available text generation models are discovered dynamically without requiring hardcoded model whitelists.
 
 ### MOD-003: Dynamic Model Selector with Provider Display Names
 WHEN an author configures the active model in Settings,
@@ -55,7 +55,7 @@ Acceptance:
   then the UI displays a Thinking Level selector with options "Off", "Low", "Medium", and "High".
 - Given a thinking level of "High" is configured for a model,
   when an agent prompt is dispatched,
-  then the provider request payload includes the corresponding reasoning parameter (OpenAI reasoning_effort: "high", Anthropic thinking: { type: "enabled", budget_tokens: 32000 }, Gemini thinkingConfig).
+  then the provider request payload includes the corresponding reasoning parameter (Gemini thinkingConfig).
 - Given thinking level is set to "Off",
   when an agent prompt is dispatched,
   then no thinking or reasoning parameters are included in the request payload.

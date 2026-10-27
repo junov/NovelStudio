@@ -1,5 +1,5 @@
 /**
- * Unified multi-provider LLM client for Anthropic, OpenAI, and Gemini.
+ * Unified multi-provider LLM client for Gemini and Antigravity CLI.
  * @spec MOD-002, MOD-003, MOD-004, MOD-006, MOD-007
  */
 import { inTauri } from '$lib/tauri';
@@ -49,20 +49,6 @@ export function formatModelLabel(id: string, displayName?: string): string {
 export function getThinkingConfig(provider: ProviderId, level: ThinkingLevel | undefined): Record<string, unknown> {
 	if (!level || level === 'off') return {};
 
-	if (provider === 'anthropic') {
-		const budgetMap = { low: 4000, medium: 16000, high: 32000 };
-		return {
-			anthropicThinking: {
-				type: 'enabled',
-				budget_tokens: budgetMap[level] || 16000
-			}
-		};
-	}
-
-	if (provider === 'openai') {
-		return { openAiReasoningEffort: level };
-	}
-
 	if (provider === 'gemini') {
 		const budgetMap = { low: 4096, medium: 16384, high: 32768 };
 		return {
@@ -73,241 +59,6 @@ export function getThinkingConfig(provider: ProviderId, level: ThinkingLevel | u
 	}
 
 	return {};
-}
-
-// ------------------------------------------------------------------ Anthropic
-async function callAnthropic(
-	apiKey: string,
-	model: string,
-	messages: ChatMessage[],
-	systemPrompt: string,
-	tools: ToolDef[],
-	thinkingLevel?: ThinkingLevel
-): Promise<LLMResponse> {
-	const httpFetch = await getFetch();
-
-	const anthropicTools = tools.map((t) => ({
-		name: t.name,
-		description: t.description,
-		input_schema: t.parameters
-	}));
-
-	const anthropicMessages: Array<{ role: 'user' | 'assistant'; content: unknown }> = [];
-
-	for (const m of messages) {
-		if (m.role === 'system') continue;
-		if (m.role === 'user') {
-			anthropicMessages.push({ role: 'user', content: m.content || '' });
-		} else if (m.role === 'assistant') {
-			if (m.toolCalls && m.toolCalls.length > 0) {
-				const content: unknown[] = [];
-				if (m.content) {
-					content.push({ type: 'text', text: m.content });
-				}
-				for (const tc of m.toolCalls) {
-					content.push({
-						type: 'tool_use',
-						id: tc.id,
-						name: tc.name,
-						input: tc.args
-					});
-				}
-				anthropicMessages.push({ role: 'assistant', content });
-			} else {
-				anthropicMessages.push({ role: 'assistant', content: m.content || '' });
-			}
-		} else if (m.role === 'tool') {
-			anthropicMessages.push({
-				role: 'user',
-				content: [
-					{
-						type: 'tool_result',
-						tool_use_id: m.toolCallId,
-						content: m.content || ''
-					}
-				]
-			});
-		}
-	}
-
-	const reqBody: Record<string, unknown> = {
-		model,
-		system: systemPrompt,
-		messages: anthropicMessages,
-		tools: anthropicTools.length > 0 ? anthropicTools : undefined,
-		max_tokens: 4096
-	};
-
-	if (thinkingLevel && thinkingLevel !== 'off') {
-		const config = getThinkingConfig('anthropic', thinkingLevel) as {
-			anthropicThinking?: { type: string; budget_tokens: number };
-		};
-		if (config.anthropicThinking) {
-			reqBody.thinking = config.anthropicThinking;
-			reqBody.max_tokens = Math.max(4096, config.anthropicThinking.budget_tokens + 4096);
-		}
-	}
-
-	const res = await httpFetch('https://api.anthropic.com/v1/messages', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'x-api-key': apiKey,
-			'anthropic-version': '2023-06-01'
-		},
-		body: JSON.stringify(reqBody)
-	});
-
-	if (!res.ok) {
-		const errText = await res.text();
-		throw new Error(`Anthropic error (${res.status}): ${errText}`);
-	}
-
-	const data = (await res.json()) as {
-		content: Array<{ type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }>;
-		usage?: { input_tokens: number; output_tokens: number };
-	};
-
-	let text = '';
-	const toolCalls: ToolCall[] = [];
-
-	for (const part of data.content || []) {
-		if (part.type === 'text' && part.text) {
-			text += part.text;
-		} else if (part.type === 'tool_use' && part.id && part.name) {
-			toolCalls.push({
-				id: part.id,
-				name: part.name,
-				args: part.input || {}
-			});
-		}
-	}
-
-	return {
-		text: text || undefined,
-		toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-		promptTokens: data.usage?.input_tokens,
-		completionTokens: data.usage?.output_tokens,
-		model
-	};
-}
-
-// ------------------------------------------------------------------ OpenAI
-async function callOpenAI(
-	apiKey: string,
-	model: string,
-	messages: ChatMessage[],
-	systemPrompt: string,
-	tools: ToolDef[],
-	thinkingLevel?: ThinkingLevel
-): Promise<LLMResponse> {
-	const httpFetch = await getFetch();
-
-	const openAiTools = tools.map((t) => ({
-		type: 'function',
-		function: {
-			name: t.name,
-			description: t.description,
-			parameters: t.parameters
-		}
-	}));
-
-	const openAiMessages: Array<Record<string, unknown>> = [];
-	if (systemPrompt) {
-		openAiMessages.push({ role: 'system', content: systemPrompt });
-	}
-
-	for (const m of messages) {
-		if (m.role === 'system') continue;
-		if (m.role === 'user') {
-			openAiMessages.push({ role: 'user', content: m.content || '' });
-		} else if (m.role === 'assistant') {
-			const obj: Record<string, unknown> = { role: 'assistant', content: m.content || null };
-			if (m.toolCalls && m.toolCalls.length > 0) {
-				obj.tool_calls = m.toolCalls.map((tc) => ({
-					id: tc.id,
-					type: 'function',
-					function: {
-						name: tc.name,
-						arguments: JSON.stringify(tc.args)
-					}
-				}));
-			}
-			openAiMessages.push(obj);
-		} else if (m.role === 'tool') {
-			openAiMessages.push({
-				role: 'tool',
-				tool_call_id: m.toolCallId,
-				content: m.content || ''
-			});
-		}
-	}
-
-	const reqBody: Record<string, unknown> = {
-		model,
-		messages: openAiMessages,
-		tools: openAiTools.length > 0 ? openAiTools : undefined,
-		max_tokens: 4096
-	};
-
-	if (thinkingLevel && thinkingLevel !== 'off') {
-		const config = getThinkingConfig('openai', thinkingLevel);
-		if (config.openAiReasoningEffort) {
-			reqBody.reasoning_effort = config.openAiReasoningEffort;
-		}
-	}
-
-	const res = await httpFetch('https://api.openai.com/v1/chat/completions', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${apiKey}`
-		},
-		body: JSON.stringify(reqBody)
-	});
-
-	if (!res.ok) {
-		const errText = await res.text();
-		throw new Error(`OpenAI error (${res.status}): ${errText}`);
-	}
-
-	const data = (await res.json()) as {
-		choices: Array<{
-			message: {
-				content?: string;
-				tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>;
-			};
-		}>;
-		usage?: { prompt_tokens: number; completion_tokens: number };
-	};
-
-	const choice = data.choices?.[0]?.message;
-	const text = choice?.content || undefined;
-	const toolCalls: ToolCall[] = [];
-
-	if (choice?.tool_calls) {
-		for (const tc of choice.tool_calls) {
-			let parsedArgs = {};
-			try {
-				parsedArgs = JSON.parse(tc.function.arguments);
-			} catch {
-				parsedArgs = { raw: tc.function.arguments };
-			}
-			toolCalls.push({
-				id: tc.id,
-				name: tc.function.name,
-				args: parsedArgs
-			});
-		}
-	}
-
-	return {
-		text,
-		toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-		promptTokens: data.usage?.prompt_tokens,
-		completionTokens: data.usage?.completion_tokens,
-		model
-	};
 }
 
 /**
@@ -496,10 +247,6 @@ export async function callProvider(
 	}
 
 	switch (provider) {
-		case 'anthropic':
-			return callAnthropic(apiKey, model, messages, systemPrompt, tools, thinkingLevel);
-		case 'openai':
-			return callOpenAI(apiKey, model, messages, systemPrompt, tools, thinkingLevel);
 		case 'gemini':
 			return callGemini(apiKey, model, messages, systemPrompt, tools, thinkingLevel);
 		default:
@@ -534,82 +281,7 @@ export function filterGenerativeModels(provider: ProviderId, models: RawModelEnt
 			}));
 	}
 
-	if (provider === 'anthropic') {
-		const sorted = [...models].sort((a, b) => (b.created || 0) - (a.created || 0));
-		return sorted.map((m) => ({
-			id: m.id,
-			displayName: m.displayName || formatModelLabel(m.id),
-			supportsThinking: Boolean(
-				m.id.includes('opus-5') ||
-				m.id.includes('3-7-sonnet') ||
-				m.id.includes('thinking')
-			)
-		}));
-	}
-
-	if (provider === 'openai') {
-		const nonChatMarkers = ['whisper', 'dall-e', 'tts', 'embedding', 'babbage', 'davinci', 'realtime', 'audio'];
-		const filtered = models.filter((m) => {
-			const l = m.id.toLowerCase();
-			return !nonChatMarkers.some((marker) => l.includes(marker));
-		});
-		const sorted = [...filtered].sort((a, b) => (b.created || 0) - (a.created || 0));
-		return sorted.map((m) => ({
-			id: m.id,
-			displayName: m.displayName || formatModelLabel(m.id),
-			supportsThinking: Boolean(
-				m.id.startsWith('o1') ||
-				m.id.startsWith('o3') ||
-				m.id.includes('reasoning')
-			)
-		}));
-	}
-
 	return models.map((m) => ({ id: m.id, displayName: m.displayName || m.id }));
-}
-
-async function listAnthropicModels(apiKey: string): Promise<DiscoveredModel[]> {
-	const httpFetch = await getFetch();
-	const res = await httpFetch('https://api.anthropic.com/v1/models', {
-		method: 'GET',
-		headers: {
-			'x-api-key': apiKey,
-			'anthropic-version': '2023-06-01'
-		}
-	});
-	if (!res.ok) {
-		const err = await res.text();
-		throw new Error(`Failed to list Anthropic models (${res.status}): ${err}`);
-	}
-	const data = (await res.json()) as {
-		data?: Array<{ id: string; display_name?: string; created_at?: string }>;
-	};
-	const raw: RawModelEntry[] = (data.data || []).map((m) => ({
-		id: m.id,
-		displayName: m.display_name,
-		created: m.created_at ? new Date(m.created_at).getTime() / 1000 : 0
-	}));
-	return filterGenerativeModels('anthropic', raw);
-}
-
-async function listOpenAIModels(apiKey: string): Promise<DiscoveredModel[]> {
-	const httpFetch = await getFetch();
-	const res = await httpFetch('https://api.openai.com/v1/models', {
-		method: 'GET',
-		headers: {
-			Authorization: `Bearer ${apiKey}`
-		}
-	});
-	if (!res.ok) {
-		const err = await res.text();
-		throw new Error(`Failed to list OpenAI models (${res.status}): ${err}`);
-	}
-	const data = (await res.json()) as { data?: Array<{ id: string; created?: number }> };
-	const raw: RawModelEntry[] = (data.data || []).map((m) => ({
-		id: m.id,
-		created: m.created || 0
-	}));
-	return filterGenerativeModels('openai', raw);
 }
 
 async function listGeminiModels(apiKey: string): Promise<DiscoveredModel[]> {
@@ -740,10 +412,6 @@ export async function fetchAvailableModels(
 	}
 	if (!apiKey) return [];
 	switch (provider) {
-		case 'anthropic':
-			return listAnthropicModels(apiKey);
-		case 'openai':
-			return listOpenAIModels(apiKey);
 		case 'gemini':
 			return listGeminiModels(apiKey);
 		default:

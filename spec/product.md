@@ -15,7 +15,7 @@ NovelStudio is a professional desktop environment for specification-driven novel
 - **Dual-Mode Writing Editor**: Switching between structural Markdown editing (CodeMirror 6 "edit" mode) and rendered Markdown ("preview" mode) with live bidirectional wiki-link resolution.
 - **Living Story Bible Explorer**: Categorized catalog of characters, places, objects, organizations, world rules, timeline events, glossary terms, facts, sources, research questions, themes, style rules, narrative arcs/beats/illustrations, structure scenes, and directives (`DIR`), continuously accessible throughout writing.
 - **Autonomous Agent Loop & Tools**: Embedded pair-programmer loop calling LLM APIs directly with SpecNovelist tools (`read_file`, `write_file`, `specnovel`, `ask_user`, `read_toolkit_doc`).
-- **Secure Multi-Provider AI Integration**: Direct API connections to Anthropic Claude, Google Gemini, and OpenAI with encrypted credentials stored in OS Keychain (Windows Credential Manager).
+- **Secure Multi-Provider AI Integration**: Direct API connection to Google Gemini (with credentials stored in OS Keychain / Windows Credential Manager) and native local execution via Antigravity CLI.
 - **Distraction-Free Dedicated Windows**: Multi-window architecture providing separate native windows for AI configuration settings and interactive author interview sessions.
 - **Narrative Analysis Dashboard**: Visual pacing waveforms, sensory radar charts, character agency radar, and Chekhov gun resolution matrices.
 - **Multi-Format Book Compilation**: One-click manuscript export to EPUB, PDF, DOCX, and combined Markdown in `publishable/`.

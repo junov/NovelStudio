@@ -201,7 +201,7 @@ THE SYSTEM SHALL provide "Antigravity CLI" as a selectable option in the Provide
 Acceptance:
 - Given the Settings modal or window,
   when the Provider select menu is viewed,
-  then "Antigravity CLI" is included as a selectable provider option alongside OpenAI, Anthropic Claude, and Google Gemini.
+  then "Antigravity CLI" is included as a selectable provider option alongside Google Gemini.
 - Given the author selects "Antigravity CLI" in the Provider menu,
   when saved,
   then defaultModel.provider is set to "antigravity" (with useAntigravityCli enabled and agentDriver set to "antigravity") and persisted in the settings store across reloads.

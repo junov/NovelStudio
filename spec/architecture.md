@@ -9,7 +9,7 @@ flowchart TD
         UI["NovelStudio UI\n(JourneyRail, Explorer, Editor, Dashboard)"]
         Store["State Stores\n(project.svelte, settings.svelte)"]
         Agent["Agent Engine Loop\n(engine.svelte.ts)"]
-        Providers["LLM Providers\n(Anthropic, Gemini, OpenAI)"]
+        Providers["LLM Providers\n(Gemini, Antigravity CLI)"]
     end
 
     subgraph Native["Native Layer (Rust / Tauri 2)"]
@@ -27,7 +27,7 @@ flowchart TD
     UI --> Store
     UI --> Agent
     Agent --> Providers
-    Providers -->|HTTP/REST| LLM["Cloud LLMs (Claude, Gemini, GPT-4o)"]
+    Providers -->|HTTP/REST / CLI| LLM["LLM Engines (Google Gemini, Antigravity CLI)"]
     Store --> FS
     Agent --> Native
     Native --> Novel
@@ -41,7 +41,7 @@ flowchart TD
 - **Styling**: Vanilla CSS with literary design tokens (`--bg`, `--ink`, `--paper`, Garamond & Inter typography). Zero viewport scrollbars.
 - **Prose Editing**: CodeMirror 6 Markdown editor (Edit mode) and rendered Markdown preview (Preview mode) with interactive wiki-links. Zero WYSIWYG mode.
 - **Testing**: Vitest (`npm test`) and Cargo (`cargo test`).
-- **AI Integration**: Direct HTTP clients with streaming and tool calling for Anthropic, Google Gemini, and OpenAI.
+- **AI Integration**: Direct HTTP client with streaming and tool calling for Google Gemini, alongside native driver execution via Antigravity CLI.
 - **Dynamic Model Discovery**: Zero hard-coded model identifiers or static whitelists in the codebase. All available models originate directly from the provider API backends (filtered by capability and sorted chronologically), guaranteeing immediate forward compatibility with new model releases.
 - **Credential Storage**: Native OS Keychain via Rust `keyring` crate (Windows Credential Manager: `dev.junov.novelstudio`).
 

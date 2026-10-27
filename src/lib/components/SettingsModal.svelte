@@ -12,15 +12,13 @@
 	let { onClose, isDedicatedWindow = false }: Props = $props();
 
 	let apiKeys = $state<Record<ProviderId, string>>({
-		anthropic: '',
-		openai: '',
-		gemini: ''
+		gemini: '',
+		antigravity: ''
 	});
 	let isSaving = $state(false);
 	let isQuerying = $state<Record<ProviderId, boolean>>({
-		anthropic: false,
-		openai: false,
-		gemini: false
+		gemini: false,
+		antigravity: false
 	});
 	let queryMessage = $state<string | null>(null);
 	let queryError = $state<string | null>(null);
@@ -40,7 +38,7 @@
 	});
 
 	onMount(async () => {
-		for (const pid of ['anthropic', 'openai', 'gemini'] as ProviderId[]) {
+		for (const pid of ['gemini'] as ProviderId[]) {
 			const val = await secretGet(PROVIDERS[pid].keyName);
 			if (val) apiKeys[pid] = val;
 		}
@@ -89,7 +87,7 @@
 	async function saveKeys() {
 		isSaving = true;
 		try {
-			for (const pid of ['anthropic', 'openai', 'gemini'] as ProviderId[]) {
+			for (const pid of ['gemini'] as ProviderId[]) {
 				const keyName = PROVIDERS[pid].keyName;
 				const val = apiKeys[pid]?.trim();
 				if (val) {

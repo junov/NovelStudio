@@ -27,7 +27,7 @@ describe('formatModelLabel', () => {
 	// @spec MOD-003
 	it('formats model labels cleanly using provider displayName or formatted id', () => {
 		expect(formatModelLabel('gemini-4-argon', 'Gemini 4 Argon')).toBe('Gemini 4 Argon');
-		expect(formatModelLabel('claude-opus-5.5', 'Claude Opus 5.5')).toBe('Claude Opus 5.5');
+		expect(formatModelLabel('gemini-pro-1.5', 'Gemini Pro 1.5')).toBe('Gemini Pro 1.5');
 		expect(formatModelLabel('my-custom-model')).toBe('My Custom Model');
 	});
 });
@@ -35,9 +35,9 @@ describe('formatModelLabel', () => {
 describe('getThinkingConfig', () => {
 	// @spec MOD-004
 	it('provides valid reasoning payloads for reasoning models', () => {
-		expect(getThinkingConfig('openai', 'high')).toEqual({ openAiReasoningEffort: 'high' });
+		expect(getThinkingConfig('gemini', 'high')).toEqual({ geminiThinkingConfig: { thinkingBudget: 32768 } });
 		expect(getThinkingConfig('gemini', 'medium')).toEqual({ geminiThinkingConfig: { thinkingBudget: 16384 } });
-		expect(getThinkingConfig('anthropic', 'low')).toEqual({ anthropicThinking: { type: 'enabled', budget_tokens: 4000 } });
-		expect(getThinkingConfig('anthropic', 'off')).toEqual({});
+		expect(getThinkingConfig('gemini', 'low')).toEqual({ geminiThinkingConfig: { thinkingBudget: 4096 } });
+		expect(getThinkingConfig('gemini', 'off')).toEqual({});
 	});
 });

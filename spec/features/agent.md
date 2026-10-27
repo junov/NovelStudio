@@ -207,7 +207,7 @@ Acceptance:
   then defaultModel.provider is set to "antigravity" (with useAntigravityCli enabled and agentDriver set to "antigravity") and persisted in the settings store across reloads.
 - Given an agent task is initiated with the Antigravity CLI provider selected,
   when execution starts,
-  then the system auto-provisions the global NovelStudio custom agent definition (`novelstudio.md` with `tools: []` and attached `mcpServers`) and MCP configuration in the user's Antigravity configuration directory, dispatching execution with --agent novelstudio, --print, --output-format stream-json, and --dangerously-skip-permissions.
+  then the system auto-provisions the NovelStudio custom agent definition (`novelstudio.md` with `tools: []` and attached `mcpServers`) and MCP configuration privately inside the active novel workspace (`<project_root>/.agents/agents/novelstudio.md` and `<project_root>/.agents/mcp_config.json`), excludes these private files from git tracking via `<project_root>/.agents/.gitignore`, purges any legacy definitions from global user configuration, and dispatches execution with --agent novelstudio, --print, --output-format stream-json, and --dangerously-skip-permissions.
 - Given tool calls emitted via the NovelStudio MCP server (including unwrapped call_mcp_tool events) during an Antigravity CLI execution session,
   when processed,
   then the system normalizes tool names, arguments, and completion results, rendering fine-grained tool_start and tool_end cards in the agent activity feed.

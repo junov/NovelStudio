@@ -288,16 +288,27 @@ async fn run_git(project: String, args: Vec<String>) -> Result<CmdOutput, String
     .map_err(|e| e.to_string())?
 }
 
-fn ensure_novelstudio_agent(app: &AppHandle) {
-    let home = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")).unwrap_or_default();
-    if home.is_empty() {
+/// Auto-provision NovelStudio custom agent privately into novel workspace (.agents/).
+/// @spec AGT-010
+fn ensure_novelstudio_agent(app: &AppHandle, project_root: &str) {
+    if project_root.trim().is_empty() {
         return;
     }
-    let home_p = PathBuf::from(&home);
-    let config_agents = home_p.join(".gemini").join("config").join("agents");
-    let cli_agents = home_p.join(".gemini").join("antigravity-cli").join("agents");
-    let _ = std::fs::create_dir_all(&config_agents);
-    let _ = std::fs::create_dir_all(&cli_agents);
+    let root_path = PathBuf::from(project_root);
+    if !root_path.exists() {
+        return;
+    }
+
+    // Clean up any legacy global files from ~/.gemini
+    if let Ok(home) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
+        let home_p = PathBuf::from(&home);
+        let _ = std::fs::remove_file(home_p.join(".gemini").join("config").join("agents").join("novelstudio.md"));
+        let _ = std::fs::remove_file(home_p.join(".gemini").join("antigravity-cli").join("agents").join("novelstudio.md"));
+    }
+
+    let agents_dir = root_path.join(".agents").join("agents");
+    let mcp_dir = root_path.join(".agents");
+    let _ = std::fs::create_dir_all(&agents_dir);
 
     let py_path = python(app).map(|p| p.0).unwrap_or_else(|| "python".to_string());
     let script_path = toolkit_dir(app).join("scripts").join("novel_mcp_server.py");
@@ -325,17 +336,18 @@ Generic system commands and arbitrary shell executions are strictly prevented.\n
         py_str, script_str
     );
 
-    let _ = std::fs::write(config_agents.join("novelstudio.md"), &agent_md);
-    let _ = std::fs::write(cli_agents.join("novelstudio.md"), &agent_md);
+    let _ = std::fs::write(agents_dir.join("novelstudio.md"), &agent_md);
 
-    let mcp_config_dir = home_p.join(".gemini").join("config");
-    let mcp_config_path = mcp_config_dir.join("mcp_config.json");
-    let _ = std::fs::create_dir_all(&mcp_config_dir);
     let mcp_json = format!(
         "{{\n  \"mcpServers\": {{\n    \"novelstudio\": {{\n      \"command\": \"{}\",\n      \"args\": [\"{}\"],\n      \"disabled\": false\n    }}\n  }}\n}}",
         py_str, script_str
     );
-    let _ = std::fs::write(mcp_config_path, mcp_json);
+    let _ = std::fs::write(mcp_dir.join("mcp_config.json"), mcp_json);
+
+    let gitignore_path = mcp_dir.join(".gitignore");
+    if !gitignore_path.exists() {
+        let _ = std::fs::write(gitignore_path, "agents/novelstudio.md\nmcp_config.json\n");
+    }
 }
 
 /// Run `agy <args>` inside the project directory.
@@ -349,16 +361,16 @@ async fn run_antigravity_streaming(
     args: Vec<String>,
     on_event: tauri::ipc::Channel<String>,
 ) -> Result<CmdOutput, String> {
-    ensure_novelstudio_agent(&app);
-    let toolkit = toolkit_dir(&app).to_string_lossy().to_string();
-    let (prog, _) = find_agy().ok_or_else(|| {
-        "Antigravity CLI ('agy') was not found. Please verify that 'agy' is installed or set NOVELSTUDIO_AGY to its path.".to_string()
-    })?;
     let cwd = if project.trim().is_empty() {
         ".".to_string()
     } else {
         project
     };
+    ensure_novelstudio_agent(&app, &cwd);
+    let toolkit = toolkit_dir(&app).to_string_lossy().to_string();
+    let (prog, _) = find_agy().ok_or_else(|| {
+        "Antigravity CLI ('agy') was not found. Please verify that 'agy' is installed or set NOVELSTUDIO_AGY to its path.".to_string()
+    })?;
     tauri::async_runtime::spawn_blocking(move || {
         let is_cmd = cfg!(windows) && (prog.ends_with(".cmd") || prog.ends_with(".bat"));
         let mut cmd = if is_cmd {
@@ -417,15 +429,16 @@ async fn run_antigravity_streaming(
 }
 
 #[tauri::command]
-async fn run_antigravity(project: String, args: Vec<String>) -> Result<CmdOutput, String> {
-    let (prog, _) = find_agy().ok_or_else(|| {
-        "Antigravity CLI ('agy') was not found. Please verify that 'agy' is installed or set NOVELSTUDIO_AGY to its path.".to_string()
-    })?;
+async fn run_antigravity(app: AppHandle, project: String, args: Vec<String>) -> Result<CmdOutput, String> {
     let cwd = if project.trim().is_empty() {
         ".".to_string()
     } else {
         project
     };
+    ensure_novelstudio_agent(&app, &cwd);
+    let (prog, _) = find_agy().ok_or_else(|| {
+        "Antigravity CLI ('agy') was not found. Please verify that 'agy' is installed or set NOVELSTUDIO_AGY to its path.".to_string()
+    })?;
     tauri::async_runtime::spawn_blocking(move || {
         let is_cmd = cfg!(windows) && (prog.ends_with(".cmd") || prog.ends_with(".bat"));
         let cmd = if is_cmd {

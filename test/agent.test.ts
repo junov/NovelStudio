@@ -609,7 +609,7 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 	});
 
 	// @spec AGT-010
-	it('dispatches Antigravity CLI driver with novelstudio custom agent and auto-provisioning', () => {
+	it('dispatches Antigravity CLI driver with novelstudio custom agent and workspace-scoped auto-provisioning', () => {
 		const engineSource = readFileSync(
 			resolve(__dirname, '../src/lib/agent/engine.svelte.ts'),
 			'utf-8'
@@ -626,6 +626,12 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 			'utf-8'
 		);
 		expect(rustSource).toContain('ensure_novelstudio_agent');
+		expect(rustSource).toContain('root_path.join(".agents").join("agents")');
+		expect(rustSource).toContain('root_path.join(".agents")');
+		expect(rustSource).toContain('agents_dir.join("novelstudio.md")');
+		expect(rustSource).toContain('mcp_dir.join("mcp_config.json")');
+		expect(rustSource).toContain('gitignore_path');
+		expect(rustSource).toContain('agents/novelstudio.md\\nmcp_config.json');
 	});
 
 	// @spec AGT-010

@@ -217,3 +217,6 @@ Acceptance:
 - Given Antigravity CLI selected as provider in Settings,
   when viewing model configuration,
   then the Thinking Level setting is hidden from the UI.
+- Given Antigravity CLI selected as provider in Settings,
+  when viewed,
+  then the Antigravity CLI active driver banner is displayed below the provider and model selection controls.

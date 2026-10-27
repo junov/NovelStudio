@@ -135,12 +135,6 @@
 				</button>
 			</div>
 
-			{#if settings.value.defaultModel.provider === 'antigravity'}
-				<div class="info-banner cli-banner">
-					<span>⚡ <strong>Antigravity CLI Driver Active:</strong> Agent tasks and pipeline skills run via the local <code>agy</code> command line session.</span>
-				</div>
-			{/if}
-
 			<div class="form-row">
 				<div class="form-group flex-1">
 					<label for="default-provider">Provider</label>
@@ -227,6 +221,12 @@
 					{/if}
 				</div>
 			</div>
+
+			{#if settings.value.defaultModel.provider === 'antigravity'}
+				<div class="info-banner cli-banner">
+					<span>⚡ <strong>Antigravity CLI Driver Active:</strong> Agent tasks and pipeline skills run via the local <code>agy</code> command line session.</span>
+				</div>
+			{/if}
 
 			{#if settings.value.defaultModel.provider !== 'antigravity'}
 				<div class="form-row">

@@ -637,4 +637,16 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(thinkingSection).toContain('id="thinking-level"');
 		expect(thinkingSection).toContain('Thinking / Reasoning Level');
 	});
+
+	// @spec AGT-010
+	it('places the Antigravity CLI active driver banner below the provider and model selection widgets', () => {
+		const modalSource = readFileSync(
+			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
+			'utf-8'
+		);
+		const modelSelectIdx = modalSource.indexOf('id="default-model"');
+		const bannerIdx = modalSource.indexOf('cli-banner');
+		expect(modelSelectIdx).toBeGreaterThan(0);
+		expect(bannerIdx).toBeGreaterThan(modelSelectIdx);
+	});
 });

@@ -220,13 +220,6 @@ class AgentEngine {
 						args.push('--model', modelChoice.model);
 					}
 
-					// --effort is only supported for reasoning-capable models (not supported for flash)
-					const modelLower = (modelChoice.model || '').toLowerCase();
-					const isFlash = modelLower === 'flash' || modelLower.includes('flash');
-					if (!isFlash && modelChoice.thinkingLevel && modelChoice.thinkingLevel !== 'off') {
-						args.push('--effort', modelChoice.thinkingLevel);
-					}
-
 					args.push('--print', safePrompt);
 
 					const out = await runAntigravity(project.root!, args);

@@ -588,7 +588,6 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(engineSource).toContain("'json'");
 		expect(engineSource).toContain("'--conversation'");
 		expect(engineSource).toContain("parsed.usage");
-		expect(engineSource).toContain("isFlash");
 
 		const tauriSource = readFileSync(
 			resolve(__dirname, '../src/lib/tauri.ts'),
@@ -623,5 +622,19 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(modalSource).toContain('Fetch Models from Provider');
 		expect(modalSource).toContain("settings.value.defaultModel.provider !== 'antigravity'");
 		expect(modalSource).toContain('queryModels(settings.value.defaultModel.provider)');
+	});
+
+	// @spec AGT-010
+	it('hides the Thinking Level setting in SettingsModal when Antigravity CLI is the active provider', () => {
+		const modalSource = readFileSync(
+			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
+			'utf-8'
+		);
+		const thinkingSection = modalSource.substring(
+			modalSource.indexOf("settings.value.defaultModel.provider !== 'antigravity'"),
+			modalSource.indexOf('Reading Appearance & Theme')
+		);
+		expect(thinkingSection).toContain('id="thinking-level"');
+		expect(thinkingSection).toContain('Thinking / Reasoning Level');
 	});
 });

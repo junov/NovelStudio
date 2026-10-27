@@ -214,3 +214,6 @@ Acceptance:
 - Given the author triggers "Fetch Models from Provider" with Antigravity CLI selected as provider,
   when executed,
   then the system invokes "agy models", parses the available model IDs and display names dynamically, and populates the model selector without requiring an API key.
+- Given Antigravity CLI selected as provider in Settings,
+  when viewing model configuration,
+  then the Thinking Level setting is hidden from the UI.

@@ -110,7 +110,7 @@
 		<div class="model-indicator" onclick={onOpenSettings} title="Active Model — Click to configure or query models">
 			<span class="provider-dot {settings.value.defaultModel.provider}"></span>
 			<span class="model-name">{formatModelLabel(settings.value.defaultModel.model)}</span>
-			{#if settings.value.defaultModel.thinkingLevel && settings.value.defaultModel.thinkingLevel !== 'off'}
+			{#if settings.value.defaultModel.provider !== 'antigravity' && settings.value.defaultModel.thinkingLevel && settings.value.defaultModel.thinkingLevel !== 'off'}
 				<span class="thinking-pill" title="Thinking: {settings.value.defaultModel.thinkingLevel}">🧠 {settings.value.defaultModel.thinkingLevel}</span>
 			{/if}
 		</div>

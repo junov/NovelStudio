@@ -122,6 +122,7 @@ class AgentEngine {
 
 	#abortController: AbortController | null = null;
 	#messages: ChatMessage[] = [];
+	#agyConversationId: string | null = null;
 
 	addFeed(type: FeedItem['type'], title: string, content?: string, metadata?: Record<string, unknown>, status?: FeedItem['status']) {
 		const item: FeedItem = {
@@ -148,6 +149,7 @@ class AgentEngine {
 		this.currentStep = 0;
 		this.totalPromptTokens = 0;
 		this.totalCompletionTokens = 0;
+		this.#agyConversationId = null;
 	}
 
 	cancel() {
@@ -198,8 +200,29 @@ class AgentEngine {
 			try {
 				if (inTauri()) {
 					this.addFeed('thought', 'Antigravity CLI Driver', `Dispatching to agy with skill context "${effectiveSkill}"...`);
-					const prompt = effectiveSkill ? `/${effectiveSkill} ${userInstruction}` : userInstruction;
-					const args: string[] = ['--print', prompt, '--dangerously-skip-permissions'];
+
+					// If this is a fresh conversation turn, prepend the SpecNovelist system prompt and skill rules
+					let prompt = userInstruction;
+					if (!this.#agyConversationId) {
+						const systemPrompt = await this.#buildSystemPrompt(effectiveSkill, modelChoice.model);
+						prompt = `${systemPrompt}\n\n=== AUTHOR DIRECTIVE ===\n[Active Skill: ${effectiveSkill}]\n${userInstruction}`;
+					} else if (effectiveSkill) {
+						prompt = `[Skill: ${effectiveSkill}]\n${userInstruction}`;
+					}
+
+					const args: string[] = [
+						'--print',
+						prompt,
+						'--output-format',
+						'json',
+						'--dangerously-skip-permissions'
+					];
+
+					// Continue previous conversation session if available
+					if (this.#agyConversationId) {
+						args.push('--conversation', this.#agyConversationId);
+					}
+
 					if (modelChoice.model && modelChoice.model !== 'default') {
 						args.push('--model', modelChoice.model);
 					}
@@ -208,12 +231,38 @@ class AgentEngine {
 					}
 
 					const out = await runAntigravity(project.root!, args);
-					const text = out.stdout + (out.stderr ? `\n[stderr]\n${out.stderr}` : '');
+					const rawStderr = out.stderr ? `\n[stderr]\n${out.stderr}` : '';
+
 					if (out.code === 0) {
-						this.addFeed('message', `${effectiveSkill} completed via Antigravity CLI`, text || undefined, undefined, 'success');
+						let responseText = out.stdout;
+						try {
+							const parsed = JSON.parse(out.stdout.trim());
+							if (parsed.response) {
+								responseText = parsed.response;
+							}
+							if (parsed.conversation_id) {
+								this.#agyConversationId = parsed.conversation_id;
+							}
+							if (parsed.usage) {
+								if (typeof parsed.usage.input_tokens === 'number') {
+									this.totalPromptTokens += parsed.usage.input_tokens;
+								}
+								if (typeof parsed.usage.output_tokens === 'number') {
+									this.totalCompletionTokens += parsed.usage.output_tokens;
+								}
+							}
+						} catch {
+							// If output is not JSON, use raw stdout
+						}
+
+						if (responseText && responseText.trim()) {
+							this.addFeed('thought', 'Antigravity CLI Output', responseText.trim());
+						}
+						this.addFeed('message', `${effectiveSkill} completed via Antigravity CLI`, undefined, undefined, 'success');
 						this.status = 'completed';
 					} else {
-						this.addFeed('error', `Antigravity CLI exited with code ${out.code}`, text, undefined, 'error');
+						const errText = (out.stdout + rawStderr).trim() || `Exit code ${out.code}`;
+						this.addFeed('error', `Antigravity CLI exited with code ${out.code}`, errText, undefined, 'error');
 						this.status = 'failed';
 					}
 				} else {

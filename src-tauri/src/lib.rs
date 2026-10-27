@@ -288,16 +288,69 @@ async fn run_git(project: String, args: Vec<String>) -> Result<CmdOutput, String
     .map_err(|e| e.to_string())?
 }
 
+fn ensure_novelstudio_agent(app: &AppHandle) {
+    let home = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")).unwrap_or_default();
+    if home.is_empty() {
+        return;
+    }
+    let home_p = PathBuf::from(&home);
+    let config_agents = home_p.join(".gemini").join("config").join("agents");
+    let cli_agents = home_p.join(".gemini").join("antigravity-cli").join("agents");
+    let _ = std::fs::create_dir_all(&config_agents);
+    let _ = std::fs::create_dir_all(&cli_agents);
+
+    let py_path = python(app).map(|p| p.0).unwrap_or_else(|| "python".to_string());
+    let script_path = toolkit_dir(app).join("scripts").join("novel_mcp_server.py");
+    let py_str = py_path.replace('\\', "/");
+    let script_str = script_path.to_string_lossy().replace('\\', "/");
+
+    let agent_md = format!(
+        "---\n\
+name: novelstudio\n\
+description: NovelStudio craft authoring and synchronization assistant. Exclusively uses NovelStudio tools.\n\
+mainAgent: true\n\
+tools: []\n\
+mcpServers:\n\
+  - name: novelstudio\n\
+    transport: stdio\n\
+    command: \"{}\"\n\
+    args:\n\
+      - \"{}\"\n\
+---\n\n\
+# NovelStudio Agent\n\n\
+You are NovelStudio's embedded AI novelist assistant operating in the novel project root.\n\
+You strictly adhere to the SpecNovelist specification-driven novel writing methodology.\n\
+You exclusively use the craft tools provided by NovelStudio via the Model Context Protocol (MCP).\n\
+Generic system commands and arbitrary shell executions are strictly prevented.\n",
+        py_str, script_str
+    );
+
+    let _ = std::fs::write(config_agents.join("novelstudio.md"), &agent_md);
+    let _ = std::fs::write(cli_agents.join("novelstudio.md"), &agent_md);
+
+    let mcp_config_dir = home_p.join(".gemini").join("config");
+    let mcp_config_path = mcp_config_dir.join("mcp_config.json");
+    let _ = std::fs::create_dir_all(&mcp_config_dir);
+    let mcp_json = format!(
+        "{{\n  \"mcpServers\": {{\n    \"novelstudio\": {{\n      \"command\": \"{}\",\n      \"args\": [\"{}\"],\n      \"disabled\": false\n    }}\n  }}\n}}",
+        py_str, script_str
+    );
+    let _ = std::fs::write(mcp_config_path, mcp_json);
+}
+
 /// Run `agy <args>` inside the project directory.
 /// @spec AGT-010
 /// Run `agy <args>` inside the project directory, streaming stdout lines via a Tauri IPC channel.
 /// @spec AGT-010
 #[tauri::command]
 async fn run_antigravity_streaming(
+    app: AppHandle,
     project: String,
     args: Vec<String>,
     on_event: tauri::ipc::Channel<String>,
 ) -> Result<CmdOutput, String> {
+    ensure_novelstudio_agent(&app);
+    let toolkit = toolkit_dir(&app).to_string_lossy().to_string();
     let (prog, _) = find_agy().ok_or_else(|| {
         "Antigravity CLI ('agy') was not found. Please verify that 'agy' is installed or set NOVELSTUDIO_AGY to its path.".to_string()
     })?;
@@ -320,6 +373,7 @@ async fn run_antigravity_streaming(
         cmd.current_dir(&cwd)
             .env("PYTHONIOENCODING", "utf-8")
             .env("PYTHONUTF8", "1")
+            .env("NOVELSTUDIO_TOOLKIT", &toolkit)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         no_window(&mut cmd);

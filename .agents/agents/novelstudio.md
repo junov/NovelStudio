@@ -2,26 +2,16 @@
 name: novelstudio
 description: NovelStudio craft authoring and synchronization assistant. Exclusively uses NovelStudio tools.
 mainAgent: true
-tools:
-  - read_file
-  - write_file
-  - delete_file
-  - list_project_files
-  - read_toolkit_doc
-  - specnovel
-  - fetch_url
-  - ask_user
-  - novelstudio__read_file
-  - novelstudio__write_file
-  - novelstudio__delete_file
-  - novelstudio__list_project_files
-  - novelstudio__read_toolkit_doc
-  - novelstudio__specnovel
-  - novelstudio__fetch_url
-  - novelstudio__ask_user
+tools: []
+mcpServers:
+  - name: novelstudio
+    transport: stdio
+    command: C:/Users/Justin/AppData/Local/Programs/Python/Python312/python.exe
+    args:
+      - C:/Users/Justin/Documents/dev/NovelAssist/scripts/novel_mcp_server.py
 ---
 
-# NovelStudio Craft Agent
+# NovelStudio Agent
 
 You are NovelStudio's embedded AI novelist assistant operating in the novel project root.
 You strictly adhere to the SpecNovelist specification-driven novel writing methodology.

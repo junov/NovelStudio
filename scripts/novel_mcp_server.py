@@ -89,12 +89,18 @@ def tool_read_toolkit_doc(args: dict) -> str:
     path_str = args.get("path", "")
     if not path_str:
         return "Error: path is required"
-    # Search in project or third_party
+    env_toolkit = os.environ.get("NOVELSTUDIO_TOOLKIT", "")
     candidates = [
         PROJECT_ROOT / path_str,
         PROJECT_ROOT / "third_party" / "specdrive" / path_str,
-        PROJECT_ROOT / ".agents" / path_str
+        PROJECT_ROOT / ".agents" / path_str,
+        Path("C:/Users/Justin/Documents/dev/NovelAssist") / path_str,
+        Path("C:/Users/Justin/Documents/dev/NovelAssist/third_party/specdrive") / path_str
     ]
+    if env_toolkit:
+        candidates.insert(0, Path(env_toolkit) / path_str)
+        candidates.insert(1, Path(env_toolkit) / "third_party" / "specdrive" / path_str)
+
     for c in candidates:
         if c.is_file():
             try:

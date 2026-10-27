@@ -219,7 +219,11 @@ class AgentEngine {
 					if (modelChoice.model && modelChoice.model !== 'default') {
 						args.push('--model', modelChoice.model);
 					}
-					if (modelChoice.thinkingLevel && modelChoice.thinkingLevel !== 'off') {
+
+					// --effort is only supported for reasoning-capable models (not supported for flash)
+					const modelLower = (modelChoice.model || '').toLowerCase();
+					const isFlash = modelLower === 'flash' || modelLower.includes('flash');
+					if (!isFlash && modelChoice.thinkingLevel && modelChoice.thinkingLevel !== 'off') {
 						args.push('--effort', modelChoice.thinkingLevel);
 					}
 
@@ -228,10 +232,13 @@ class AgentEngine {
 					const out = await runAntigravity(project.root!, args);
 					const rawStderr = out.stderr ? `\n[stderr]\n${out.stderr}` : '';
 
-					if (out.code === 0) {
-						let responseText = out.stdout;
-						try {
-							const parsed = JSON.parse(out.stdout.trim());
+					let responseText = out.stdout;
+					let parsedError: string | null = null;
+					try {
+						const parsed = JSON.parse(out.stdout.trim());
+						if (parsed.status === 'ERROR' && parsed.error) {
+							parsedError = parsed.error;
+						} else {
 							if (parsed.response) {
 								responseText = parsed.response;
 							}
@@ -246,10 +253,15 @@ class AgentEngine {
 									this.totalCompletionTokens += parsed.usage.output_tokens;
 								}
 							}
-						} catch {
-							// If output is not JSON, use raw stdout
 						}
+					} catch {
+						// If output is not JSON, use raw stdout
+					}
 
+					if (parsedError) {
+						this.addFeed('error', 'Antigravity CLI error', parsedError, undefined, 'error');
+						this.status = 'failed';
+					} else if (out.code === 0) {
 						if (responseText && responseText.trim()) {
 							this.addFeed('thought', 'Antigravity CLI Output', responseText.trim());
 						}

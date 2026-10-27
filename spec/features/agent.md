@@ -208,3 +208,6 @@ Acceptance:
 - Given an agent task is initiated with the Antigravity CLI provider selected,
   when execution starts,
   then the execution engine dispatches the instruction through the Antigravity CLI driver with --print, --output-format json, and --dangerously-skip-permissions, parses the structured response payload and token usage into the agent feed, and preserves conversation continuity across turns via conversation IDs.
+- Given a model that does not support reasoning effort (such as flash) configured under the Antigravity CLI,
+  when constructing CLI invocation flags,
+  then reasoning effort parameters (--effort) are omitted to avoid invalid model selection errors.

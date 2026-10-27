@@ -212,9 +212,9 @@ export class SettingsState {
 		if (provider === 'antigravity') {
 			return (
 				this.value.modelCache['antigravity'] || [
-					{ id: 'default', displayName: 'Antigravity CLI Default' },
-					{ id: 'flash', displayName: 'Antigravity Flash' },
-					{ id: 'pro', displayName: 'Antigravity Pro' }
+					{ id: 'default', displayName: 'Antigravity CLI Default', supportsThinking: true },
+					{ id: 'flash', displayName: 'Antigravity Flash (Fast)', supportsThinking: false },
+					{ id: 'pro', displayName: 'Antigravity Pro (Reasoning)', supportsThinking: true }
 				]
 			);
 		}

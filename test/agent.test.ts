@@ -588,6 +588,7 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(engineSource).toContain("'json'");
 		expect(engineSource).toContain("'--conversation'");
 		expect(engineSource).toContain("parsed.usage");
+		expect(engineSource).toContain("isFlash");
 
 		const tauriSource = readFileSync(
 			resolve(__dirname, '../src/lib/tauri.ts'),
@@ -602,5 +603,14 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		);
 		expect(rustSource).toContain('run_antigravity');
 		expect(rustSource).toContain('find_agy');
+	});
+
+	// @spec AGT-010
+	it('disables thinking for flash models under Antigravity provider in settings', () => {
+		const state = new SettingsState();
+		const models = state.modelsForProvider('antigravity');
+		const flashModel = models.find((m) => m.id === 'flash');
+		expect(flashModel).toBeDefined();
+		expect(flashModel?.supportsThinking).toBe(false);
 	});
 });

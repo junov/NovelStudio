@@ -273,6 +273,7 @@
 					<select
 						id="thinking-level"
 						bind:value={settings.value.defaultModel.thinkingLevel}
+						disabled={currentModelMetadata?.supportsThinking === false}
 					>
 						<option value="off">Off (Standard)</option>
 						<option value="low">Low (Light Reasoning)</option>
@@ -280,7 +281,11 @@
 						<option value="high">High (Deep Deliberation)</option>
 					</select>
 					<span class="muted font-small">
-						Extended thinking tokens or reasoning effort for models supporting chain-of-thought.
+						{#if currentModelMetadata?.supportsThinking === false}
+							Thinking / reasoning effort is not supported by {formatModelLabel(settings.value.defaultModel.model)}.
+						{:else}
+							Extended thinking tokens or reasoning effort for models supporting chain-of-thought.
+						{/if}
 					</span>
 				</div>
 			</div>

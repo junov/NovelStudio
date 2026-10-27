@@ -333,12 +333,12 @@ fn ensure_novelstudio_agent(app: &AppHandle, project_root: &str) {
     let _ = std::fs::create_dir_all(&agents_dir);
 
     let py_path = python(app).map(|p| p.0).unwrap_or_else(|| "python".to_string());
-    let mut script_path = toolkit_dir(app).join("scripts").join("novel_mcp_server.py");
+    let mut script_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("scripts")
+        .join("novel_mcp_server.py");
     if !script_path.is_file() {
-        let fallback = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("..")
-            .join("scripts")
-            .join("novel_mcp_server.py");
+        let fallback = toolkit_dir(app).join("scripts").join("novel_mcp_server.py");
         if fallback.is_file() {
             script_path = fallback;
         }
@@ -348,32 +348,43 @@ fn ensure_novelstudio_agent(app: &AppHandle, project_root: &str) {
     let proj_str = root_path.to_string_lossy().replace("\\\\?\\", "").replace('\\', "/");
 
     let agent_md = format!(
-        "---\n\
-name: novelstudio\n\
-description: NovelStudio craft authoring and synchronization assistant. Exclusively uses NovelStudio tools.\n\
-mainAgent: true\n\
-tools: []\n\
-mcpServers:\n\
-  - name: novelstudio\n\
-    transport: stdio\n\
-    command: \"{}\"\n\
-    args:\n\
-      - \"{}\"\n\
-      - \"--project\"\n\
-      - \"{}\"\n\
----\n\n\
-# NovelStudio Agent\n\n\
-You are NovelStudio's embedded AI novelist assistant operating in the novel project root.\n\
-You strictly adhere to the SpecNovelist specification-driven novel writing methodology.\n\
-You exclusively use the craft tools provided by NovelStudio via the Model Context Protocol (MCP).\n\
-Generic system commands and arbitrary shell executions are strictly prevented.\n",
+        r#"---
+name: novelstudio
+description: NovelStudio craft authoring and synchronization assistant. Exclusively uses NovelStudio tools.
+mainAgent: true
+tools: []
+mcpServers:
+  - name: novelstudio
+    transport: stdio
+    command: "{}"
+    args:
+      - "{}"
+      - "--project"
+      - "{}"
+---
+
+# NovelStudio Agent
+
+You are NovelStudio's embedded AI novelist assistant operating in the novel project root.
+You strictly adhere to the SpecNovelist specification-driven novel writing methodology.
+You exclusively use the craft tools provided by NovelStudio via the Model Context Protocol (MCP).
+Generic system commands and arbitrary shell executions are strictly prevented.
+"#,
         py_str, script_str, proj_str
     );
 
     let _ = std::fs::write(agents_dir.join("novelstudio.md"), &agent_md);
 
     let mcp_json = format!(
-        "{{\n  \"mcpServers\": {{\n    \"novelstudio\": {{\n      \"command\": \"{}\",\n      \"args\": [\"{}\", \"--project\", \"{}\"],\n      \"disabled\": false\n    }}\n  }}\n}}",
+        r#"{{
+  "mcpServers": {{
+    "novelstudio": {{
+      "command": "{}",
+      "args": ["{}", "--project", "{}"],
+      "disabled": false
+    }}
+  }}
+}}"#,
         py_str, script_str, proj_str
     );
     let _ = std::fs::write(mcp_dir.join("mcp_config.json"), mcp_json);
@@ -381,7 +392,13 @@ Generic system commands and arbitrary shell executions are strictly prevented.\n
     let skills_dir = toolkit_dir(app).join(".agents").join("skills");
     let skills_str = skills_dir.to_string_lossy().replace("\\\\?\\", "").replace('\\', "/");
     let skills_json = format!(
-        "{{\n  \"entries\": [\n    {{\n      \"path\": \"{}\"\n    }}\n  ]\n}}",
+        r#"{{
+  "entries": [
+    {{
+      "path": "{}"
+    }}
+  ]
+}}"#,
         skills_str
     );
     let _ = std::fs::write(mcp_dir.join("skills.json"), skills_json);

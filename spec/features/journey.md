@@ -14,7 +14,7 @@ Acceptance:
 - Given an author hovers over a stage node body or label,
   when the hover card appears,
   then it displays the full stage title, sequence position (Stage N of 9), comprehensive stage description, associated paths, and the assigned skill (`novel-generate` or `novel-sync`).
-- Given an author hovers over a status pill (drift, pending, or synced),
+- Given an author hovers over a status pill ("sync", pending, or synced),
   when the hover card appears,
   then it displays a description of the state represented by the pill without Git-specific terminology or commit hashes, enumerating affected items or files contributing to drift under the subtitle "Upstream Items with Changes (<count>)" (specifically listing the upstream items that have changes since last sync, including upstream files from `upstream_drift` and working-tree changes that have not been incorporated into the stage, while distinguishing upstream drift from stage-internal changes), and enumerating pending items or scenes requiring generation for pending status pills.
 - Given an author hovers over a stage action play button,
@@ -100,21 +100,21 @@ Acceptance:
   when viewed on the Journey Rail,
   then all initial files are committed, the initial stage is in the "synced" state, and zero "Accept" pills are exhibited across the pipeline.
 
-### JRN-006: Interactive Drift Pill Synchronization Action
+### JRN-006: Interactive Sync Pill Synchronization Action
 WHEN a stage on the Journey Rail exhibits local or upstream drift,
-THE SYSTEM SHALL present the drift status pill as an interactive button that dispatches stage synchronization (`novel-sync`) when clicked, disabling the button while the agent is busy.
+THE SYSTEM SHALL present the status pill as an interactive "sync" button (without numerical counts) that dispatches stage synchronization (`novel-sync`) when clicked, disabling the button while the agent is busy.
 
 Acceptance:
 - Given a stage on the Journey Rail with local or upstream drift,
   when displayed,
-  then its drift pill is rendered as an interactive button with distinct hover and active states.
-- Given an author clicks the drift button,
+  then its status pill is labeled "sync" (without numbers) and rendered as an interactive button with distinct hover and active states.
+- Given an author clicks the "sync" button,
   when clicked,
   then the system sets the stage as the current active stage and dispatches stage synchronization (`novel-sync`) with the stage's synchronization prompt.
 - Given the agent is actively executing a task (`agent.status === 'running'`),
   when evaluated,
-  then the drift button is disabled to prevent concurrent agent runs.
-- Given an author hovers over the drift button,
+  then the sync button is disabled to prevent concurrent agent runs.
+- Given an author hovers over the "sync" button,
   when hovered,
   then the contextual hover card is displayed listing the upstream items that have changes since last sync (or stage-internal files for initial stages without upstream stages) and presenting the synchronization action prompt in an action callout box placed directly below the hover card title without exhibiting conflicting browser-native tooltip attributes.
 

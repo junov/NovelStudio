@@ -89,7 +89,7 @@
 		if (!baseline) {
 			return {
 				status: 'needs-sync',
-				badge: effectiveDrift > 0 ? `${effectiveDrift} drift` : 'unaccepted',
+				badge: effectiveDrift > 0 ? 'sync' : 'unaccepted',
 				canAccept: hasUncommittedDiffs
 			};
 		}
@@ -97,7 +97,7 @@
 		if (effectiveDrift > 0 || pendingCount > 0) {
 			return {
 				status: 'needs-sync',
-				badge: effectiveDrift > 0 ? `${effectiveDrift} drift` : `${pendingCount} pending`,
+				badge: effectiveDrift > 0 ? 'sync' : `${pendingCount} pending`,
 				canAccept: hasUncommittedDiffs
 			};
 		}
@@ -173,9 +173,9 @@
 
 				<div class="node-meta">
 					{#if st.badge}
-						{#if st.badge.includes('drift')}
+						{#if st.badge === 'sync' || st.badge.includes('drift')}
 							<button
-								class="pill {st.status} drift-btn"
+								class="pill {st.status} drift-btn sync-btn"
 								disabled={agent.status === 'running'}
 								onclick={(e) => {
 									e.stopPropagation();
@@ -366,6 +366,7 @@
 		background: color-mix(in srgb, var(--ok) 18%, transparent);
 	}
 	.stage-node.current button.pill.drift-btn,
+	.stage-node.current button.pill.sync-btn,
 	.stage-node.current .pill.needs-sync {
 		color: var(--warn);
 		border-color: color-mix(in srgb, var(--warn) 45%, transparent);
@@ -426,7 +427,8 @@
 		background: color-mix(in srgb, var(--warn) 15%, transparent);
 		color: var(--warn);
 	}
-	button.pill.drift-btn {
+	button.pill.drift-btn,
+	button.pill.sync-btn {
 		background: color-mix(in srgb, var(--warn) 15%, transparent);
 		color: var(--warn);
 		border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
@@ -436,12 +438,14 @@
 		font-weight: 600;
 		transition: all 0.15s ease;
 	}
-	button.pill.drift-btn:hover:not(:disabled) {
+	button.pill.drift-btn:hover:not(:disabled),
+	button.pill.sync-btn:hover:not(:disabled) {
 		background: var(--warn);
 		color: #fff;
 		border-color: var(--warn);
 	}
-	button.pill.drift-btn:disabled {
+	button.pill.drift-btn:disabled,
+	button.pill.sync-btn:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
 	}

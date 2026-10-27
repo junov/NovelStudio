@@ -289,7 +289,7 @@ export function getStagePillInfo(
 			};
 		}
 
-		if (badge.includes('drift')) {
+		if (badge === 'sync' || badge.includes('drift')) {
 			return {
 				title: 'Upstream Changes Detected',
 				badge,

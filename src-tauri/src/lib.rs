@@ -10,7 +10,8 @@
 
 use serde::Serialize;
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
+use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
@@ -289,6 +290,78 @@ async fn run_git(project: String, args: Vec<String>) -> Result<CmdOutput, String
 
 /// Run `agy <args>` inside the project directory.
 /// @spec AGT-010
+/// Run `agy <args>` inside the project directory, streaming stdout lines via a Tauri IPC channel.
+/// @spec AGT-010
+#[tauri::command]
+async fn run_antigravity_streaming(
+    project: String,
+    args: Vec<String>,
+    on_event: tauri::ipc::Channel<String>,
+) -> Result<CmdOutput, String> {
+    let (prog, _) = find_agy().ok_or_else(|| {
+        "Antigravity CLI ('agy') was not found. Please verify that 'agy' is installed or set NOVELSTUDIO_AGY to its path.".to_string()
+    })?;
+    let cwd = if project.trim().is_empty() {
+        ".".to_string()
+    } else {
+        project
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        let is_cmd = cfg!(windows) && (prog.ends_with(".cmd") || prog.ends_with(".bat"));
+        let mut cmd = if is_cmd {
+            let mut c = Command::new("cmd.exe");
+            c.arg("/C").arg(&prog).args(args);
+            c
+        } else {
+            let mut c = Command::new(&prog);
+            c.args(args);
+            c
+        };
+        cmd.current_dir(&cwd)
+            .env("PYTHONIOENCODING", "utf-8")
+            .env("PYTHONUTF8", "1")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        no_window(&mut cmd);
+        let mut child = cmd.spawn().map_err(|e| format!("failed to start process: {e}"))?;
+
+        let stdout = child.stdout.take().ok_or("failed to open stdout")?;
+        let stderr = child.stderr.take().ok_or("failed to open stderr")?;
+
+        let mut stdout_acc = String::new();
+        let reader = BufReader::new(stdout);
+        for line in reader.lines() {
+            match line {
+                Ok(l) => {
+                    let _ = on_event.send(l.clone());
+                    stdout_acc.push_str(&l);
+                    stdout_acc.push('\n');
+                }
+                Err(_) => break,
+            }
+        }
+
+        let mut stderr_acc = String::new();
+        let err_reader = BufReader::new(stderr);
+        for line in err_reader.lines() {
+            if let Ok(l) = line {
+                stderr_acc.push_str(&l);
+                stderr_acc.push('\n');
+            }
+        }
+
+        let status = child.wait().map_err(|e| format!("failed to wait on child process: {e}"))?;
+
+        Ok(CmdOutput {
+            code: status.code().unwrap_or(-1),
+            stdout: stdout_acc,
+            stderr: stderr_acc,
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 async fn run_antigravity(project: String, args: Vec<String>) -> Result<CmdOutput, String> {
     let (prog, _) = find_agy().ok_or_else(|| {
@@ -564,6 +637,7 @@ pub fn run() {
             run_specnovel,
             run_git,
             run_antigravity,
+            run_antigravity_streaming,
             pick_folder,
             ensure_dir,
             path_exists,

@@ -122,40 +122,6 @@
 			</div>
 		{/if}
 
-		<!-- OS Keychain API Keys -->
-		<div class="section">
-			<h3 class="section-title">API Keys (Stored Securely in OS Keychain)</h3>
-			<p class="muted font-small">
-				Your credentials are saved directly into the OS Credential Manager / Keychain, never in plain project files.
-			</p>
-
-			{#each Object.entries(PROVIDERS).filter(([pid]) => pid !== 'antigravity') as [pid, meta]}
-				{@const pId = pid as ProviderId}
-				<div class="form-group">
-					<div class="label-row">
-						<label for="key-{pid}">{meta.label}</label>
-						<div class="label-actions">
-							<button
-								class="btn small ghost text-btn"
-								onclick={() => queryModels(pId)}
-								disabled={isQuerying[pId] || !apiKeys[pId]}
-								title="Query backend to list all available models for this key"
-							>
-								{isQuerying[pId] ? 'Querying...' : '↻ Query Models'}
-							</button>
-							<a href={meta.keyUrl} target="_blank" class="external-link">Get Key ↗</a>
-						</div>
-					</div>
-					<input
-						id="key-{pid}"
-						type="password"
-						placeholder="sk-..."
-						bind:value={apiKeys[pId]}
-					/>
-				</div>
-			{/each}
-		</div>
-
 		<!-- Model Selection -->
 		<div class="section">
 			<div class="section-header-row">
@@ -292,6 +258,44 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- OS Keychain API Keys -->
+		{#if settings.value.defaultModel.provider === 'gemini'}
+			<div class="section">
+				<h3 class="section-title">API Key (Stored Securely in OS Keychain)</h3>
+				<p class="muted font-small">
+					Your credentials are saved directly into the OS Credential Manager / Keychain, never in plain project files.
+				</p>
+
+				{#each Object.entries(PROVIDERS).filter(([pid]) => pid !== 'antigravity') as [pid, meta]}
+					{@const pId = pid as ProviderId}
+					{#if pId === 'gemini' && settings.value.defaultModel.provider === 'gemini'}
+						<div class="form-group">
+							<div class="label-row">
+								<label for="key-{pid}">{meta.label}</label>
+								<div class="label-actions">
+									<button
+										class="btn small ghost text-btn"
+										onclick={() => queryModels(pId)}
+										disabled={isQuerying[pId] || !apiKeys[pId]}
+										title="Query backend to list all available models for this key"
+									>
+										{isQuerying[pId] ? 'Querying...' : '↻ Query Models'}
+									</button>
+									<a href={meta.keyUrl} target="_blank" class="external-link">Get Key ↗</a>
+								</div>
+							</div>
+							<input
+								id="key-{pid}"
+								type="password"
+								placeholder="AIza..."
+								bind:value={apiKeys[pId]}
+							/>
+						</div>
+					{/if}
+				{/each}
+			</div>
+		{/if}
 
 		<!-- Appearance & Font Size -->
 		<div class="section">

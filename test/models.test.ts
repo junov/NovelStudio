@@ -1,5 +1,7 @@
 // @spec MOD-001, MOD-002, MOD-003, MOD-004, MOD-005, MOD-006, MOD-007
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import {
 	filterGenerativeModels,
 	formatModelLabel,
@@ -18,6 +20,32 @@ describe('MOD-001: OS Keychain Credential Storage', () => {
 	it('defines correct OS keychain service and key mappings', () => {
 		const expectedService = 'dev.junov.novelstudio';
 		expect(expectedService).toBe('dev.junov.novelstudio');
+	});
+
+	// @spec MOD-001
+	it('places API key setting below provider and model selection in SettingsModal', () => {
+		const modalSource = readFileSync(
+			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
+			'utf-8'
+		);
+		const modelSelectIdx = modalSource.indexOf('AI Model Selection');
+		const apiKeyIdx = modalSource.indexOf('API Key (Stored Securely in OS Keychain)');
+		expect(modelSelectIdx).toBeGreaterThan(0);
+		expect(apiKeyIdx).toBeGreaterThan(modelSelectIdx);
+	});
+
+	// @spec MOD-001
+	it('hides the Gemini API key text box when provider is not Gemini', () => {
+		const modalSource = readFileSync(
+			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
+			'utf-8'
+		);
+		expect(modalSource).toContain("settings.value.defaultModel.provider === 'gemini'");
+		const apiKeyBlock = modalSource.substring(
+			modalSource.indexOf("settings.value.defaultModel.provider === 'gemini'"),
+			modalSource.indexOf('Reading Appearance & Theme')
+		);
+		expect(apiKeyBlock).toContain('id="key-{pid}"');
 	});
 });
 

@@ -17,6 +17,15 @@ Acceptance:
 - Given a previously saved key in the OS credential manager,
   when the application boots,
   then secretGet retrieves the key value into memory.
+- Given the Settings window or modal,
+  when viewed,
+  then the API key configuration section is positioned below the provider and model selection controls.
+- Given the active AI provider in Settings is not Gemini (e.g. Antigravity CLI),
+  when viewing settings,
+  then the Gemini API key text box is hidden from the UI.
+- Given the active AI provider in Settings is Gemini,
+  when viewing settings,
+  then the Gemini API key text box is displayed.
 
 ### MOD-002: Dynamic Backend Model Discovery
 WHEN an author triggers model querying for an AI provider or configures an API key,

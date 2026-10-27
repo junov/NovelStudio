@@ -1,6 +1,6 @@
 /**
  * The core SpecNovelist agent execution loop.
- * @spec AGT-001, AGT-002, AGT-007, AGT-009
+ * @spec AGT-001, AGT-002, AGT-007, AGT-009, AGT-010
  */
 import {
 	readText,
@@ -9,6 +9,7 @@ import {
 	listFiles,
 	readToolkit,
 	runSpecnovel,
+	runAntigravity,
 	secretGet,
 	inTauri
 } from '$lib/tauri';
@@ -182,6 +183,60 @@ class AgentEngine {
 		this.#abortController = new AbortController();
 
 		const modelChoice: ModelChoice = settings.modelFor(stageId);
+		const isAntigravity =
+			modelChoice.provider === 'antigravity' ||
+			settings.value.useAntigravityCli ||
+			settings.value.agentDriver === 'antigravity';
+
+		if (isAntigravity) {
+			this.addFeed(
+				'message',
+				`Starting ${effectiveSkill} (Antigravity CLI)`,
+				`Model: Antigravity CLI (${modelChoice.model || 'default'})\nInstruction: ${userInstruction}`
+			);
+
+			try {
+				if (inTauri()) {
+					this.addFeed('thought', 'Antigravity CLI Driver', `Dispatching to agy with skill context "${effectiveSkill}"...`);
+					const out = await runAntigravity(project.root!, [
+						'--skill',
+						effectiveSkill,
+						userInstruction
+					]);
+					const text = out.stdout + (out.stderr ? `\n[stderr]\n${out.stderr}` : '');
+					if (out.code === 0) {
+						this.addFeed('message', `${effectiveSkill} completed via Antigravity CLI`, text || undefined, undefined, 'success');
+						this.status = 'completed';
+					} else {
+						this.addFeed('error', `Antigravity CLI exited with code ${out.code}`, text, undefined, 'error');
+						this.status = 'failed';
+					}
+				} else {
+					this.addFeed('thought', 'Antigravity CLI Driver (Simulated)', `Simulated execution of ${effectiveSkill} via Antigravity CLI`);
+					this.addFeed('message', `${effectiveSkill} completed via Antigravity CLI`, undefined, undefined, 'success');
+					this.status = 'completed';
+				}
+			} catch (err) {
+				this.status = 'failed';
+				const msg = err instanceof Error ? err.message : String(err);
+				this.addFeed(
+					'error',
+					'Antigravity CLI execution failed',
+					`${msg}\nMake sure 'agy' is installed and available in your environment PATH.`,
+					undefined,
+					'error'
+				);
+			} finally {
+				if (stageId && this.status !== 'failed') {
+					project.markStageGenerated(stageId);
+				}
+				await project.refresh();
+				await project.refreshGitStatus();
+				if (this.status === 'running') this.status = 'idle';
+			}
+			return;
+		}
+
 		const providerMeta = PROVIDERS[modelChoice.provider];
 		const apiKey = (await secretGet(providerMeta.keyName)) || '';
 

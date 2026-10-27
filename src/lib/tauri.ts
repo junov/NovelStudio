@@ -1,6 +1,6 @@
 /**
  * Thin typed wrappers around the Rust commands in `src-tauri/src/lib.rs`.
- * @spec PROJ-001, MOD-001, AGT-002
+ * @spec PROJ-001, MOD-001, AGT-002, AGT-010
  */
 import { invoke } from '@tauri-apps/api/core';
 
@@ -30,6 +30,13 @@ export const runSpecnovel = (project: string, args: string[]) =>
 
 export const runGit = (project: string, args: string[]) =>
 	invoke<CmdOutput>('run_git', { project, args });
+
+/**
+ * Run `agy <args>` inside the project directory.
+ * @spec AGT-010
+ */
+export const runAntigravity = (project: string, args: string[]) =>
+	invoke<CmdOutput>('run_antigravity', { project, args });
 
 export const ensureDir = (path: string) => invoke<void>('ensure_dir', { path });
 

@@ -283,6 +283,9 @@
 	.provider-dot.gemini {
 		background: #3b82f6;
 	}
+	.provider-dot.antigravity {
+		background: #8b5cf6;
+	}
 
 	.thinking-pill {
 		font-size: 10px;

@@ -1,4 +1,4 @@
-// @spec AGT-001, AGT-002, AGT-003, AGT-004, AGT-005, AGT-006, AGT-007, AGT-008, AGT-009
+// @spec AGT-001, AGT-002, AGT-003, AGT-004, AGT-005, AGT-006, AGT-007, AGT-008, AGT-009, AGT-010
 import { describe, it, expect } from 'vitest';
 import { AGENT_TOOLS } from '../src/lib/agent/tools';
 import { initAnswers } from '../src/lib/components/InterviewCard.svelte';
@@ -10,6 +10,7 @@ import { renderMarkdown } from '../src/lib/markdown';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import type { AskUserRequest, FeedItem } from '../src/lib/agent/types';
+import { SettingsState, PROVIDERS } from '../src/lib/stores/settings.svelte';
 
 describe('AGT-001: Unstaged File Execution for Agent Tools', () => {
 	// @spec AGT-001
@@ -527,5 +528,73 @@ describe('AGT-009: User-Controlled Journey Progression and Stage Isolation (Issu
 			'utf-8'
 		);
 		expect(syncSource).toContain('novel-sync');
+	});
+});
+
+describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', () => {
+	// @spec AGT-010
+	it('includes Antigravity CLI as a registered provider option with label in PROVIDERS', () => {
+		expect(PROVIDERS.antigravity).toBeDefined();
+		expect(PROVIDERS.antigravity.label).toBe('Antigravity CLI');
+	});
+
+	// @spec AGT-010
+	it('defaults Antigravity CLI driver to false and builtin engine in settings store', () => {
+		const state = new SettingsState();
+		expect(state.value.useAntigravityCli).toBe(false);
+		expect(state.value.agentDriver).toBe('builtin');
+	});
+
+	// @spec AGT-010
+	it('persists and reconciles Antigravity CLI preference upon incoming settings updates', () => {
+		const state = new SettingsState();
+		state.applyIncomingSettings({ defaultModel: { provider: 'antigravity', model: 'default' } });
+		expect(state.value.defaultModel.provider).toBe('antigravity');
+		expect(state.value.useAntigravityCli).toBe(true);
+		expect(state.value.agentDriver).toBe('antigravity');
+
+		state.applyIncomingSettings({ defaultModel: { provider: 'gemini', model: 'gemini-3.8-flash' } });
+		expect(state.value.defaultModel.provider).toBe('gemini');
+		expect(state.value.useAntigravityCli).toBe(false);
+		expect(state.value.agentDriver).toBe('builtin');
+	});
+
+	// @spec AGT-010
+	it('renders Antigravity CLI option in the Provider dropdown in SettingsModal component', () => {
+		const modalSource = readFileSync(
+			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
+			'utf-8'
+		);
+		expect(modalSource).toContain('id="default-provider"');
+		expect(modalSource).toContain('PROVIDERS');
+		expect(modalSource).toContain("p === 'antigravity'");
+		expect(modalSource).toContain('settings.value.useAntigravityCli = true');
+		expect(modalSource).toContain("settings.value.agentDriver = 'antigravity'");
+	});
+
+	// @spec AGT-010
+	it('wires Antigravity CLI execution dispatch into agent engine and tauri bridge', () => {
+		const engineSource = readFileSync(
+			resolve(__dirname, '../src/lib/agent/engine.svelte.ts'),
+			'utf-8'
+		);
+		expect(engineSource).toContain("modelChoice.provider === 'antigravity'");
+		expect(engineSource).toContain('useAntigravityCli');
+		expect(engineSource).toContain('runAntigravity');
+		expect(engineSource).toContain('Antigravity CLI');
+
+		const tauriSource = readFileSync(
+			resolve(__dirname, '../src/lib/tauri.ts'),
+			'utf-8'
+		);
+		expect(tauriSource).toContain('runAntigravity');
+		expect(tauriSource).toContain('run_antigravity');
+
+		const rustSource = readFileSync(
+			resolve(__dirname, '../src-tauri/src/lib.rs'),
+			'utf-8'
+		);
+		expect(rustSource).toContain('run_antigravity');
+		expect(rustSource).toContain('Command::new("agy")');
 	});
 });

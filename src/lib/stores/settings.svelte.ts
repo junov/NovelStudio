@@ -1,12 +1,13 @@
 /**
  * App-wide settings persisted with tauri-plugin-store (API keys live in the OS keychain instead).
- * @spec MOD-001, MOD-005, PROJ-002
+ * @spec MOD-001, MOD-005, PROJ-002, AGT-010
  */
 import { load, type Store } from '@tauri-apps/plugin-store';
 import { inTauri } from '$lib/tauri';
 import type { DiscoveredModel, ThinkingLevel } from '$lib/agent/providers';
 
-export type ProviderId = 'openai' | 'anthropic' | 'gemini';
+export type ProviderId = 'openai' | 'anthropic' | 'gemini' | 'antigravity';
+export type AgentDriver = 'builtin' | 'antigravity';
 
 export interface ModelChoice {
 	provider: ProviderId;
@@ -32,6 +33,9 @@ export interface Settings {
 	/** Cached models fetched dynamically from providers. */
 	modelCache: Partial<Record<ProviderId, DiscoveredModel[]>>;
 	proseFontSize: number;
+	/** Option to drive the agent using the local Antigravity CLI (@spec AGT-010) */
+	useAntigravityCli: boolean;
+	agentDriver: AgentDriver;
 }
 
 export const PROVIDERS: Record<ProviderId, { label: string; keyName: string; keyUrl: string }> = {
@@ -49,6 +53,11 @@ export const PROVIDERS: Record<ProviderId, { label: string; keyName: string; key
 		label: 'Google Gemini',
 		keyName: 'gemini_api_key',
 		keyUrl: 'https://aistudio.google.com/apikey'
+	},
+	antigravity: {
+		label: 'Antigravity CLI',
+		keyName: 'antigravity_cli',
+		keyUrl: 'https://antigravity.google'
 	}
 };
 
@@ -60,7 +69,9 @@ const DEFAULTS: Settings = {
 	autoApprove: false,
 	maxAgentSteps: 80,
 	modelCache: {},
-	proseFontSize: 18
+	proseFontSize: 18,
+	useAntigravityCli: false,
+	agentDriver: 'builtin'
 };
 
 export class SettingsState {
@@ -116,16 +127,34 @@ export class SettingsState {
 	}
 
 	applyIncomingSettings(patch: Partial<Settings>) {
+		const targetProvider = patch.defaultModel?.provider ?? this.value?.defaultModel?.provider ?? DEFAULTS.defaultModel.provider;
+		const isAg = targetProvider === 'antigravity' || Boolean(patch.useAntigravityCli) || patch.agentDriver === 'antigravity';
+
+		const useCli =
+			patch.useAntigravityCli ??
+			(patch.agentDriver ? patch.agentDriver === 'antigravity' : isAg);
+		const driver: AgentDriver =
+			patch.agentDriver ??
+			(useCli ? 'antigravity' : 'builtin');
+
 		this.value = {
 			...structuredClone(DEFAULTS),
 			...this.value,
 			...patch,
+			useAntigravityCli: Boolean(useCli),
+			agentDriver: driver,
 			defaultModel: {
 				...DEFAULTS.defaultModel,
 				...(this.value?.defaultModel || {}),
 				...(patch.defaultModel || {})
 			}
 		};
+		if (this.value.useAntigravityCli && this.value.defaultModel.provider !== 'antigravity') {
+			this.value.defaultModel.provider = 'antigravity';
+		}
+		if (this.value.defaultModel.provider === 'antigravity' && !this.value.defaultModel.model) {
+			this.value.defaultModel.model = 'default';
+		}
 		this.applyTheme();
 	}
 
@@ -180,6 +209,15 @@ export class SettingsState {
 	}
 
 	modelsForProvider(provider: ProviderId): DiscoveredModel[] {
+		if (provider === 'antigravity') {
+			return (
+				this.value.modelCache['antigravity'] || [
+					{ id: 'default', displayName: 'Antigravity CLI Default' },
+					{ id: 'flash', displayName: 'Antigravity Flash' },
+					{ id: 'pro', displayName: 'Antigravity Pro' }
+				]
+			);
+		}
 		return this.value.modelCache[provider] || [];
 	}
 

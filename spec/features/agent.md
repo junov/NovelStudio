@@ -193,3 +193,18 @@ Acceptance:
   then no redundant "Next Step" action bar is displayed and stage advancement remains exclusively manual.
 
 Notes: Linked to #8.
+
+### AGT-010: Antigravity CLI Agent Driver Option in Provider Selection
+WHEN an author configures AI providers and models in Settings,
+THE SYSTEM SHALL provide "Antigravity CLI" as a selectable option in the Provider dropdown menu, persist this preference in settings, and route agent task execution through the local Antigravity CLI (`agy`) driver without requiring direct provider API credentials.
+
+Acceptance:
+- Given the Settings modal or window,
+  when the Provider select menu is viewed,
+  then "Antigravity CLI" is included as a selectable provider option alongside OpenAI, Anthropic Claude, and Google Gemini.
+- Given the author selects "Antigravity CLI" in the Provider menu,
+  when saved,
+  then defaultModel.provider is set to "antigravity" (with useAntigravityCli enabled and agentDriver set to "antigravity") and persisted in the settings store across reloads.
+- Given an agent task is initiated with the Antigravity CLI provider selected,
+  when execution starts,
+  then the execution engine dispatches the instruction through the Antigravity CLI workflow driver without blocking on missing provider API keys.

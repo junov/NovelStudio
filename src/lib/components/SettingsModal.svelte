@@ -130,7 +130,7 @@
 				Your credentials are saved directly into the OS Credential Manager / Keychain, never in plain project files.
 			</p>
 
-			{#each Object.entries(PROVIDERS) as [pid, meta]}
+			{#each Object.entries(PROVIDERS).filter(([pid]) => pid !== 'antigravity') as [pid, meta]}
 				{@const pId = pid as ProviderId}
 				<div class="form-group">
 					<div class="label-row">
@@ -161,14 +161,22 @@
 		<div class="section">
 			<div class="section-header-row">
 				<h3 class="section-title">AI Model Selection</h3>
-				<button
-					class="btn small ghost"
-					onclick={() => queryModels(settings.value.defaultModel.provider)}
-					disabled={isQuerying[settings.value.defaultModel.provider] || !apiKeys[settings.value.defaultModel.provider]}
-				>
-					{isQuerying[settings.value.defaultModel.provider] ? 'Refreshing...' : '↻ Fetch Models from Provider'}
-				</button>
+				{#if settings.value.defaultModel.provider !== 'antigravity'}
+					<button
+						class="btn small ghost"
+						onclick={() => queryModels(settings.value.defaultModel.provider)}
+						disabled={isQuerying[settings.value.defaultModel.provider] || !apiKeys[settings.value.defaultModel.provider]}
+					>
+						{isQuerying[settings.value.defaultModel.provider] ? 'Refreshing...' : '↻ Fetch Models from Provider'}
+					</button>
+				{/if}
 			</div>
+
+			{#if settings.value.defaultModel.provider === 'antigravity'}
+				<div class="info-banner cli-banner">
+					<span>⚡ <strong>Antigravity CLI Driver Active:</strong> Agent tasks and pipeline skills run via the local <code>agy</code> command line session.</span>
+				</div>
+			{/if}
 
 			<div class="form-row">
 				<div class="form-group flex-1">
@@ -183,8 +191,18 @@
 								settings.value.defaultModel.model = available[0].id;
 								isCustomModel = false;
 							}
-							if (apiKeys[p]) {
-								queryModels(p);
+							if (p === 'antigravity') {
+								settings.value.useAntigravityCli = true;
+								settings.value.agentDriver = 'antigravity';
+								if (!settings.value.defaultModel.model) {
+									settings.value.defaultModel.model = 'default';
+								}
+							} else {
+								settings.value.useAntigravityCli = false;
+								settings.value.agentDriver = 'builtin';
+								if (apiKeys[p]) {
+									queryModels(p);
+								}
 							}
 						}}
 					>
@@ -364,6 +382,11 @@
 	.info-banner.err {
 		background: color-mix(in srgb, var(--err) 15%, transparent);
 		color: var(--err);
+	}
+	.info-banner.cli-banner {
+		background: color-mix(in srgb, #8b5cf6 15%, transparent);
+		color: #7c3aed;
+		border: 1px solid color-mix(in srgb, #8b5cf6 25%, transparent);
 	}
 
 	.form-group {

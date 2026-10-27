@@ -45,16 +45,17 @@
 			if (val) apiKeys[pid] = val;
 		}
 
-		// Auto-query models if an API key is configured and cache is empty
+		// Auto-query models if credentials configured or provider is Antigravity and cache is empty
 		const currentProv = settings.value.defaultModel.provider;
-		if (apiKeys[currentProv] && (!settings.value.modelCache[currentProv] || settings.value.modelCache[currentProv]!.length === 0)) {
+		const hasCreds = currentProv === 'antigravity' || Boolean(apiKeys[currentProv]);
+		if (hasCreds && (!settings.value.modelCache[currentProv] || settings.value.modelCache[currentProv]!.length === 0)) {
 			queryModels(currentProv);
 		}
 	});
 
 	async function queryModels(pid: ProviderId) {
 		const key = apiKeys[pid]?.trim();
-		if (!key) {
+		if (pid !== 'antigravity' && !key) {
 			queryError = `Please enter an API key for ${PROVIDERS[pid].label} first.`;
 			queryMessage = null;
 			return;
@@ -75,7 +76,7 @@
 					isCustomModel = false;
 				}
 			} else {
-				queryMessage = `No chat models returned from ${PROVIDERS[pid].label}.`;
+				queryMessage = `No models returned from ${PROVIDERS[pid].label}.`;
 			}
 		} catch (e) {
 			queryError = e instanceof Error ? e.message : String(e);
@@ -161,15 +162,13 @@
 		<div class="section">
 			<div class="section-header-row">
 				<h3 class="section-title">AI Model Selection</h3>
-				{#if settings.value.defaultModel.provider !== 'antigravity'}
-					<button
-						class="btn small ghost"
-						onclick={() => queryModels(settings.value.defaultModel.provider)}
-						disabled={isQuerying[settings.value.defaultModel.provider] || !apiKeys[settings.value.defaultModel.provider]}
-					>
-						{isQuerying[settings.value.defaultModel.provider] ? 'Refreshing...' : '↻ Fetch Models from Provider'}
-					</button>
-				{/if}
+				<button
+					class="btn small ghost"
+					onclick={() => queryModels(settings.value.defaultModel.provider)}
+					disabled={isQuerying[settings.value.defaultModel.provider] || (settings.value.defaultModel.provider !== 'antigravity' && !apiKeys[settings.value.defaultModel.provider])}
+				>
+					{isQuerying[settings.value.defaultModel.provider] ? 'Refreshing...' : '↻ Fetch Models from Provider'}
+				</button>
 			</div>
 
 			{#if settings.value.defaultModel.provider === 'antigravity'}
@@ -196,6 +195,9 @@
 								settings.value.agentDriver = 'antigravity';
 								if (!settings.value.defaultModel.model) {
 									settings.value.defaultModel.model = 'default';
+								}
+								if (!settings.value.modelCache['antigravity'] || settings.value.modelCache['antigravity']!.length === 0) {
+									queryModels('antigravity');
 								}
 							} else {
 								settings.value.useAntigravityCli = false;

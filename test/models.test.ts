@@ -6,6 +6,8 @@ import {
 	getThinkingConfig,
 	formatGeminiToolResponse,
 	formatGeminiContents,
+	parseAgyModelsOutput,
+	fetchAvailableModels,
 	type RawModelEntry
 } from '../src/lib/agent/providers';
 import type { ChatMessage } from '../src/lib/agent/types';
@@ -75,6 +77,37 @@ describe('MOD-002: Dynamic Backend Model Discovery', () => {
 			'claude-3-7-sonnet-20250219',
 			'claude-3-5-sonnet-20241022'
 		]);
+	});
+
+	// @spec MOD-002, AGT-010
+	it('parses output from agy models dynamically into discovered models', () => {
+		const rawAgyOutput = `
+Fetching available models...
+gemini-4-argon-medium\tGemini 4 Argon (Medium)
+gemini-3.8-flash-high\tGemini 3.8 Flash (High)
+claude-opus-5-5-low\tClaude Opus 5.5 (Low)
+claude-sonnet-5-5-medium\tClaude Sonnet 5.5 (Medium)
+gpt-oss-120b-medium\tGPT-OSS 120B (Medium)
+flash\tFast Flash
+`;
+		const models = parseAgyModelsOutput(rawAgyOutput);
+		expect(models).toHaveLength(6);
+		expect(models[0].id).toBe('gemini-4-argon-medium');
+		expect(models[0].displayName).toBe('Gemini 4 Argon (Medium)');
+		expect(models[0].supportsThinking).toBe(true);
+
+		const flash = models.find((m) => m.id === 'flash');
+		expect(flash).toBeDefined();
+		expect(flash?.supportsThinking).toBe(false);
+	});
+
+	// @spec MOD-002, AGT-010
+	it('fetches Antigravity CLI models without requiring an API key', async () => {
+		const models = await fetchAvailableModels('antigravity');
+		expect(models.length).toBeGreaterThanOrEqual(3);
+		expect(models.map((m) => m.id)).toContain('default');
+		expect(models.map((m) => m.id)).toContain('flash');
+		expect(models.map((m) => m.id)).toContain('pro');
 	});
 });
 

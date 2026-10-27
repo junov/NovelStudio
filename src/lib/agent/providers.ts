@@ -640,10 +640,104 @@ async function listGeminiModels(apiKey: string): Promise<DiscoveredModel[]> {
 }
 
 /**
+ * Parse output lines from `agy models` into DiscoveredModel[].
+ * @spec AGT-010, MOD-002
+ */
+export function parseAgyModelsOutput(output: string): DiscoveredModel[] {
+	const models: DiscoveredModel[] = [];
+	const lines = output.split(/\r?\n/);
+
+	for (const rawLine of lines) {
+		const line = rawLine.trim();
+		if (
+			!line ||
+			line.startsWith('Fetching available models') ||
+			line.startsWith('Usage:') ||
+			line.startsWith('Flags:') ||
+			line.startsWith('Available models:')
+		) {
+			continue;
+		}
+
+		// Lines are formatted as: <model_id>\t<Display Name (Details)> or separated by spaces
+		const parts = line.split(/\t+|\s{2,}/);
+		const id = parts[0]?.trim();
+		if (!id) continue;
+
+		const displayName = parts.length > 1 ? parts.slice(1).join(' ').trim() : formatModelLabel(id);
+
+		// Base flash models do not support --effort; variants ending in effort levels (-medium, -high, -low)
+		// or containing argon/opus/pro/reasoning support thinking
+		const idLower = id.toLowerCase();
+		const isBaseFlash = idLower === 'flash' || idLower === 'gemini-flash';
+		const supportsThinking =
+			!isBaseFlash &&
+			Boolean(
+				idLower.includes('argon') ||
+				idLower.includes('opus') ||
+				idLower.includes('pro') ||
+				idLower.includes('medium') ||
+				idLower.includes('high') ||
+				idLower.includes('low') ||
+				idLower.includes('reasoning') ||
+				idLower.includes('o1') ||
+				idLower.includes('o3')
+			);
+
+		models.push({
+			id,
+			displayName,
+			supportsThinking
+		});
+	}
+
+	return models;
+}
+
+/**
+ * Retrieve models from local Antigravity CLI installation via `agy models`.
+ * @spec AGT-010, MOD-002
+ */
+export async function listAntigravityModels(projectRoot?: string): Promise<DiscoveredModel[]> {
+	const defaultShortcuts: DiscoveredModel[] = [
+		{ id: 'default', displayName: 'Antigravity CLI Default', supportsThinking: true },
+		{ id: 'flash', displayName: 'Antigravity Flash (Fast)', supportsThinking: false },
+		{ id: 'pro', displayName: 'Antigravity Pro (Reasoning)', supportsThinking: true }
+	];
+
+	if (inTauri()) {
+		try {
+			const { runAntigravity } = await import('$lib/tauri');
+			const out = await runAntigravity(projectRoot || '.', ['models']);
+			if (out.code === 0 && out.stdout) {
+				const discovered = parseAgyModelsOutput(out.stdout);
+				if (discovered.length > 0) {
+					const seen = new Set(discovered.map((m) => m.id));
+					const unlistedDefaults = defaultShortcuts.filter((d) => !seen.has(d.id));
+					return [...unlistedDefaults, ...discovered];
+				}
+			}
+		} catch (e) {
+			console.warn('Could not query agy models:', e);
+		}
+	}
+
+	return defaultShortcuts;
+}
+
+/**
  * Query the provider's API backend to retrieve all available text generation models dynamically.
  * Zero hard-coded model lists; all names originate directly from the service backend.
+ * @spec MOD-002, AGT-010
  */
-export async function fetchAvailableModels(provider: ProviderId, apiKey: string): Promise<DiscoveredModel[]> {
+export async function fetchAvailableModels(
+	provider: ProviderId,
+	apiKey?: string,
+	projectRoot?: string
+): Promise<DiscoveredModel[]> {
+	if (provider === 'antigravity') {
+		return listAntigravityModels(projectRoot);
+	}
 	if (!apiKey) return [];
 	switch (provider) {
 		case 'anthropic':

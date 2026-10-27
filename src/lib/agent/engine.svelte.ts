@@ -201,21 +201,14 @@ class AgentEngine {
 				if (inTauri()) {
 					this.addFeed('thought', 'Antigravity CLI Driver', `Dispatching to agy with skill context "${effectiveSkill}"...`);
 
-					// If this is a fresh conversation turn, prepend the SpecNovelist system prompt and skill rules
-					let prompt = userInstruction;
-					if (!this.#agyConversationId) {
-						const systemPrompt = await this.#buildSystemPrompt(effectiveSkill, modelChoice.model);
-						prompt = `${systemPrompt}\n\n=== AUTHOR DIRECTIVE ===\n[Active Skill: ${effectiveSkill}]\n${userInstruction}`;
-					} else if (effectiveSkill) {
-						prompt = `[Skill: ${effectiveSkill}]\n${userInstruction}`;
-					}
+					// Keep prompt concise to stay well within OS command-line argument limits (Windows 32K limit)
+					const promptText = effectiveSkill ? `/${effectiveSkill} ${userInstruction}` : userInstruction;
+					const safePrompt = promptText.length > 25000 ? promptText.slice(0, 25000) : promptText;
 
 					const args: string[] = [
-						'--print',
-						prompt,
+						'--dangerously-skip-permissions',
 						'--output-format',
-						'json',
-						'--dangerously-skip-permissions'
+						'json'
 					];
 
 					// Continue previous conversation session if available
@@ -229,6 +222,8 @@ class AgentEngine {
 					if (modelChoice.thinkingLevel && modelChoice.thinkingLevel !== 'off') {
 						args.push('--effort', modelChoice.thinkingLevel);
 					}
+
+					args.push('--print', safePrompt);
 
 					const out = await runAntigravity(project.root!, args);
 					const rawStderr = out.stderr ? `\n[stderr]\n${out.stderr}` : '';

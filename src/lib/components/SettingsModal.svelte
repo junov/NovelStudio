@@ -276,14 +276,6 @@
 							<div class="label-row">
 								<label for="key-{pid}">{meta.label}</label>
 								<div class="label-actions">
-									<button
-										class="btn small ghost text-btn"
-										onclick={() => queryModels(pId)}
-										disabled={isQuerying[pId] || !apiKeys[pId]}
-										title="Query backend to list all available models for this key"
-									>
-										{isQuerying[pId] ? 'Querying...' : '↻ Query Models'}
-									</button>
 									<a href={meta.keyUrl} target="_blank" class="external-link">Get Key ↗</a>
 								</div>
 							</div>

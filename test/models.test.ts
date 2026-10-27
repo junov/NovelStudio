@@ -47,6 +47,15 @@ describe('MOD-001: OS Keychain Credential Storage', () => {
 		);
 		expect(apiKeyBlock).toContain('id="key-{pid}"');
 	});
+
+	// @spec MOD-001
+	it('does not display a Query Models button above the API key text box', () => {
+		const modalSource = readFileSync(
+			resolve(__dirname, '../src/lib/components/SettingsModal.svelte'),
+			'utf-8'
+		);
+		expect(modalSource).not.toContain('Query Models');
+	});
 });
 
 describe('MOD-002: Dynamic Backend Model Discovery', () => {

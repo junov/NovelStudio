@@ -26,6 +26,9 @@ Acceptance:
 - Given the active AI provider in Settings is Gemini,
   when viewing settings,
   then the Gemini API key text box is displayed.
+- Given the Gemini API key input in Settings,
+  when viewed,
+  then no redundant "Query Models" button is displayed above the text box.
 
 ### MOD-002: Dynamic Backend Model Discovery
 WHEN an author triggers model querying for an AI provider or configures an API key,

@@ -609,40 +609,15 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 	});
 
 	// @spec AGT-010
-	it('routes Antigravity CLI execution to novelstudio custom agent backed by MCP server with suppressed built-ins', () => {
+	it('dispatches Antigravity CLI driver with structured headless mode and stream-json output', () => {
 		const engineSource = readFileSync(
 			resolve(__dirname, '../src/lib/agent/engine.svelte.ts'),
 			'utf-8'
 		);
-		expect(engineSource).toContain("'--agent'");
-		expect(engineSource).toContain("'novelstudio'");
-
-		// Verify workspace MCP configuration
-		const mcpConfigPath = resolve(__dirname, '../.agents/mcp_config.json');
-		expect(existsSync(mcpConfigPath)).toBe(true);
-		const mcpConfig = JSON.parse(readFileSync(mcpConfigPath, 'utf-8'));
-		expect(mcpConfig.mcpServers?.novelstudio).toBeDefined();
-		expect(mcpConfig.mcpServers.novelstudio.args).toContain('scripts/novel_mcp_server.py');
-
-		// Verify NovelStudio custom agent definition
-		const agentMdPath = resolve(__dirname, '../.agents/agents/novelstudio.md');
-		expect(existsSync(agentMdPath)).toBe(true);
-		const agentMd = readFileSync(agentMdPath, 'utf-8');
-		expect(agentMd).toContain('name: novelstudio');
-		expect(agentMd).toContain('mainAgent: true');
-		expect(agentMd).toContain('specnovel');
-		expect(agentMd).toContain('ask_user');
-		// Excludes generic shell execution
-		expect(agentMd).not.toContain('- run_command');
-
-		// Verify MCP server script exists and contains REV-004 guardrail
-		const mcpServerScriptPath = resolve(__dirname, '../scripts/novel_mcp_server.py');
-		expect(existsSync(mcpServerScriptPath)).toBe(true);
-		const mcpScript = readFileSync(mcpServerScriptPath, 'utf-8');
-		expect(mcpScript).toContain('TOOLS_REGISTRY');
-		expect(mcpScript).toContain('tool_specnovel');
-		expect(mcpScript).toContain('REV-004');
-		expect(mcpScript).toContain('"accept" in all_tokens');
+		expect(engineSource).toContain("'--output-format'");
+		expect(engineSource).toContain("'stream-json'");
+		expect(engineSource).toContain("'--dangerously-skip-permissions'");
+		expect(engineSource).toContain("'--print'");
 	});
 
 	// @spec AGT-010

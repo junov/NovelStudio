@@ -207,8 +207,6 @@ class AgentEngine {
 					const safePrompt = promptText.length > 25000 ? promptText.slice(0, 25000) : promptText;
 
 					const args: string[] = [
-						'--agent',
-						'novelstudio',
 						'--dangerously-skip-permissions',
 						'--output-format',
 						'stream-json'

@@ -178,23 +178,72 @@ export function hasStageGeneratedContent(
 }
 
 /**
- * Extracts upstream drift and local drift for a stage.
+ * Returns folder prefixes for all stages upstream of this stage in PIPELINE, plus directives/.
+ * @spec JRN-001, JRN-006
  */
-function getStageDriftDetails(stage: PipelineStage, status: StatusJson | null) {
+export function getStageUpstreamPrefixes(stage: PipelineStage): string[] {
+	const stageIndex = PIPELINE.findIndex((s) => s.id === stage.id);
+	const prefixes: string[] = ['directives/'];
+	if (stageIndex <= 0) return prefixes;
+
+	for (let i = 0; i < stageIndex; i++) {
+		const upstreamStage = PIPELINE[i];
+		prefixes.push(`${upstreamStage.id}/`);
+		for (const p of upstreamStage.paths) {
+			const dir = p.includes('/') ? p.split('/')[0] + '/' : `${p}/`;
+			if (!prefixes.includes(dir)) {
+				prefixes.push(dir);
+			}
+		}
+	}
+	return prefixes;
+}
+
+/**
+ * Extracts upstream drift and local drift for a stage.
+ * Strictly isolates upstream items that have changes since last sync from stage-local files.
+ * @spec JRN-001, JRN-006
+ */
+export function getStageDriftDetails(
+	stage: PipelineStage,
+	status: StatusJson | null,
+	unstagedFiles?: Set<string>
+) {
 	const syncName = stage.sync;
+	const stagePrefixes = [
+		`${stage.id}/`,
+		...stage.paths.map((p) => (p.includes('/') ? p.split('/')[0] + '/' : `${p}/`))
+	];
+	const isStageLocal = (file: string) =>
+		stage.paths.includes(file) || stagePrefixes.some((pre) => file.startsWith(pre));
+
+	const upstreamPrefixes = getStageUpstreamPrefixes(stage);
+	const isUpstream = (file: string) =>
+		!isStageLocal(file) && (upstreamPrefixes.some((pre) => file.startsWith(pre)) || file.startsWith('directives/'));
+
 	const rawDrift = (syncName && status?.drift?.[syncName]) || [];
 	const driftItems = rawDrift.map(formatDriftItem).filter(Boolean);
 
 	const rawUpstream = (syncName && status?.upstream_drift?.[syncName]) || [];
 	const upstreamItems = rawUpstream.map(formatDriftItem).filter(Boolean);
 
-	// Also separate any items in driftItems that belong to upstream folders rather than this stage's own folders
-	const stagePrefixes = stage.paths.map((p) => p.split('/')[0] + '/');
-	const inferredUpstream = driftItems.filter(
-		(item) => item.includes('/') && !stagePrefixes.some((pre) => item.startsWith(pre))
-	);
-	const localDrift = driftItems.filter((item) => !inferredUpstream.includes(item));
-	const allUpstream = Array.from(new Set([...upstreamItems, ...inferredUpstream]));
+	const unstagedList = unstagedFiles ? Array.from(unstagedFiles).filter(Boolean) : [];
+
+	// Upstream items that have changes since last sync
+	const candidateUpstream = [
+		...upstreamItems.filter((f) => !isStageLocal(f)),
+		...driftItems.filter((f) => isUpstream(f)),
+		...unstagedList.filter((f) => isUpstream(f))
+	];
+
+	// Local drift items for this stage
+	const candidateLocal = [
+		...driftItems.filter((f) => isStageLocal(f)),
+		...unstagedList.filter((f) => isStageLocal(f))
+	];
+
+	const allUpstream = Array.from(new Set(candidateUpstream));
+	const localDrift = Array.from(new Set(candidateLocal));
 	const allChanged = Array.from(new Set([...allUpstream, ...localDrift]));
 
 	return { localDrift, allUpstream, allChanged };
@@ -208,10 +257,11 @@ export function getStagePillInfo(
 	stage: PipelineStage,
 	status: StatusJson | null,
 	badge: string,
-	pillStatus: 'needs-sync' | 'synced' | 'pending'
+	pillStatus: 'needs-sync' | 'synced' | 'pending',
+	unstagedFiles?: Set<string>
 ): StagePillInfo {
 	const syncName = stage.sync;
-	const { localDrift, allUpstream } = getStageDriftDetails(stage, status);
+	const { localDrift, allUpstream } = getStageDriftDetails(stage, status, unstagedFiles);
 
 	if (pillStatus === 'needs-sync') {
 		if (allUpstream.length > 0) {
@@ -219,7 +269,7 @@ export function getStagePillInfo(
 				title: 'Upstream Changes Detected',
 				badge,
 				status: pillStatus,
-				description: `${allUpstream.length} upstream item(s) have changed since ${stage.label} was last accepted.`,
+				description: `${allUpstream.length} upstream item(s) have changed since last sync.`,
 				items: allUpstream,
 				actionHint: 'Click to synchronize stage with upstream changes'
 			};
@@ -233,6 +283,17 @@ export function getStagePillInfo(
 				description: `${localDrift.length} item(s) have changed in ${stage.label} since last sync.`,
 				items: localDrift,
 				actionHint: 'Click to synchronize stage'
+			};
+		}
+
+		if (badge.includes('drift')) {
+			return {
+				title: 'Upstream Changes Detected',
+				badge,
+				status: pillStatus,
+				description: `Upstream items have changed since ${stage.label} was last synced.`,
+				items: allUpstream,
+				actionHint: 'Click to synchronize stage with upstream changes'
 			};
 		}
 

@@ -26,7 +26,7 @@
 	let { type, stage, stageIndex, stageState, status, targetRect, railRect, unstagedFiles }: Props = $props();
 
 	let stepInfo = $derived(getStageStepInfo(stage, stageIndex, status));
-	let pillInfo = $derived(getStagePillInfo(stage, status, stageState.badge, stageState.status));
+	let pillInfo = $derived(getStagePillInfo(stage, status, stageState.badge, stageState.status, unstagedFiles));
 	let actionInfo = $derived(getStageActionInfo(stage, status));
 	let acceptInfo = $derived(getStageAcceptInfo(stage, unstagedFiles));
 

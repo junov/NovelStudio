@@ -7,7 +7,9 @@ import {
 	getStageActionInfo,
 	getStageUnstagedFiles,
 	hasStageGeneratedContent,
-	getStageAcceptInfo
+	getStageAcceptInfo,
+	getStageUpstreamPrefixes,
+	getStageDriftDetails
 } from '../src/lib/stagesHover';
 import type { StatusJson } from '../src/lib/types';
 import { project } from '../src/lib/stores/project.svelte';
@@ -147,6 +149,63 @@ describe('JRN-001: Contextual Hover Cards for Journey Rail Elements (Issue #7)',
 		const actionInfo = getStageActionInfo(structureStage, status);
 		expect(actionInfo.items).toContain('world/characters/CHR-001.md');
 		expect(actionInfo.items).toContain('narrative/beats.md');
+	});
+
+	// @spec JRN-001, JRN-006
+	it('incorporates upstream unstaged working-tree files in drift hovercard upstream items', () => {
+		const status = createMockStatus({
+			upstream_drift: {
+				narrative: ['world/places/PLC-001.md']
+			}
+		});
+		const narrativeStage = PIPELINE.find((s) => s.id === 'narrative')!;
+		const unstaged = new Set(['world/characters/CHR-002.md', 'directives/style.md', 'narrative/arcs.md']);
+		const pillInfo = getStagePillInfo(narrativeStage, status, '3 drift', 'needs-sync', unstaged);
+
+		expect(pillInfo.title).toBe('Upstream Changes Detected');
+		// Upstream items changed since last sync
+		expect(pillInfo.items).toContain('world/places/PLC-001.md');
+		expect(pillInfo.items).toContain('world/characters/CHR-002.md');
+		expect(pillInfo.items).toContain('directives/style.md');
+		// Stage-local file narrative/arcs.md must NOT be in upstream items
+		expect(pillInfo.items).not.toContain('narrative/arcs.md');
+		expect(pillInfo.description).toContain('3 upstream item(s)');
+	});
+
+	// @spec JRN-001, JRN-006
+	it('filters out stage-local files that appear in upstream_drift from specnovel', () => {
+		const status = createMockStatus({
+			upstream_drift: {
+				setup: ['initial/synopsis.md', 'setup/brief.md']
+			},
+			drift: {
+				setup: ['setup/themes.md']
+			}
+		});
+		const setupStage = PIPELINE.find((s) => s.id === 'setup')!;
+		const pillInfo = getStagePillInfo(setupStage, status, '1 drift', 'needs-sync');
+
+		expect(pillInfo.title).toBe('Upstream Changes Detected');
+		expect(pillInfo.items).toContain('initial/synopsis.md');
+		// setup/brief.md belongs to setup itself, so it must not be listed as an upstream change
+		expect(pillInfo.items).not.toContain('setup/brief.md');
+		expect(pillInfo.items).not.toContain('setup/themes.md');
+		expect(pillInfo.description).toContain('1 upstream item(s)');
+	});
+
+	// @spec JRN-001
+	it('computes upstream folder prefixes correctly across pipeline stages', () => {
+		const initialStage = PIPELINE.find((s) => s.id === 'initial')!;
+		const setupStage = PIPELINE.find((s) => s.id === 'setup')!;
+		const worldStage = PIPELINE.find((s) => s.id === 'world')!;
+
+		expect(getStageUpstreamPrefixes(initialStage)).toEqual(['directives/']);
+		expect(getStageUpstreamPrefixes(setupStage)).toContain('initial/');
+		expect(getStageUpstreamPrefixes(setupStage)).toContain('directives/');
+		expect(getStageUpstreamPrefixes(worldStage)).toContain('initial/');
+		expect(getStageUpstreamPrefixes(worldStage)).toContain('setup/');
+		expect(getStageUpstreamPrefixes(worldStage)).toContain('research/');
+		expect(getStageUpstreamPrefixes(worldStage)).not.toContain('world/');
 	});
 
 	// @spec JRN-001

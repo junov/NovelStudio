@@ -16,7 +16,7 @@ Acceptance:
   then it displays the full stage title, sequence position (Stage N of 9), comprehensive stage description, associated paths, and the assigned skill (`novel-generate` or `novel-sync`).
 - Given an author hovers over a status pill (drift, pending, or synced),
   when the hover card appears,
-  then it displays a description of the state represented by the pill without Git-specific terminology or commit hashes, enumerating affected items or files contributing to drift (specifically listing upstream items from `upstream_drift` that have changed since the stage was last synced, distinguishing upstream drift from stage-internal changes), and enumerating pending items or scenes requiring generation for pending status pills.
+  then it displays a description of the state represented by the pill without Git-specific terminology or commit hashes, enumerating affected items or files contributing to drift (specifically listing the upstream items that have changes since last sync, including upstream files from `upstream_drift` and working-tree changes that have not been incorporated into the stage, while distinguishing upstream drift from stage-internal changes), and enumerating pending items or scenes requiring generation for pending status pills.
 - Given an author hovers over a stage action play button,
   when the hover card appears,
   then it displays a dynamic craft-oriented action title (such as "Draft Manuscript Prose" or "Build Narrative Beat DAG") and description of the exact actions that will be performed upon clicking without referencing raw skill names (e.g. novel-generate, novel-sync), referencing current project context and relevant entities.
@@ -116,7 +116,7 @@ Acceptance:
   then the drift button is disabled to prevent concurrent agent runs.
 - Given an author hovers over the drift button,
   when hovered,
-  then the contextual hover card is displayed describing the drift items and presenting the synchronization action prompt in an action callout box placed directly below the hover card title without exhibiting conflicting browser-native tooltip attributes.
+  then the contextual hover card is displayed listing the upstream items that have changes since last sync (or stage-internal files for initial stages without upstream stages) and presenting the synchronization action prompt in an action callout box placed directly below the hover card title without exhibiting conflicting browser-native tooltip attributes.
 
 
 

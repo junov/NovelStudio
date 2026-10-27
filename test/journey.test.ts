@@ -307,7 +307,7 @@ describe('JRN-001: Contextual Hover Cards for Journey Rail Elements (Issue #7)',
 	});
 });
 
-describe('JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling (Issue #7)', () => {
+describe('JRN-002: Dynamic Stage Action Feasibility and Action Pill Disabling (Issue #7)', () => {
 	// @spec JRN-002
 	it('disables play button and explains reason when stage is up to date', () => {
 		const status = createMockStatus(); // fully synced, 0 pending, 0 drift, 0 open RQs
@@ -603,9 +603,10 @@ describe('JRN-005: Initial Stage Pending Lifecycle', () => {
 
 	// @spec JRN-005
 	it('ensures JourneyRail enforces pending status until stages are generated', () => {
-		expect(journeyRailSrc).toContain('project.isStageGenerated(stage.id)');
-		expect(journeyRailSrc).toContain("return { status: 'pending', badge: '', canAccept: false };");
-		expect(journeyRailSrc).toContain("badge: effectiveDrift > 0 ? 'sync' : 'unaccepted'");
+		const freshRailSrc = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
+		expect(freshRailSrc).toContain('project.isStageGenerated(stage.id)');
+		expect(freshRailSrc).toContain("return { status: 'pending', badge: 'gen', canAccept: false };");
+		expect(freshRailSrc).toContain("badge: effectiveDrift > 0 ? 'sync' : 'unaccepted'");
 	});
 
 	// @spec JRN-005
@@ -644,7 +645,7 @@ describe('JRN-005: Initial Stage Pending Lifecycle', () => {
 	});
 });
 
-describe('JRN-006: Interactive Sync Pill Synchronization Action', () => {
+describe('JRN-006: Interactive Stage Action Pill (GEN and SYNC)', () => {
 	const railSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyRail.svelte'), 'utf-8');
 	const hoverCardSource = readFileSync(resolve(__dirname, '../src/lib/components/JourneyHoverCard.svelte'), 'utf-8');
 
@@ -653,10 +654,35 @@ describe('JRN-006: Interactive Sync Pill Synchronization Action', () => {
 		expect(railSource).toContain("st.badge === 'sync'");
 		expect(railSource).toContain('drift-btn');
 		expect(railSource).toContain('sync-btn');
-		expect(railSource).toContain('syncStage(stage)');
+		expect(railSource).toContain("runActionPill(stage, 'sync')");
 		expect(railSource).toContain("disabled={agent.status === 'running'}");
 		// Native browser title attribute omitted to prevent collision with custom hover card
 		expect(railSource).not.toMatch(/<button[^>]*class="[^"]*drift-btn[^"]*"[^>]*title=/);
+	});
+
+	// @spec JRN-006
+	it('renders gen pills for ungenerated stages as interactive buttons that trigger stage generation', () => {
+		expect(railSource).toContain("st.badge === 'gen'");
+		expect(railSource).toContain('gen-btn');
+		expect(railSource).toContain("runActionPill(stage, 'gen')");
+		expect(railSource).toContain('class:disabled={!action.isActionable}');
+		expect(railSource).toContain('disabled={!action.isActionable || agent.status === ' + "'running'}");
+	});
+
+	// @spec JRN-006
+	it('removes standalone play button and transfers action functionality to action pills', () => {
+		expect(railSource).not.toContain('class="run-skill-btn"');
+		expect(railSource).not.toContain('.run-skill-btn');
+	});
+
+	// @spec JRN-006
+	it('invokes novel-generate for gen mode and novel-sync for sync mode', () => {
+		for (const stage of PIPELINE) {
+			expect(stage.skill).toBe('novel-generate');
+			expect(stage.syncSkill).toBe('novel-sync');
+		}
+		expect(railSource).toContain("agent.run(stage.skill, stage.prompt, stage.id)");
+		expect(railSource).toContain("agent.run(stage.syncSkill, stage.syncPrompt, stage.id)");
 	});
 
 	// @spec JRN-006
@@ -679,14 +705,22 @@ describe('JRN-006: Interactive Sync Pill Synchronization Action', () => {
 		const pillInfo = getStagePillInfo(setupStage, driftStatus, 'sync', 'needs-sync');
 		expect(pillInfo.actionHint).toBeDefined();
 		expect(pillInfo.actionHint).toContain('synchronize');
+
+		// GEN pill hover info
+		const genInfo = getStagePillInfo(setupStage, createMockStatus({ baselines: { setup: null }, generatedStages: { setup: false } }), 'gen', 'pending');
+		expect(genInfo.actionHint).toBeDefined();
+		expect(genInfo.badge).toBe('gen');
 	});
 
 	// @spec JRN-006
-	it('provides styling for interactive drift/sync pill buttons with distinct hover and disabled states', () => {
+	it('provides styling for interactive drift/sync and gen pill buttons with distinct hover and disabled states', () => {
 		expect(railSource).toContain('button.pill.drift-btn');
 		expect(railSource).toContain('button.pill.sync-btn');
 		expect(railSource).toContain('button.pill.drift-btn:hover:not(:disabled)');
 		expect(railSource).toContain('button.pill.drift-btn:disabled');
+		expect(railSource).toContain('button.pill.gen-btn');
+		expect(railSource).toContain('button.pill.gen-btn:hover:not(:disabled)');
+		expect(railSource).toContain('button.pill.gen-btn:disabled');
 	});
 
 	// @spec JRN-001, JRN-006

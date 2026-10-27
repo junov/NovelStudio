@@ -264,6 +264,22 @@ export function getStagePillInfo(
 	const syncName = stage.sync;
 	const { localDrift, allUpstream } = getStageDriftDetails(stage, status, unstagedFiles);
 
+	if (badge === 'gen') {
+		const actionInfo = getStageActionInfo(stage, status);
+		return {
+			title: actionInfo.title || `Generate ${stage.label}`,
+			badge: 'gen',
+			status: 'pending',
+			description: actionInfo.isActionable
+				? actionInfo.description
+				: actionInfo.disabledReason || `Prerequisites for ${stage.label} are not yet completed.`,
+			actionHint: actionInfo.isActionable
+				? `Click to generate ${stage.label} stage`
+				: actionInfo.disabledReason || 'Prerequisites required before generating',
+			items: actionInfo.items
+		};
+	}
+
 	if (pillStatus === 'needs-sync') {
 		if (allUpstream.length > 0) {
 			return {

@@ -7,42 +7,39 @@ status: active
 ## Requirements
 
 ### JRN-001: Contextual Hover Cards for Journey Rail Elements
-WHEN an author hovers over any interactive element of a stage node in the Journey Rail (the step body, the status pill, or the stage action play button),
+WHEN an author hovers over any interactive element of a stage node in the Journey Rail (the step body or the status/action pills),
 THE SYSTEM SHALL display a styled hover card matching the application design system containing contextual details for the hovered target instead of browser-native tooltips.
 
 Acceptance:
 - Given an author hovers over a stage node body or label,
   when the hover card appears,
   then it displays the full stage title, sequence position (Stage N of 9), comprehensive stage description, associated paths, and the assigned skill (`novel-generate` or `novel-sync`).
-- Given an author hovers over a status pill ("sync", pending, or synced),
+- Given an author hovers over a status or action pill ("GEN", "SYNC", pending, or "SYNCED"),
   when the hover card appears,
-  then it displays a description of the state represented by the pill without Git-specific terminology or commit hashes, enumerating affected items or files contributing to drift under the subtitle "Upstream Items with Changes (<count>)" (specifically listing the upstream items that have changes since last sync, including upstream files from `upstream_drift` and working-tree changes that have not been incorporated into the stage, while distinguishing upstream drift from stage-internal changes), and enumerating pending items or scenes requiring generation for pending status pills.
-- Given an author hovers over a stage action play button,
-  when the hover card appears,
-  then it displays a dynamic craft-oriented action title (such as "Draft Manuscript Prose" or "Build Narrative Beat DAG") and description of the exact actions that will be performed upon clicking without referencing raw skill names (e.g. novel-generate, novel-sync), referencing current project context and relevant entities.
+  then for "SYNC" it displays a description of the drift state without Git-specific terminology, enumerating affected items contributing to drift under the subtitle "Upstream Items with Changes (<count>)" with the synchronization action prompt, and for "GEN" it displays the craft-oriented action title, description of initial generation actions, target scope, and action feasibility or prerequisite guidance.
 - Given any active hover card in the Journey Rail,
   when rendered,
   then it utilizes application literary design tokens without exposing Git-specific terms or porcelain codes, and positions itself adjacent to the hovered element without clipping viewport boundaries.
-- Given any status or action pill rendered on a stage node in the Journey Rail (including "sync", "synced", pending, "unaccepted", and "Accept"),
+- Given any status or action pill rendered on a stage node in the Journey Rail (including "GEN", "SYNC", "SYNCED", pending, "unaccepted", and "Accept"),
   when displayed,
   then its text label is presented in ALL CAPS (uppercase).
 
 Notes: Linked to #7.
 
-### JRN-002: Dynamic Stage Action Feasibility and Play Button Disabling
+### JRN-002: Dynamic Stage Action Feasibility and Action Pill Disabling
 WHEN a stage on the Journey Rail has no pending work or actions to perform based on project status, upstream prerequisites, and stage synchronization,
-THE SYSTEM SHALL disable and gray out the stage's play button, and explain in the play button's hover card why no action is required or which upstream prerequisite must be completed first.
+THE SYSTEM SHALL disable and gray out the stage's action pill ("GEN" or "SYNC") in place of a standalone play button, and explain in the hover card why no action is required or which upstream prerequisite must be completed first.
 
 Acceptance:
-- Given a stage where all criteria are satisfied and no work is pending, or where required upstream stages have not yet been generated (Synchronization Generation Gate),
+- Given a stage where required upstream stages have not yet been generated (Synchronization Generation Gate),
   when evaluated,
-  then the stage play button is visually grayed out and its click handler is disabled.
-- Given an author hovers over a disabled play button,
+  then the stage "GEN" action pill is visually grayed out and its click handler is disabled.
+- Given an author hovers over a disabled action pill ("GEN" or "SYNC"),
   when the hover card appears,
   then it explicitly explains in craft-oriented terms without Git jargon why the action is inactive and states that the stage is up to date or waiting on upstream prerequisites.
 - Given changes or drift occur that create pending work for a stage, or an ungenerated stage's upstream prerequisites become satisfied,
   when project status updates,
-  then the play button reactively re-enables and dispatches initial generation (`novel-generate`) if not yet generated or incremental synchronization (`novel-sync`) if already generated.
+  then the action pill reactively enables, allowing authors to dispatch initial generation ("GEN") or incremental synchronization ("SYNC").
 
 Notes: Linked to #7.
 
@@ -81,7 +78,7 @@ Acceptance:
 - Given non-current stages on the Journey Rail,
   when rendered,
   then they display the radial gradient over the standard paper background with elevation drop shadows, visually contrasting with the lighter elevated current stage.
-- Given an author clicks a stage node or any child widget within that stage node (step label, status pill, play button, or accept button),
+- Given an author clicks a stage node or any child widget within that stage node (step label, status pill, or accept button),
   when clicked,
   then that stage becomes the active current stage and receives the visual highlight.
 
@@ -92,7 +89,7 @@ THE SYSTEM SHALL present all pipeline stages in the pending state until each sta
 Acceptance:
 - Given a newly created or ungenerated project stage,
   when displayed on the Journey Rail,
-  then the stage begins in the "pending" state without exhibiting drift or unaccepted pills.
+  then the stage presents an interactive "GEN" pill in the "pending" state to trigger initial generation without exhibiting drift or unaccepted pills.
 - Given an author runs stage generation via the agent or generates initial stage content,
   when generation completes,
   then the stage transitions from "pending" to "needs-sync" with an "unaccepted" status and displays the interactive "Accept" pill.
@@ -103,23 +100,29 @@ Acceptance:
   when viewed on the Journey Rail,
   then all initial files are committed, the initial stage is in the "synced" state, and zero "Accept" pills are exhibited across the pipeline.
 
-### JRN-006: Interactive Sync Pill Synchronization Action
-WHEN a stage on the Journey Rail exhibits local or upstream drift,
-THE SYSTEM SHALL present the status pill as an interactive "sync" button (without numerical counts) that dispatches stage synchronization (`novel-sync`) when clicked, disabling the button while the agent is busy.
+### JRN-006: Interactive Stage Action Pill (GEN and SYNC)
+WHEN a stage on the Journey Rail requires initial generation, or exhibits local or upstream drift,
+THE SYSTEM SHALL present the status pill as an interactive action button ("GEN" when ungenerated, "SYNC" when drifted) without numerical counts that dispatches stage generation or synchronization when clicked, removing any standalone play button.
 
 Acceptance:
+- Given a stage on the Journey Rail where content has not yet been generated,
+  when displayed,
+  then its status pill is labeled "GEN" (in ALL CAPS) and rendered as an interactive generation button.
 - Given a stage on the Journey Rail with local or upstream drift,
   when displayed,
-  then its status pill is labeled "sync" (rendered in ALL CAPS as "SYNC", without numbers) and rendered as an interactive button with distinct hover and active states.
-- Given an author clicks the "sync" button,
+  then its status pill is labeled "SYNC" (in ALL CAPS, without numbers) and rendered as an interactive synchronization button.
+- Given an author clicks the "GEN" button,
+  when clicked,
+  then the system sets the stage as the current active stage and dispatches stage generation (`novel-generate`) with the stage's initial generation prompt.
+- Given an author clicks the "SYNC" button,
   when clicked,
   then the system sets the stage as the current active stage and dispatches stage synchronization (`novel-sync`) with the stage's synchronization prompt.
 - Given the agent is actively executing a task (`agent.status === 'running'`),
   when evaluated,
-  then the sync button is disabled to prevent concurrent agent runs.
-- Given an author hovers over the "sync" button,
+  then the action button is disabled to prevent concurrent agent runs.
+- Given an author hovers over the action button ("GEN" or "SYNC"),
   when hovered,
-  then the contextual hover card is displayed listing the upstream items that have changes since last sync (or stage-internal files for initial stages without upstream stages) and presenting the synchronization action prompt in an action callout box placed directly below the hover card title without exhibiting conflicting browser-native tooltip attributes.
+  then the contextual hover card is displayed presenting craft-oriented action details without exhibiting conflicting browser-native tooltip attributes.
 
 
 

@@ -64,7 +64,7 @@
 			project.isStageGenerated(stage.id);
 
 		if (!isGenerated) {
-			return { status: 'pending', badge: '', canAccept: false };
+			return { status: 'pending', badge: 'gen', canAccept: false };
 		}
 
 		const localDrift = syncName && status.drift?.[syncName] ? status.drift[syncName].length : 0;
@@ -124,6 +124,24 @@
 		}
 	}
 
+	/**
+	 * Run the appropriate skill for an action pill (GEN or SYNC).
+	 * In gen mode (ungenerated stage), invokes `novel-generate` with stage.prompt.
+	 * In sync mode (drifted/pending stage), invokes `novel-sync` with stage.syncPrompt.
+	 * @spec JRN-006
+	 */
+	function runActionPill(stage: PipelineStage, mode: 'gen' | 'sync') {
+		if (agent.status === 'running') return;
+		const action = getStageActionInfo(stage, project.status);
+		if (mode === 'gen' && !action.isActionable) return;
+		project.setCurrentStage(stage.id);
+		if (mode === 'gen') {
+			agent.run(stage.skill, stage.prompt, stage.id);
+		} else {
+			agent.run(stage.syncSkill, stage.syncPrompt, stage.id);
+		}
+	}
+
 	function runStageSkill(stage: PipelineStage) {
 		const action = getStageActionInfo(stage, project.status);
 		if (!action.isActionable) return;
@@ -136,10 +154,7 @@
 	 * @spec JRN-006
 	 */
 	function syncStage(stage: PipelineStage) {
-		if (agent.status === 'running') return;
-		project.setCurrentStage(stage.id);
-		const resolved = resolveStageExecution(stage, project.status);
-		agent.run(resolved.skill, resolved.prompt, stage.id);
+		runActionPill(stage, 'sync');
 	}
 </script>
 
@@ -173,13 +188,30 @@
 
 				<div class="node-meta">
 					{#if st.badge}
-						{#if st.badge === 'sync' || st.badge.includes('drift')}
+						{#if st.badge === 'gen'}
 							<button
-								class="pill {st.status} drift-btn sync-btn"
+								class="pill {st.status} gen-btn action-pill"
+								class:disabled={!action.isActionable}
+								disabled={!action.isActionable || agent.status === 'running'}
+								onclick={(e) => {
+									e.stopPropagation();
+									runActionPill(stage, 'gen');
+								}}
+								onmouseenter={(e) => {
+									e.stopPropagation();
+									showHover('pill', stage, i, st, e.currentTarget);
+								}}
+								onmouseleave={hideHover}
+							>
+								{st.badge}
+							</button>
+						{:else if st.badge === 'sync' || st.badge.includes('drift')}
+							<button
+								class="pill {st.status} drift-btn sync-btn action-pill"
 								disabled={agent.status === 'running'}
 								onclick={(e) => {
 									e.stopPropagation();
-									syncStage(stage);
+									runActionPill(stage, 'sync');
 								}}
 								onmouseenter={(e) => {
 									e.stopPropagation();
@@ -224,24 +256,6 @@
 						</button>
 					{/if}
 				</div>
-
-				<button
-					class="run-skill-btn"
-					class:disabled={!action.isActionable}
-					disabled={!action.isActionable || agent.status === 'running'}
-					onclick={(e) => {
-						e.stopPropagation();
-						project.setCurrentStage(stage.id);
-						runStageSkill(stage);
-					}}
-					onmouseenter={(e) => {
-						e.stopPropagation();
-						showHover('play', stage, i, st, e.currentTarget);
-					}}
-					onmouseleave={hideHover}
-				>
-					▶
-				</button>
 			</div>
 
 			{#if i < PIPELINE.length - 1}
@@ -372,11 +386,12 @@
 		border-color: color-mix(in srgb, var(--warn) 45%, transparent);
 		background: color-mix(in srgb, var(--warn) 15%, transparent);
 	}
-	.stage-node.current .run-skill-btn {
-		background: color-mix(in srgb, var(--accent) 15%, transparent);
+	.stage-node.current button.pill.gen-btn {
 		color: var(--accent);
+		border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+		background: color-mix(in srgb, var(--accent) 15%, transparent);
 	}
-	.stage-node.current .run-skill-btn:hover:not(.disabled) {
+	.stage-node.current button.pill.gen-btn:hover:not(:disabled) {
 		background: var(--accent);
 		color: var(--accent-ink);
 	}
@@ -472,31 +487,25 @@
 		cursor: wait;
 	}
 
-	.run-skill-btn {
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		border: none;
-		background: var(--bg-sunken);
-		color: var(--ink-soft);
-		font-size: 10px;
-		display: grid;
-		place-items: center;
+	button.pill.gen-btn {
+		background: color-mix(in srgb, var(--accent) 15%, transparent);
+		color: var(--accent);
+		border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
 		cursor: pointer;
-		margin-left: 4px;
+		display: inline-flex;
+		align-items: center;
+		font-weight: 600;
 		transition: all 0.15s ease;
 	}
-	.run-skill-btn:hover:not(.disabled) {
+	button.pill.gen-btn:hover:not(:disabled) {
 		background: var(--accent);
 		color: var(--accent-ink);
+		border-color: var(--accent);
 	}
-	.run-skill-btn.disabled {
-		opacity: 0.35;
+	button.pill.gen-btn:disabled,
+	button.pill.gen-btn.disabled {
+		opacity: 0.45;
 		cursor: not-allowed;
-	}
-	.run-skill-btn.disabled:hover {
-		background: var(--bg-sunken);
-		color: var(--ink-soft);
 	}
 
 	.stage-connector {

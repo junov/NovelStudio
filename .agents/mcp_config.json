@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "novelstudio": {
+      "command": "python",
+      "args": ["scripts/novel_mcp_server.py"]
+    }
+  }
+}

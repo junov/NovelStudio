@@ -7,7 +7,7 @@ import { groupFeedItems, isWorkItemType } from '../src/lib/agent/feed';
 import { routeUserPrompt } from '../src/lib/agent/router';
 import { PIPELINE } from '../src/lib/stages';
 import { renderMarkdown } from '../src/lib/markdown';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import type { AskUserRequest, FeedItem } from '../src/lib/agent/types';
 import { SettingsState, PROVIDERS } from '../src/lib/stores/settings.svelte';
@@ -609,6 +609,43 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 	});
 
 	// @spec AGT-010
+	it('routes Antigravity CLI execution to novelstudio custom agent backed by MCP server with suppressed built-ins', () => {
+		const engineSource = readFileSync(
+			resolve(__dirname, '../src/lib/agent/engine.svelte.ts'),
+			'utf-8'
+		);
+		expect(engineSource).toContain("'--agent'");
+		expect(engineSource).toContain("'novelstudio'");
+
+		// Verify workspace MCP configuration
+		const mcpConfigPath = resolve(__dirname, '../.agents/mcp_config.json');
+		expect(existsSync(mcpConfigPath)).toBe(true);
+		const mcpConfig = JSON.parse(readFileSync(mcpConfigPath, 'utf-8'));
+		expect(mcpConfig.mcpServers?.novelstudio).toBeDefined();
+		expect(mcpConfig.mcpServers.novelstudio.args).toContain('scripts/novel_mcp_server.py');
+
+		// Verify NovelStudio custom agent definition
+		const agentMdPath = resolve(__dirname, '../.agents/agents/novelstudio.md');
+		expect(existsSync(agentMdPath)).toBe(true);
+		const agentMd = readFileSync(agentMdPath, 'utf-8');
+		expect(agentMd).toContain('name: novelstudio');
+		expect(agentMd).toContain('mainAgent: true');
+		expect(agentMd).toContain('specnovel');
+		expect(agentMd).toContain('ask_user');
+		// Excludes generic shell execution
+		expect(agentMd).not.toContain('- run_command');
+
+		// Verify MCP server script exists and contains REV-004 guardrail
+		const mcpServerScriptPath = resolve(__dirname, '../scripts/novel_mcp_server.py');
+		expect(existsSync(mcpServerScriptPath)).toBe(true);
+		const mcpScript = readFileSync(mcpServerScriptPath, 'utf-8');
+		expect(mcpScript).toContain('TOOLS_REGISTRY');
+		expect(mcpScript).toContain('tool_specnovel');
+		expect(mcpScript).toContain('REV-004');
+		expect(mcpScript).toContain('"accept" in all_tokens');
+	});
+
+	// @spec AGT-010
 	it('parses fine-grained stream-json events from Antigravity CLI into agent feed items', () => {
 		const agent = new AgentEngine();
 
@@ -621,19 +658,29 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(thoughtItem).toBeDefined();
 		expect(thoughtItem?.content).toContain('Examining setup/brief.md');
 
-		// 2. Tool call event
+		// 2. Tool call event with novelstudio MCP prefix
 		agent.handleAgyStreamLine(JSON.stringify({
 			type: 'step_update',
 			tool_calls: [{
-				name: 'edit_file',
-				args: { Path: 'setup/brief.md', Target: 'Draft', Replacement: 'Final' }
+				name: 'novelstudio__specnovel',
+				args: { subcommand: 'check', args: ['--stage', 'setup'] }
 			}]
 		}));
-		const toolItem = agent.feed.find((f) => f.type === 'tool_start' && f.title === 'Edit File: setup/brief.md');
+		const toolItem = agent.feed.find((f) => f.type === 'tool_start' && f.title === 'specnovel check');
 		expect(toolItem).toBeDefined();
-		expect(toolItem?.content).toContain('setup/brief.md');
+		expect(toolItem?.content).toContain('--stage');
 
-		// 3. Step progress event
+		// 3. MCP tool completion event
+		agent.handleAgyStreamLine(JSON.stringify({
+			type: 'tool_result',
+			name: 'novelstudio__specnovel',
+			output: 'Integrity check passed.'
+		}));
+		const endItem = agent.feed.find((f) => f.type === 'tool_end' && f.title === 'Completed: specnovel');
+		expect(endItem).toBeDefined();
+		expect(endItem?.content).toContain('Integrity check passed');
+
+		// 4. Step progress event
 		agent.handleAgyStreamLine(JSON.stringify({
 			type: 'step_update',
 			message: 'Synchronizing narrative beats'
@@ -642,7 +689,7 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(stepItem).toBeDefined();
 		expect(stepItem?.content).toBe('Synchronizing narrative beats');
 
-		// 4. Token telemetry
+		// 5. Token telemetry
 		const initialPromptTokens = agent.totalPromptTokens;
 		const initialCompTokens = agent.totalCompletionTokens;
 		agent.handleAgyStreamLine(JSON.stringify({
@@ -651,7 +698,7 @@ describe('AGT-010: Antigravity CLI Agent Driver Option in Provider Selection', (
 		expect(agent.totalPromptTokens).toBe(initialPromptTokens + 350);
 		expect(agent.totalCompletionTokens).toBe(initialCompTokens + 120);
 
-		// 5. Terminal result event
+		// 6. Terminal result event
 		const result = agent.handleAgyStreamLine(JSON.stringify({
 			type: 'result',
 			response: 'Setup creative brief successfully synchronized with themes.'

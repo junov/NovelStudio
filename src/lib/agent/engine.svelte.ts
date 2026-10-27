@@ -207,6 +207,8 @@ class AgentEngine {
 					const safePrompt = promptText.length > 25000 ? promptText.slice(0, 25000) : promptText;
 
 					const args: string[] = [
+						'--agent',
+						'novelstudio',
 						'--dangerously-skip-permissions',
 						'--output-format',
 						'stream-json'
@@ -657,24 +659,50 @@ ${skillMd}
 					: [];
 
 		for (const tc of rawToolCalls) {
-			const name = tc.name || tc.tool || 'tool';
+			let name = tc.name || tc.tool || 'tool';
+			if (name.startsWith('novelstudio__')) {
+				name = name.slice('novelstudio__'.length);
+			} else if (name.startsWith('novelstudio_')) {
+				name = name.slice('novelstudio_'.length);
+			}
 			const args = tc.args || tc.input || tc.arguments || tc.parameters || {};
 
 			let toolTitle = `Tool: ${name}`;
 			let detail = '';
 
 			if (name === 'read_file') {
-				const p = args.Path || args.path || '';
+				const p = args.path || args.Path || '';
 				toolTitle = `Read File: ${p}`;
 				detail = `Path: ${p}`;
 			} else if (name === 'edit_file') {
-				const p = args.Path || args.path || '';
+				const p = args.path || args.Path || '';
 				toolTitle = `Edit File: ${p}`;
 				detail = `Path: ${p}\n\nTarget:\n${args.Target || args.target || ''}\n\nReplacement:\n${args.Replacement || args.replacement || ''}`;
 			} else if (name === 'write_file') {
-				const p = args.Path || args.path || '';
+				const p = args.path || args.Path || '';
 				toolTitle = `Write File: ${p}`;
 				detail = `Path: ${p}`;
+			} else if (name === 'delete_file') {
+				const p = args.path || args.Path || '';
+				toolTitle = `Delete File: ${p}`;
+				detail = `Path: ${p}`;
+			} else if (name === 'list_project_files') {
+				toolTitle = `List Project Files`;
+				detail = args.folder ? `Folder: ${args.folder}` : 'All files';
+			} else if (name === 'read_toolkit_doc') {
+				const p = args.path || '';
+				toolTitle = `Read Toolkit Doc: ${p}`;
+				detail = `Path: ${p}`;
+			} else if (name === 'specnovel') {
+				const sub = args.subcommand || '';
+				toolTitle = `specnovel ${sub}`;
+				detail = `Subcommand: ${sub}\nArgs: ${JSON.stringify(args.args || [])}`;
+			} else if (name === 'ask_user') {
+				toolTitle = args.title || 'Author Interview';
+				detail = JSON.stringify(args.questions || [], null, 2);
+			} else if (name === 'fetch_url') {
+				toolTitle = `Fetch Webpage: ${args.url || ''}`;
+				detail = `URL: ${args.url || ''}`;
 			} else if (name === 'run_command') {
 				const cmd = args.CommandLine || args.command || args.toolSummary || '';
 				toolTitle = args.toolSummary ? `Run: ${args.toolSummary}` : `Run Command: ${cmd}`;
@@ -692,7 +720,12 @@ ${skillMd}
 		// 5. Tool result
 		if (parsed.type === 'tool_result' || parsed.tool_result) {
 			const res = parsed.tool_result || parsed.result || parsed.output;
-			const toolName = parsed.tool || parsed.name || 'Tool';
+			let toolName = parsed.tool || parsed.name || 'Tool';
+			if (toolName.startsWith('novelstudio__')) {
+				toolName = toolName.slice('novelstudio__'.length);
+			} else if (toolName.startsWith('novelstudio_')) {
+				toolName = toolName.slice('novelstudio_'.length);
+			}
 			const detail = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
 			this.addFeed('tool_end', `Completed: ${toolName}`, detail, undefined, 'success');
 		}
